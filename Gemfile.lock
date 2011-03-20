@@ -1,7 +1,18 @@
 GEM
   remote: http://rubygems.org/
   specs:
+    configuration (1.2.0)
+    heroku (1.18.3)
+      launchy (~> 0.3.2)
+      rest-client (< 1.7.0, >= 1.4.0)
+    launchy (0.3.7)
+      configuration (>= 0.0.5)
+      rake (>= 0.8.1)
+    mime-types (1.16)
     rack (1.2.2)
+    rake (0.8.7)
+    rest-client (1.6.1)
+      mime-types (>= 1.16)
     sinatra (1.2.1)
       rack (~> 1.1)
       tilt (< 2.0, >= 1.2.2)
@@ -11,5 +22,6 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  heroku (~> 1.18)
   rack (~> 1.2)
   sinatra (~> 1.2)
