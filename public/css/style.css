@@ -223,9 +223,33 @@ button {  width: auto; overflow: visible; }
  /* Primary Styles
     Author:
  */
+body {
+  text-align: center;
+}
 
+#container {
+  margin: 2em auto;
+  max-width: 60em;
+  text-align: left;
+}
 
+header.page {
+  font-family: "Co Headline Corp", "Adelle Web", "Magpie Regular", "Edita Web Regular", "Times New Roman", serif;
+  margin-bottom: 2em;
+  text-align: center;
+}
+header.page h1 { font-size: 3em; }
+header.page h2 { font-size: 1.5em; font-style: italic; }
 
+#main {
+  min-height: 20em;
+}
+
+footer.page {
+  clear: both;
+  margin-top: 2em;
+  text-align: center;
+}
 
 
 
