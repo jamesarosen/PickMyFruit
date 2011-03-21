@@ -1,12 +1,11 @@
 require 'sinatra'
+require 'haml'
 
 class PickMyFruit < Sinatra::Base
-  project_root = File.expand_path('..', File.dirname(__FILE__))
-  index_html = File.read(project_root + '/public/index.html')
-
-  set :root, project_root
+  set :root, File.expand_path('..', File.dirname(__FILE__))
+  
 
   get '/' do
-    index_html
+    haml :index
   end
 end
