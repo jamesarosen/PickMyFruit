@@ -5,6 +5,7 @@ gem 'haml',         '~> 3.0'
 gem 'omniauth',     '~> 0.2'
 gem 'sqlite3',      '~> 1.3'
 gem 'high_voltage', '~> 0.9'
+gem 'compass',      '~> 0.10'
 
 group :development do
   gem 'heroku', '~> 1.18'

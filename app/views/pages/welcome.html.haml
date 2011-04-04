@@ -1,7 +1,8 @@
-#growers
-  %a{ :href => page_path(:id => 'growers') }
-    %img{ :src => 'http://placekitten.com/200/200' }
-    For Growers
-  %a{ :href => page_path(:id => 'pickers') }
-    %img{ :src => 'http://placekitten.com/200/200' }
-    For Pickers
+#welcome
+  %div
+    %a#growers{ :href => page_path(:id => 'growers') }
+      %img{ :src => 'http://placekitten.com/200/200' }
+      %span For Growers
+    %a#pickers{ :href => page_path(:id => 'pickers') }
+      %img{ :src => 'http://placekitten.com/200/200' }
+      %span For Pickers

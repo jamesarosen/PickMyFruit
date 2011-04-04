@@ -1,0 +1,39 @@
+#welcome {
+  $item-width: 200px;
+  $gutter-width: 50px;
+
+  text-align: center;
+
+  & > div {
+    margin: auto;
+    text-align: left;
+    width: (2 * $item-width) + $gutter-width + 5px;
+  }
+
+  a {
+    display: block;
+    text-align: center;
+    width: $item-width;
+
+    img, span {
+      display: block;
+      width: $item-width;
+    }
+
+    img {
+      @include border-radius(8px);
+    }
+
+    span {
+      margin-top: 1em;
+    }
+
+    &#growers {
+      float: left;
+    }
+
+    &#pickers {
+      margin-left: $item-width + $gutter-width;
+    }
+  }
+}
