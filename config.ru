@@ -1,5 +1,4 @@
-$: << File.expand_path('lib', File.dirname(__FILE__))
-require 'pick_my_fruit'
+# This file is used by Rack-based servers to start the application.
 
-use Rack::Static, :urls => ['/js', '/css'], :root => 'public'
-run PickMyFruit
+require ::File.expand_path('../config/environment',  __FILE__)
+run PickMyFruit::Application
