@@ -9,3 +9,9 @@ gem 'high_voltage', '~> 0.9'
 group :development do
   gem 'heroku', '~> 1.18'
 end
+
+group :development, :test do
+  gem 'rspec-rails', '~> 2.5'
+  gem 'steak',       '~> 1.1'
+  gem 'capybara',    '~> 0.4'
+end
