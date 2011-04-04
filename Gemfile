@@ -14,4 +14,5 @@ group :development, :test do
   gem 'rspec-rails', '~> 2.5'
   gem 'steak',       '~> 1.1'
   gem 'capybara',    '~> 0.4'
+  gem 'mocha',       '~> 0.9'
 end
