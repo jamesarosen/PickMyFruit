@@ -1,27 +1,17 @@
 {
-  "name": "fx-pnpm-monorepo-starter",
+  "name": "@pickmyfruit/workspace",
   "private": true,
   "type": "module",
-  "description": "pnpm workspace (monorepo) starter for TypeScript with example React/Tailwind/Vite app and shared package. Includes vitest + eslint + prettier.",
-  "license": "UNLICENSED",
-  "keywords": [
-    "starter",
-    "boilerplate",
-    "typescript",
-    "pnpm",
-    "vite",
-    "react",
-    "eslint",
-    "prettier"
-  ],
+  "description": "pnpm workspace for PickMyFruit.com",
+  "license": "Apache-2.0",
   "author": {
-    "name": "Kevin Firko",
-    "url": "https://firxworx.com",
-    "email": "hello@firxworx.com"
+    "name": "James A Rosen",
+    "url": "https://jamesarosen.com",
+    "email": "pickmyfruit@jamesarosen.com"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/appcurve/flint.git"
+    "url": "git+https://github.com/jamesarosen/pickmyfruit.git"
   },
   "scripts": {
     "dev": "NODE_ENV=development pnpm --filter demo dev",
