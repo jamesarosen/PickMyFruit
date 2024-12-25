@@ -88,6 +88,8 @@ importers:
         specifier: ^1.10.4
         version: 1.10.4
 
+  packages/dns: {}
+
 packages:
 
   '@astrojs/compiler@2.10.3':
