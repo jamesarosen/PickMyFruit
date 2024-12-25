@@ -5,8 +5,12 @@ on:
     branches:
       - main # continuous deployment on merge to main
 jobs:
+  lint:
+    uses: ./.github/workflows/_lint.yaml
+
   deploy:
     name: Deploy www
+    needs: lint
     runs-on: ubuntu-latest
     concurrency: deploy-group # optional: ensure only one action runs at a time
     steps:
