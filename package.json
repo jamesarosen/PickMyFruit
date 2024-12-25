@@ -14,7 +14,7 @@
     "url": "git+https://github.com/jamesarosen/pickmyfruit.git"
   },
   "scripts": {
-    "dev": "NODE_ENV=development pnpm --filter demo dev",
+    "dev": "NODE_ENV=development pnpm --filter www dev",
     "dev:watch": "tsc -w",
     "dev:preflight": "pnpm run format && pnpm lint:fix && pnpm run ci:check && pnpm ci:test",
     "ci:lint": "pnpm lint",
