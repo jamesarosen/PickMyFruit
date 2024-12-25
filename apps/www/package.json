@@ -1,5 +1,5 @@
 {
-  "name": "apps-www",
+  "name": "@pickmyfruit/www",
   "type": "module",
   "version": "0.0.1",
   "scripts": {
