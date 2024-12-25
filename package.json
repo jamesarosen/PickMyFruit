@@ -13,6 +13,7 @@
     "type": "git",
     "url": "git+https://github.com/jamesarosen/pickmyfruit.git"
   },
+  "packageManager": "pnpm@9.12.0",
   "scripts": {
     "dev": "NODE_ENV=development pnpm --filter www dev",
     "dev:watch": "tsc -w",
