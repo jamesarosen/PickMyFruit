@@ -3,11 +3,16 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
+    "astro": "astro",
     "build": "astro build",
-    "preview": "astro preview",
-    "astro": "astro"
+    "deploy": "fly deploy",
+    "dev": "astro dev",
+    "docker:build": "docker build -f ./Dockerfile --target runtime --tag pickmyfruit/www:latest ../..",
+    "preview": "astro preview"
   },
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@astrojs/node": "^9.0.0",
     "astro": "^5.1.1"
