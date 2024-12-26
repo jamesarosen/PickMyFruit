@@ -36,6 +36,13 @@ resource "dnsimple_zone_record" "www_cname" {
   value     = "pickmyfruit.fly.dev"
 }
 
+resource "dnsimple_zone_record" "www_acme" {
+  zone_name = var.dnsimple_zone
+  name      = "_acme-challenge.www"
+  type      = "CNAME"
+  value     = "www.pickmyfruit.com.nm66l1.flydns.net."
+}
+
 resource "dnsimple_zone_record" "apex_redirect" {
   zone_name = var.dnsimple_zone
   name      = ""
