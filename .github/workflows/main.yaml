@@ -9,13 +9,6 @@ jobs:
     uses: ./.github/workflows/_lint.yaml
 
   deploy:
-    name: Deploy www
+    uses: ./.github/workflows/_deploy.yaml
     needs: lint
-    runs-on: ubuntu-latest
-    concurrency: deploy-group # optional: ensure only one action runs at a time
-    steps:
-      - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only --config apps/www/fly.toml --dockerfile apps/www/Dockerfile
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    secrets: inherit

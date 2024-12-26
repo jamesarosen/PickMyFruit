@@ -1,0 +1,10 @@
+{
+  "name": "@pickmyfruit/dns",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "deploy": "terraform apply",
+    "plan": "terraform plan",
+    "terraform": "terraform"
+  }
+}
