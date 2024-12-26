@@ -14,7 +14,7 @@
     "url": "git+https://github.com/jamesarosen/pickmyfruit.git"
   },
   "engines": {
-    "node": "22.12.0"
+    "node": "^22.12.0"
   },
   "packageManager": "pnpm@9.12.0",
   "scripts": {
@@ -26,6 +26,7 @@
     "ci:test": "CI=true NODE_ENV=test pnpm --recursive run test",
     "ci:build": "NODE_ENV=production pnpm --recursive --stream run build",
     "docker:build": "pnpm -r --if-present --parallel docker:build",
+    "install:node": "pnpm env use --global ^22.12.0",
     "setup": "pnpm run reset && pnpm install",
     "reset": "pnpm dlx rimraf --glob ./**/node_modules",
     "build": "NODE_ENV=production pnpm run --recursive --stream build",
@@ -49,8 +50,7 @@
     "kill:vscode-server": "ps uxa | grep .vscode-server | awk '{print $2}' | xargs kill",
     "kill:vscode-server:force": "ps uxa | grep .vscode-server | awk '{print $2}' | xargs kill -9",
     "clear:node_modules": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' +",
-    "clear:dist": "find . -name 'dist' -type d -prune -exec rm -rf '{}' +",
-    "pnpm:env:node:lts": "pnpm env use --global lts"
+    "clear:dist": "find . -name 'dist' -type d -prune -exec rm -rf '{}' +"
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.4",
