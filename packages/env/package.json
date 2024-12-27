@@ -3,9 +3,18 @@
   "type": "module",
   "version": "1.0.0",
   "dependencies": {
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "valibot": "1.0.0-beta.9"
   },
   "devDependencies": {
     "tsx": "^4.19.2"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "license": "Apache-2.0",
+  "scripts": {
+    "build": "tsc",
+    "bootstrap": "for file in .env.*.sample; do cp -n \"$file\" \"${file%.sample}\" && echo \"${file%.sample}: copied\" || echo \"${file%.sample}: exists\"; done"
   }
 }
