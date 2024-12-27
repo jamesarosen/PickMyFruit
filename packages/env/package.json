@@ -1,0 +1,11 @@
+{
+  "name": "@pickmyfruit/env",
+  "type": "module",
+  "version": "1.0.0",
+  "dependencies": {
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}
