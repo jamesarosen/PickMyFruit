@@ -6,3 +6,7 @@ on:
 jobs:
   lint:
     uses: ./.github/workflows/_lint.yaml
+
+  build:
+    uses: ./.github/workflows/_build.yaml
+    needs: lint
