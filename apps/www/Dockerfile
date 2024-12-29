@@ -11,7 +11,6 @@
 # Operating system, Node, pnpm
 ARG NODE_VERSION=22.12.0
 FROM node:${NODE_VERSION}-slim AS base
-ENV NODE_ENV="production"
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -37,6 +36,7 @@ RUN pnpm --filter=@pickmyfruit/www --prod deploy /app
 FROM built_workspace AS runtime
 LABEL fly_launch_runtime="Astro"
 LABEL "website.name"="Pick My Fruit"
+ENV NODE_ENV="production"
 WORKDIR /app
 COPY --from=built_workspace /app .
 ENV PORT=4321
