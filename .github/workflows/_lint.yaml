@@ -40,13 +40,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install 1Password CLI
+        uses: 1password/install-cli-action@v1
+
       - uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Format
         run: terraform fmt -check
 
       - name: Terraform Init
-        run: terraform init
+        run: ./tf init
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          PG_CONN_TYPE: Transaction-Pooler # GitHub Actions doesn't support IPv6
 
       - name: Terraform Validate
         run: terraform validate -no-color

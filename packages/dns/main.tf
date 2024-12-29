@@ -1,4 +1,11 @@
 terraform {
+  # Sync state to a Supabase PostgreSQL database
+  # See https://developer.hashicorp.com/terraform/language/backend/pg
+  # Relies on `PG*` environment variables for authentication. See .env.tpl.
+  backend "pg" {
+    schema_name = "terraform_remote_state"
+  }
+
   required_providers {
     dnsimple = {
       source  = "dnsimple/dnsimple"

@@ -1,6 +1,18 @@
 # @pickmyfruit/env
 
-Exports an environment object with a validated schema.
+This package handles environment variables (including secrets) for the
+various environments. Some example use-cases:
+
+- A developer wants to get going quickly and pulls the default environment
+  variables from 1Password.
+- A developer wants to override specific environment variables for their
+  local development environment.
+- GitHub Actions don't support IPv6, so that environment needs a different
+  Postgres connection URL.
+
+## From TypeScript
+
+`@pickmyfruit/env` exports an environment object with a validated schema.
 
 Loads environment variables from the following sources, in order:
 

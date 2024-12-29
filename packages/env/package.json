@@ -17,7 +17,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
-    "pull": ": ${NODE_ENV:=development} && op inject -i .env.tpl -o .env.${NODE_ENV}",
+    "pull": "op inject -i .env.tpl -o .env.${NODE_ENV:-development}",
     "bootstrap": "for file in .env.*.sample; do cp -n \"$file\" \"${file%.sample}\" && echo \"${file%.sample}: copied\" || echo \"${file%.sample}: exists\"; done"
   }
 }

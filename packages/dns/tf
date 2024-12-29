@@ -1,0 +1,30 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# Script to pass arguments to terraform with environment variables from .env.tpl
+
+# Get the file's path
+# See https://stackoverflow.com/questions/4774054/reliable-way-for-a-bash-script-to-get-the-full-path-to-itself
+PACKAGE_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+
+# Check if any arguments are provided
+if [ "$#" -eq 0 ]; then
+  echo "No arguments provided. Usage: $0 <terraform-arguments>"
+  exit 1
+fi
+
+if [ ! -f "$PACKAGE_PATH/.env" ]; then
+  op inject -i "$PACKAGE_PATH/.env.tpl" -o "$PACKAGE_PATH/.env"
+  echo "✅ Wrote $PACKAGE_PATH/.env"
+fi
+
+# Export all variables from the file
+# See https://stackoverflow.com/questions/44364059/xargs-with-export-is-not-working
+set -o allexport
+. "$PACKAGE_PATH/.env"
+set +o allexport
+
+
+# Pass all arguments to the terraform command
+terraform $@
