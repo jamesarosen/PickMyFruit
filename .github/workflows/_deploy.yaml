@@ -12,9 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
+      - uses: ./.github/actions/pull-env
+        with:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
       - run: flyctl deploy --remote-only --config apps/www/fly.toml --dockerfile apps/www/Dockerfile
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
   dns:
     name: DNS
@@ -26,11 +27,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set Environment Variables
-        run: |
-          echo "TF_VAR_dnsimple_account=${{ secrets.DNSIMPLE_ACCOUNT }}" >> $GITHUB_ENV
-          echo "TF_VAR_dnsimple_token=${{ secrets.DNSIMPLE_TOKEN }}" >> $GITHUB_ENV
-          echo "TF_VAR_dnsimple_zone=${{ secrets.DNSIMPLE_ZONE }}" >> $GITHUB_ENV
+      - uses: ./.github/actions/pull-env
+        with:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - uses: hashicorp/setup-terraform@v3
 

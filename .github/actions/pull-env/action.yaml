@@ -1,0 +1,23 @@
+name: Pull Env
+description: Pull environment variables from 1Password into $GITHUB_ENV
+# Schema: https://json.schemastore.org/github-action.json
+
+inputs:
+  OP_SERVICE_ACCOUNT_TOKEN:
+    description: '1Password Service Account Token'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install 1Password CLI
+      uses: 1password/install-cli-action@v1
+      if: ${{ env.OP_ENV_LOADED != 'TRUE' }}
+
+    - name: Load Environment Variables
+      shell: bash
+      run: |
+        echo "NODE_ENV=production" >> $GITHUB_ENV;
+        OP_SERVICE_ACCOUNT_TOKEN=${{ inputs.OP_SERVICE_ACCOUNT_TOKEN }} op inject -i packages/env/.env.tpl | egrep -v '^#|^$' >> $GITHUB_ENV;
+        echo "OP_ENV_LOADED=TRUE" >> $GITHUB_ENV;
+      if: ${{ env.OP_ENV_LOADED != 'TRUE' }}
