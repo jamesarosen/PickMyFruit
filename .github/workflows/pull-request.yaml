@@ -6,7 +6,9 @@ on:
 jobs:
   lint:
     uses: ./.github/workflows/_lint.yaml
+    secrets: inherit
 
   build:
     uses: ./.github/workflows/_build.yaml
     needs: lint
+    secrets: inherit
