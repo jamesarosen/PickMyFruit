@@ -11,11 +11,15 @@ jobs:
     concurrency: deploy-group # optional: ensure only one action runs at a time
     steps:
       - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - uses: ./.github/actions/pull-env
-        with:
+      - name: Install 1Password CLI
+        uses: 1password/install-cli-action@v1
+      - name: Install Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: |
+          FLY_API_TOKEN=`op read 'op://PickMyFruit/Fly.io/Deploy Token'` \
+          flyctl deploy --remote-only --config apps/www/fly.toml --dockerfile apps/www/Dockerfile
+        env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-      - run: flyctl deploy --remote-only --config apps/www/fly.toml --dockerfile apps/www/Dockerfile
 
   dns:
     name: DNS
@@ -27,11 +31,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: ./.github/actions/pull-env
-        with:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+      - name: Install 1Password CLI
+        uses: 1password/install-cli-action@v1
 
       - uses: hashicorp/setup-terraform@v3
+
+      - name: Set Terraform Variables
+        run: op inject -i terraform.tfvars.tpl -o terraform.tfvars
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: Terraform Init
         run: terraform init
@@ -39,4 +47,4 @@ jobs:
       # TODO: store the plan in the pull request and reuse the plan here
       # to ensure we're deploying exactly what was approved
       - name: Terraform Apply
-        run: terraform apply -no-color -auto-approve -backup=- -input=false
+        run: terraform apply -no-color -auto-approve -backup=- -input=false -var-file="terraform.tfvars"

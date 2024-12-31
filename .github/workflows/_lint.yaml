@@ -40,10 +40,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: ./.github/actions/pull-env
-        with:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-
       - uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Format
