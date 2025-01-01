@@ -3,9 +3,7 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "env:pull": "op inject -i terraform.tfvars.tpl -o terraform.tfvars",
-    "deploy": "terraform apply -var-file=\"terraform.tfvars\"",
-    "plan": "terraform plan",
-    "terraform": "terraform"
+    "deploy": "./tf apply",
+    "plan": "./tf plan"
   }
 }

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main # continuous deployment on merge to main
+
 jobs:
   lint:
     uses: ./.github/workflows/_lint.yaml
