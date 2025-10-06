@@ -1,0 +1,59 @@
+# Project: Pick My Fruit
+
+## Project Description
+A site for gardeners to share surplus produce with their community.
+
+## Tech Stack
+- Frontend: Astro, TypeScript
+- Backend: Astro, TypeScript
+- Database: SQLite, AstroDB, Drizzle ORM
+- Testing: Vitest
+- Authentication: Better Auth
+- Deployed environment: Fly.io, via Docker
+
+## Code Conventions
+- Prettier for formatting
+- ESLint for linting
+- 1-tab indentation
+- camelCase for variables and functions
+- PascalCase for components and classes
+- Use semantic names for variables and functions to document what they do. Use comments to document why, especially for non-intuitive or unusual code.
+
+## Project Structure
+
+We use a monorepo structure
+
+- /apps/www - an Astro application
+	- /src
+		- /assets - images and other assets transformed by Astro
+		- /components - Reusable components and their related CSS
+		- /data - SQL schema, SQL queries, and TypeScript wrappers
+		- /layouts - layout components and their related CSS
+		- /lib - Utility functions
+		- /middleware - aspect-oriented code that runs on every request
+		- /pages - Page components and their related CSS
+	- /public - Static assets, not transformed by Astro
+	- /tests - Test files
+- /packages/ - libraries extracted for reuse across applications
+
+## Goals
+- 30 days (2025-11-04): MVP with 10 beta users in one city. Manual matching OK. 3 successful fruit transfers.
+- 60 days (2025-12-04): Add gleaning group support. Partner with 1-2 food banks/orgs. 20 total rescues.
+- 90 days (2026-01-03): Automation complete. One week of transfers without founder intervention.
+- 180 days (2026-04-03): Expand to 2-3 cities. 100 total rescues. Identify strongest user segment.
+- 365 days (2026-10-05): Revenue model identified. 500+ rescues. <2 hrs/week maintenance required.
+
+## Important Notes
+- Validate input at system boundaries with Zod
+- HTML: write semantically-meaningful and accessible markup
+- Styling: Do not use Tailwind. Use CSS layers and variables. Keep CSS near the relevant markup
+- Use Astro DB for the data layer
+- Use the ORM for simple operations; use SQL and prepared statements for complex ones
+- Use Astro Actions for form submissions
+- Use Astro Web Components for reusable, isolated components
+
+## Known Issues
+(none yet)
+
+## Future Plans
+(none yet)
