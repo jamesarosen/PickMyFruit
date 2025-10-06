@@ -1,0 +1,16 @@
+{
+	"semi": false,
+	"singleQuote": true,
+	"tabWidth": 1,
+	"useTabs": true,
+	"trailingComma": "es5",
+	"plugins": ["prettier-plugin-astro"],
+	"overrides": [
+		{
+			"files": "*.astro",
+			"options": {
+				"parser": "astro"
+			}
+		}
+	]
+}
