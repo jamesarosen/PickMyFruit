@@ -1,0 +1,230 @@
+/**
+ * Pick My Fruit CSS Starter
+ * Synthesized from Comeau, Coyier, and Piccalilli modern reset approaches
+ * @see https://www.joshwcomeau.com/css/custom-css-reset/
+ * @see https://frontendmasters.com/blog/the-coyier-css-starter/
+ * @see https://piccalil.li/blog/a-more-modern-css-reset/
+ * @see https://piccalil.li/links/the-coyier-css-starter/
+ * @see https://github.com/jensimmons/cssremedy
+ * @see https://www.ellyloel.com/modern-css-reset/
+ * @see https://github.com/mayank99/reset.css
+ */
+
+@layer base components page utilities;
+
+@layer base {
+	/* Use border-box everywhere to make sizing predictable and intuitive */
+	*,
+	*::before,
+	*::after {
+		box-sizing: border-box;
+	}
+
+	/**
+	 * In general, elements should be in charge of their internal spacing.
+	 * @see [Full Stack Radio ep. 134: Mark Dalgleish - You Should Be Using Layout Components](https://fullstackradio.com/134)
+	 */
+	* {
+		margin: 0;
+	}
+
+	html {
+		/* Prevent font inflation, esp on orientation change */
+		-moz-text-size-adjust: none;
+		-webkit-text-size-adjust: none;
+		text-size-adjust: none;
+
+		color-scheme: light dark;
+		font-family: system-ui, sans-serif;
+		font-size: clamp(1rem, 1rem + 0.5vw, 2rem);
+		hanging-punctuation: first allow-end last;
+		line-height: calc(0.25rem + 1em + 0.25rem);
+		tab-size: 4;
+		word-break: break-word;
+	}
+
+	@media (width < 500px) {
+		html {
+			tab-size: 2;
+		}
+	}
+
+	/* Set core body defaults for readable, accessible content */
+	body {
+		min-height: 100vh;
+		line-height: 1.5; /* Better readability than browser default of ~1.2 */
+		-webkit-font-smoothing: antialiased; /* Smoother font rendering on Mac */
+	}
+
+	/* Make images, videos, and other media responsive by default */
+	img,
+	picture,
+	video,
+	canvas,
+	svg {
+		display: block; /* Removes weird inline spacing issues */
+		max-width: 100%; /* Prevents overflow on small screens */
+	}
+
+	input,
+	button,
+	textarea,
+	select {
+		font: inherit;
+		color: inherit;
+	}
+
+	button {
+		border: 1px solid currentColor;
+		background: none;
+		padding: 0;
+		cursor: pointer;
+	}
+
+	h1, h2, h3, h4,
+	button, input, label {
+		line-height: 1.1;
+	}
+
+	p,
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		overflow-wrap: break-word;
+	}
+
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		text-wrap: balance; /* Better multi-line heading distribution */
+	}
+
+	h1,
+	h2 {
+		font-weight: 900;
+	}
+
+	h3,
+	h4 {
+		font-weight: 700;
+	}
+
+	h5,
+	h6 {
+		font-weight: 400;
+	}
+
+	/* Improve paragraph readability with balanced text wrapping */
+	dd,
+	li,
+	p {
+		text-wrap: pretty;
+		max-inline-size: 88ch;
+	}
+
+	ul[role='list'],
+	ol[role='list'] {
+		padding-inline-start: 0;
+		list-style-position: outside;
+	}
+
+	/* Improve table appearance and spacing */
+	table {
+		border-collapse: collapse;
+		border-spacing: 0;
+		border: 1px solid currentColor;
+	}
+	th, td {
+		padding: 0.25rem 0.5rem;
+	}
+
+	/* Ensure consistent anchor styling. Keep the link the same color as the
+	 * surrounding text and use a contrasting color for the underline. */
+	a {
+		--color-highlight: oklch(from currentColor l c h + 120);
+		color: currentColor;
+		text-decoration-color: var(--color-highlight);
+		text-decoration-skip-ink: auto;
+	}
+
+	/* Prevent textarea resize beyond container */
+	textarea {
+		resize: vertical;
+	}
+
+	/* Respect user motion preferences for accessibility */
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.01ms !important;
+			scroll-behavior: auto !important;
+		}
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		html {
+			interpolate-size: allow-keywords;
+			&:focus-within {
+				scroll-behavior: smooth;
+			}
+		}
+	}
+
+	/* Improve focus visibility for keyboard navigation */
+	:focus-visible {
+		outline: 2px solid currentColor;
+		outline-offset: 2px;
+	}
+
+	/* Remove focus outline for mouse users while preserving for keyboard */
+	:focus:not(:focus-visible) {
+		outline: none;
+	}
+
+	/* Ensure fieldset and legend have sensible defaults */
+	fieldset {
+		border: none;
+		padding: 0;
+	}
+
+	legend {
+		padding: 0;
+	}
+
+	/* Ensure abbreviations are styled consistently */
+	abbr[title] {
+		text-decoration: underline dotted;
+	}
+
+	/* Make sure hidden elements are actually hidden */
+	[hidden] {
+		display: none !important;
+	}
+
+	/* Improve code and pre readability */
+	code,
+	kbd,
+	samp,
+	pre {
+		font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+	}
+
+	pre {
+		overflow: auto; /* Prevent horizontal overflow */
+		max-width: 100%;
+	}
+
+	/* Remove default dialog backdrop */
+	dialog::backdrop {
+		background: var(--color-backdrop, rgba(0, 0, 0, 0.5));
+	}
+}
