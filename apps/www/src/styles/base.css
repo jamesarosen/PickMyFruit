@@ -10,7 +10,7 @@
  * @see https://github.com/mayank99/reset.css
  */
 
-@layer base components page utilities;
+@layer base, components, page, utilities;
 
 @layer base {
 	/* Use border-box everywhere to make sizing predictable and intuitive */
@@ -81,8 +81,13 @@
 		cursor: pointer;
 	}
 
-	h1, h2, h3, h4,
-	button, input, label {
+	h1,
+	h2,
+	h3,
+	h4,
+	button,
+	input,
+	label {
 		line-height: 1.1;
 	}
 
@@ -140,7 +145,8 @@
 		border-spacing: 0;
 		border: 1px solid currentColor;
 	}
-	th, td {
+	th,
+	td {
 		padding: 0.25rem 0.5rem;
 	}
 
@@ -215,7 +221,9 @@
 	kbd,
 	samp,
 	pre {
-		font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+		font-family:
+			ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas,
+			'DejaVu Sans Mono', monospace;
 	}
 
 	pre {
