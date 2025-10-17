@@ -1,0 +1,54 @@
+@layer base {
+	:root {
+		/**
+		 * Named colors
+		 */
+		--color-sunset-coral: #ff6b5a;
+		--color-fresh-green: #10b981;
+		--color-golden-light: #d38f0f;
+		--color-morning-cream: #fffcf5;
+		--color-warm-charcoal: #2d2d2a;
+		--color-medium-slate: #6b7280;
+
+		/**
+		 * Semantic colors, base theme
+		 */
+		--color-primary: light-dark(
+			var(--color-sunset-coral),
+			oklch(from var(--color-sunset-coral) 0.65 c h)
+		);
+		--color-secondary: light-dark(
+			var(--color-fresh-green),
+			oklch(from var(--color-fresh-green) calc(l + 0.02) c h)
+		);
+		--color-accent: light-dark(
+			var(--color-golden-light),
+			oklch(from var(--color-golden-light) 0.83 c h)
+		);
+		--color-background: light-dark(
+			var(--color-morning-cream),
+			oklch(from var(--color-warm-charcoal) 0.19 c h)
+		);
+		--color-foreground: light-dark(
+			var(--color-warm-charcoal),
+			var(--color-morning-cream)
+		);
+		--color-quiet: light-dark(
+			var(--color-medium-slate),
+			oklch(from var(--color-medium-slate) 0.75 c h)
+		);
+		--color-border: currentColor;
+	}
+}
+
+@layer utilities {
+	.text-primary {
+		color: var(--color-primary);
+	}
+	.text-secondary {
+		color: var(--color-secondary);
+	}
+	.text-accent {
+		color: var(--color-accent);
+	}
+}

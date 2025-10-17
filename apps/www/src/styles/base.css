@@ -34,6 +34,9 @@
 		-webkit-text-size-adjust: none;
 		text-size-adjust: none;
 
+		background-color: var(--color-background);
+		border-color: var(--color-border);
+		color: var(--color-foreground);
 		color-scheme: light dark;
 		font-family: system-ui, sans-serif;
 		font-size: clamp(1rem, 1rem + 0.5vw, 2rem);
@@ -153,9 +156,8 @@
 	/* Ensure consistent anchor styling. Keep the link the same color as the
 	 * surrounding text and use a contrasting color for the underline. */
 	a {
-		--color-highlight: oklch(from currentColor l c h + 120);
-		color: currentColor;
-		text-decoration-color: var(--color-highlight);
+		color: var(--color-secondary);
+		text-decoration-color: currentColor;
 		text-decoration-skip-ink: auto;
 	}
 
@@ -187,7 +189,7 @@
 
 	/* Improve focus visibility for keyboard navigation */
 	:focus-visible {
-		outline: 2px solid currentColor;
+		outline: 2px solid var(--color-accent);
 		outline-offset: 2px;
 	}
 

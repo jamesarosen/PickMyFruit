@@ -2,9 +2,9 @@
 import Layout from '@/components/Layout.astro'
 ---
 
-<Layout title="CSS Reset Test">
+<Layout title="CSS Demo">
 	<main>
-		<h1>Pick My Fruit CSS Reset Test Document</h1>
+		<h1>Pick My Fruit CSS Test Document</h1>
 
 		<p>
 			This document exists to test the Pick My Fruit CSS. Eventually, this should
@@ -194,6 +194,14 @@ import Layout from '@/components/Layout.astro'
 		</dialog>
 
 		<button id="open-dialog">Open Dialog (Test backdrop)</button>
+
+		<section>
+			This section uses the default theme. The
+			<code class="text-primary">.text-primary</code>,
+			<code class="text-secondary">.text-secondary</code>, and
+			<code class="text-accent">.text-accent</code> utility classes change text color.
+			It also supports dark mode.
+		</section>
 	</main>
 </Layout>
 <style>
@@ -204,6 +212,12 @@ import Layout from '@/components/Layout.astro'
 		margin: auto;
 		max-inline-size: 90ch;
 		padding: 2rem;
+	}
+
+	.card {
+		border: 1px solid var(--color-border);
+		border-radius: 0.5rem;
+		padding: 1rem;
 	}
 </style>
 <script>
