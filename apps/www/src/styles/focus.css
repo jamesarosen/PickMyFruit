@@ -1,0 +1,39 @@
+@layer base {
+	:where(
+		a,
+		button,
+		input,
+		textarea,
+		select,
+		details,
+		audio,
+		video,
+		object,
+		[contenteditable],
+		[tabindex]
+	) {
+		border-radius: 4px;
+	}
+
+	/**
+	* Focus ring styles
+	* This adds a multi-layer focus ring, which helps ensure that all interactive
+	* elements have a contrasting focus ring, regardless of their background or
+	* foreground colors.
+	* @see https://piccalil.li/blog/taking-a-shot-at-the-double-focus-ring-problem-using-modern-css/
+	*/
+	:focus-visible {
+		--_focus-ring-width: 2px;
+		--_focus-ring-color-1: var(--color-background);
+		--_focus-ring-color-2: var(--color-accent);
+		--_focus-ring-color-3: var(--color-background);
+		--_focus-ring-color-4: var(--color-foreground);
+
+		box-shadow:
+			0 0 0 var(--_focus-ring-width) var(--_focus-ring-color-1),
+			0 0 0 calc(var(--_focus-ring-width) * 2) var(--_focus-ring-color-2),
+			0 0 0 calc(var(--_focus-ring-width) * 3) var(--_focus-ring-color-3),
+			0 0 0 calc(var(--_focus-ring-width) * 4) var(--_focus-ring-color-4);
+		outline: none;
+	}
+}
