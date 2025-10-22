@@ -12,6 +12,13 @@
 
 @layer base, components, page, utilities;
 
+@font-face {
+	font-family: 'Outfit';
+	src: url('/Outfit/Outfit-Variable.ttf') format('truetype-variations');
+	font-weight: 100 900;
+	font-display: swap;
+}
+
 @layer base {
 	/* Use border-box everywhere to make sizing predictable and intuitive */
 	*,
@@ -38,7 +45,7 @@
 		border-color: var(--color-border);
 		color: var(--color-foreground);
 		color-scheme: light dark;
-		font-family: system-ui, sans-serif;
+		font-family: Outfit, Avenir, Montserrat, Inter, system-ui, sans-serif;
 		font-size: clamp(1rem, 1rem + 0.5vw, 2rem);
 		hanging-punctuation: first allow-end last;
 		line-height: calc(0.25rem + 1em + 0.25rem);
@@ -115,12 +122,14 @@
 
 	h1,
 	h2 {
-		font-weight: 900;
+		font-weight: 750;
+		letter-spacing: -0.01ch;
 	}
 
 	h3,
 	h4 {
-		font-weight: 700;
+		font-weight: 630;
+		letter-spacing: -0.01ch;
 	}
 
 	h5,
