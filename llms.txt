@@ -10,7 +10,7 @@ A site for gardeners to share surplus produce with their community.
 ### Currently Implemented
 - **Frontend**: Astro 5.14.7, TypeScript (strict mode)
 - **Styling**: Custom CSS with layers, variables, modern features (no Tailwind)
-- **Package Manager**: pnpm 9.4.0 with workspaces
+- **Package Manager**: pnpm 10.22.0 with workspaces
 - **Node**: v24.9.0 (required, enforced via .npmrc)
 - **Code Quality**: ESLint 9.x (flat config), Prettier
 - **CI/CD**: GitHub Actions (test, lint, build)
@@ -27,7 +27,7 @@ A site for gardeners to share surplus produce with their community.
 ### Initial Setup
 ```bash
 # Install pnpm if needed (use correct version from package.json)
-npm install -g pnpm@9.4.0
+npm install -g pnpm@10.22.0
 
 # Install dependencies (uses Node 24.9.0 automatically)
 pnpm install
@@ -206,7 +206,7 @@ CI will run these checks on all pushes via GitHub Actions.
 - **Triggers**: All branch pushes
 - **Steps**:
   1. Checkout code
-  2. Setup pnpm 9.4.0
+  2. Setup pnpm 10.22.0
   3. Setup Node.js 20 (CI uses 20, project uses 24.9.0 locally)
   4. Install dependencies
   5. Format check
@@ -219,7 +219,7 @@ CI will run these checks on all pushes via GitHub Actions.
 
 ### Required Versions
 - **Node**: 24.9.0 (enforced by .npmrc)
-- **pnpm**: 9.4.0 (defined in package.json)
+- **pnpm**: 10.22.0 (defined in package.json)
 
 ### Editor Setup
 - **VSCode**: Extension recommendations in `.vscode/extensions.json`
@@ -233,6 +233,14 @@ Settings for all editors (`.editorconfig`):
 - Line ending: LF
 - Charset: UTF-8
 - Trim trailing whitespace
+
+### Security Policy
+**Package Age Restriction**: Configured in `.npmrc` via `minimum-release-age=7`
+- Packages must be at least 7 days old before installation
+- Protects against supply chain attacks from newly published malicious packages
+- Built-in pnpm feature (requires pnpm ≥10.16.0)
+- If urgent dependency update needed, temporarily adjust the value in `.npmrc`
+- See: https://pnpm.io/npmrc#minimum-release-age
 
 ## Goals & Milestones
 
