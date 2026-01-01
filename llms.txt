@@ -3,293 +3,56 @@
 ## Project Description
 A site for gardeners to share surplus produce with their community.
 
-**Current Status**: Early development phase - building foundation with core infrastructure, CSS system, and tooling.
-
 ## Tech Stack
-
-### Currently Implemented
-- **Frontend**: Astro 5.14.7, TypeScript (strict mode)
-- **Styling**: Custom CSS with layers, variables, modern features (no Tailwind)
-- **Package Manager**: pnpm 10.22.0 with workspaces
-- **Node**: v24.9.0 (required, enforced via .npmrc)
-- **Code Quality**: ESLint 9.x (flat config), Prettier
-- **CI/CD**: GitHub Actions (test, lint, build)
-
-### Planned (Not Yet Implemented)
-- **Backend**: Astro with server-side rendering
-- **Database**: SQLite, AstroDB, Drizzle ORM
-- **Testing**: Vitest
-- **Authentication**: Better Auth
-- **Deployment**: Fly.io via Docker
-
-## Development Workflow
-
-### Initial Setup
-```bash
-# Install pnpm if needed (use correct version from package.json)
-npm install -g pnpm@10.22.0
-
-# Install dependencies (uses Node 24.9.0 automatically)
-pnpm install
-
-# Start development server
-cd apps/www
-pnpm dev
-```
-
-### Available Commands
-
-**Root workspace** (`/`):
-- `pnpm build` - Build all apps/packages
-- `pnpm format` - Format code with Prettier
-- `pnpm format:check` - Check formatting
-- `pnpm lint` - Lint with ESLint
-- `pnpm lint:fix` - Fix linting issues
-- `pnpm typecheck` - Type check with TypeScript
-
-**www app** (`/apps/www`):
-- `pnpm dev` - Start dev server (usually port 4321)
-- `pnpm build` - Build for production
-- `pnpm preview` - Preview production build
-- `pnpm astro` - Run Astro CLI commands
-
-### Before Committing
-Always run these commands from the root:
-```bash
-pnpm format
-pnpm lint
-pnpm typecheck
-pnpm build
-```
-
-CI will run these checks on all pushes via GitHub Actions.
+- Frontend: Solid JS, TanStack Router, TypeScript
+- Build Tool: Vite
+- Database: SQLite, Drizzle ORM
+- Testing: Vitest
+- Authentication: Better Auth
+- Deployed environment: Fly.io, via Docker
 
 ## Code Conventions
-
-### General
-- **Formatting**: Prettier (configured in apps/www/.prettierrc)
-- **Linting**: ESLint 9.x flat config (apps/www/eslint.config.js)
-- **Indentation**: 1 tab (not spaces)
-- **Line Endings**: LF (Unix-style)
-- **Quotes**: Single quotes
-- **Semicolons**: No semicolons
-
-### Naming
-- `camelCase` for variables and functions
-- `PascalCase` for components and classes
-- Use semantic names for variables/functions to document **what** they do
-- Use comments to document **why**, especially for non-intuitive or unusual code
-
-### TypeScript
-- **Strict mode** enabled
-- **Path aliases**: `@/*` maps to `src/*`
-- Use explicit types for function parameters and return values
-- Validate input at system boundaries with Zod (when implemented)
+- Prettier for formatting
+- ESLint for linting
+- 1-tab indentation
+- camelCase for variables and functions
+- PascalCase for components and classes
+- Use semantic names for variables and functions to document what they do. Use comments to document why, especially for non-intuitive or unusual code.
 
 ## Project Structure
 
-### Monorepo Layout
-```
-/
-├── apps/
-│   └── www/                    # Main Astro application
-├── packages/                   # (planned) Shared libraries
-├── docs/                       # Project documentation
-├── .github/workflows/          # GitHub Actions CI/CD
-└── pnpm-workspace.yaml         # Workspace configuration
-```
+We use a monorepo structure
 
-### www App Structure (`/apps/www`)
+- /apps/www - a Solid JS + TanStack Router application
+	- /src
+		- /assets - images and other assets transformed by Vite
+		- /components - Reusable Solid JS components and their related CSS
+		- /routes - Page components (TanStack Router file-based routing) and their related CSS
+		- /data - SQL schema, SQL queries, and TypeScript wrappers
+		- /lib - Utility functions
+		- /styles - Global styles and CSS
+	- /public - Static assets, not transformed by Vite
+	- /tests - Test files
+- /packages/ - libraries extracted for reuse across applications
 
-**Currently Implemented**:
-```
-/apps/www/
-├── src/
-│   ├── components/             # Reusable components with co-located CSS
-│   │   └── Layout.astro       # Base layout (imports global styles)
-│   ├── pages/                 # Page components with co-located CSS
-│   │   ├── index.astro        # Homepage
-│   │   └── css-test.astro     # CSS testing/reference page
-│   └── styles/                # Global styles only
-│       ├── base.css           # CSS reset, typography, base elements
-│       ├── colors.css         # Color palette & semantic colors
-│       ├── focus.css          # Multi-layer focus ring system
-│       └── README.md          # Style organization guidelines
-├── public/                    # Static assets (not transformed)
-│   ├── Outfit/                # Outfit variable font files
-│   └── favicon.svg            # Favicon with dark mode support
-└── .vscode/                   # VSCode config (Astro extension, debug)
-```
+## Goals
+- 30 days (2025-11-04): MVP with 10 beta users in one city. Manual matching OK. 3 successful fruit transfers.
+- 60 days (2025-12-04): Add gleaning group support. Partner with 1-2 food banks/orgs. 20 total rescues.
+- 90 days (2026-01-03): Automation complete. One week of transfers without founder intervention.
+- 180 days (2026-04-03): Expand to 2-3 cities. 100 total rescues. Identify strongest user segment.
+- 365 days (2026-10-05): Revenue model identified. 500+ rescues. <2 hrs/week maintenance required.
 
-**Planned Directories** (not yet created):
-```
-/apps/www/
-├── src/
-│   ├── assets/                # Images/assets transformed by Astro
-│   ├── data/                  # SQL schema, queries, TypeScript wrappers
-│   ├── layouts/               # Layout components (beyond Layout.astro)
-│   ├── lib/                   # Utility functions
-│   └── middleware/            # Request middleware (auth, etc.)
-└── tests/                     # Vitest test files
-```
-
-## Styling & CSS Architecture
-
-### Philosophy
-- **NO Tailwind** - We use custom CSS for better control and learning
-- **Keep CSS near markup** - Component/page styles live next to their components/pages
-- **Global styles** live in `src/styles/` only
-- **CSS Layers** for proper cascade control
-- **Modern CSS** features (custom properties, light-dark(), clamp(), etc.)
-
-### CSS Layers (in order)
-1. `base` - Resets, element defaults, typography
-2. `components` - Component-specific styles
-3. `page` - Page-specific styles
-4. `utilities` - Utility classes
-
-### Current Global Styles
-
-**base.css** (`src/styles/base.css`):
-- Comprehensive CSS reset (synthesized from multiple sources)
-- Outfit variable font setup
-- Responsive typography using `clamp()` for fluid scaling
-- Accessibility features (reduced motion, focus-visible)
-- Dark mode support via `color-scheme: light dark`
-
-**colors.css** (`src/styles/colors.css`):
-- Named palette: sunset-coral, fresh-green, golden-light, morning-cream, warm-charcoal, medium-slate
-- Semantic variables using `light-dark()` function
-- OKLCH color manipulation for theme variants
-- Utility classes for text colors (`.text-coral`, `.text-green`, etc.)
-
-**focus.css** (`src/styles/focus.css`):
-- Multi-layer focus ring system (4-layer shadow approach)
-- Ensures contrast regardless of background/foreground colors
-- Accessibility-first design
-
-### Adding New Styles
-- **Component styles**: Create `.css` file next to component in `src/components/`
-- **Page styles**: Create `.css` file next to page in `src/pages/`
-- **Global styles**: Only for truly global things in `src/styles/`
-- Import component/page CSS in the component/page file itself
-- Import global CSS in `Layout.astro`
-
-### Accessibility Requirements
-- Write semantic HTML (proper headings, landmarks, form labels)
-- Use focus states (already configured globally)
-- Respect `prefers-reduced-motion`
-- Support both light and dark color schemes
-- Test with keyboard navigation
-
-## Astro Conventions
-
-### Component Types
-- **`.astro` components**: For most components (can include CSS in `<style>` or import)
-- **Web Components**: For reusable, isolated components with encapsulated behavior (planned)
-
-### Data Patterns (when implemented)
-- **Astro Actions**: For form submissions and mutations
-- **Astro DB**: For data layer
-- **Drizzle ORM**: For simple operations
-- **SQL + prepared statements**: For complex queries
-
-### File Organization
-- **Pages**: File-based routing in `src/pages/`
-- **API routes**: Will go in `src/pages/api/` (when needed)
-- **Middleware**: Will go in `src/middleware/` (when needed)
-
-## CI/CD
-
-### GitHub Actions
-**Workflow**: `.github/workflows/deploy.yml`
-- **Triggers**: All branch pushes
-- **Steps**:
-  1. Checkout code
-  2. Setup pnpm 10.22.0
-  3. Setup Node.js 20 (CI uses 20, project uses 24.9.0 locally)
-  4. Install dependencies
-  5. Format check
-  6. Lint
-  7. Build
-
-**No deployment yet** - just validation/building
-
-## Environment & Tooling
-
-### Required Versions
-- **Node**: 24.9.0 (enforced by .npmrc)
-- **pnpm**: 10.22.0 (defined in package.json)
-
-### Editor Setup
-- **VSCode**: Extension recommendations in `.vscode/extensions.json`
-  - Astro language support
-- **Debug config**: `.vscode/launch.json` for debugging `astro dev`
-
-### EditorConfig
-Settings for all editors (`.editorconfig`):
-- Tab size: 2 spaces for display
-- Indent style: tabs
-- Line ending: LF
-- Charset: UTF-8
-- Trim trailing whitespace
-
-### Security Policy
-**Package Age Restriction**: Configured in `.npmrc` via `minimum-release-age=7`
-- Packages must be at least 7 days old before installation
-- Protects against supply chain attacks from newly published malicious packages
-- Built-in pnpm feature (requires pnpm ≥10.16.0)
-- If urgent dependency update needed, temporarily adjust the value in `.npmrc`
-- See: https://pnpm.io/npmrc#minimum-release-age
-
-## Goals & Milestones
-
-- **30 days** (2025-11-04): MVP with 10 beta users in one city. Manual matching OK. 3 successful fruit transfers.
-- **60 days** (2025-12-04): Add gleaning group support. Partner with 1-2 food banks/orgs. 20 total rescues.
-- **90 days** (2026-01-03): Automation complete. One week of transfers without founder intervention.
-- **180 days** (2026-04-03): Expand to 2-3 cities. 100 total rescues. Identify strongest user segment.
-- **365 days** (2026-10-05): Revenue model identified. 500+ rescues. <2 hrs/week maintenance required.
-
-## Important Guidelines for AI Assistants
-
-### When Adding Features
-1. **Check existing patterns** before creating new ones
-2. **Follow the CSS architecture** - use layers, keep styles near markup
-3. **Write semantic HTML** - accessibility is critical
-4. **Use TypeScript strictly** - explicit types, no `any`
-5. **Validate inputs** with Zod at system boundaries (when Zod is added)
-6. **Test your changes** - run format, lint, typecheck, build
-7. **Create component CSS files** next to components, not in global styles
-
-### When Working with Styles
-- **DO NOT** add Tailwind or similar utility CSS frameworks
-- **DO** use CSS custom properties for theming
-- **DO** use CSS layers for cascade control
-- **DO** use modern CSS features (light-dark, clamp, etc.)
-- **DO** consider both light and dark modes
-- **DO** ensure sufficient color contrast (WCAG AA minimum)
-
-### When Creating Components
-- **Prefer** editing existing components over creating new ones
-- **Co-locate** CSS with components (or use `<style>` blocks)
-- **Use** semantic HTML elements
-- **Include** ARIA attributes when needed
-- **Consider** keyboard navigation and focus management
-
-### When Working with Data (future)
-- **Validate** all user input with Zod schemas
-- **Use** Astro Actions for mutations
-- **Use** Drizzle ORM for simple queries
-- **Write** SQL with prepared statements for complex queries
-- **Keep** schema in `src/data/schema/`
-- **Keep** queries in `src/data/queries/`
+## Important Notes
+- Validate input at system boundaries with Zod
+- HTML: write semantically-meaningful and accessible markup
+- Styling: Do not use Tailwind. Use CSS layers and variables. Keep CSS near the relevant components
+- Use SQLite for the data layer
+- Use the ORM for simple operations; use SQL and prepared statements for complex ones
+- Use Solid JS for reactive UI components
+- Routes are defined using TanStack Router's file-based routing
 
 ## Known Issues
 (none yet)
 
 ## Future Plans
-- Set up Vitest testing infrastructure
-- Implement database schema with AstroDB and Drizzle
-- Add Better Auth authentication system
-- Create Docker deployment configuration
-- Set up Fly.io deployment pipeline
+(none yet)
