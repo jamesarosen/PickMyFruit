@@ -1,0 +1,16 @@
+@layer page {
+	main {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		margin: auto;
+		max-inline-size: 90ch;
+		padding: 2rem;
+	}
+
+	.card {
+		border: 1px solid var(--color-border);
+		border-radius: 0.5rem;
+		padding: 1rem;
+	}
+}
