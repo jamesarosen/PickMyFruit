@@ -1,43 +1,43 @@
-# Astro Starter Kit: Minimal
+# Pick My Fruit - Web Application
 
-```sh
-pnpm create astro@latest -- --template minimal
-```
-
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+This is the main web application for Pick My Fruit, built with Solid JS and TanStack Router.
 
 ## 🚀 Project Structure
 
-Inside of your Astro project, you'll see the following folders and files:
-
 ```text
 /
-├── public/
+├── public/          # Static assets (images, fonts, etc.)
 ├── src/
-│   └── pages/
-│       └── index.astro
+│   ├── components/  # Reusable UI components
+│   ├── routes/      # Page components and routing
+│   ├── styles/      # Global styles and CSS
+│   └── main.tsx     # Application entry point
+├── index.html       # HTML entry point
+├── vite.config.ts   # Vite configuration
 └── package.json
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
-
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
+- Routes are defined in `src/routes/` using TanStack Router's file-based routing
+- Components are Solid JS components in `src/components/`
+- Static assets like images can be placed in the `public/` directory
 
 ## 🧞 Commands
 
 All commands are run from the root of the project, from a terminal:
 
-| Command                | Action                                           |
-| :--------------------- | :----------------------------------------------- |
-| `pnpm install`         | Installs dependencies                            |
-| `pnpm dev`             | Starts local dev server at `localhost:4321`      |
-| `pnpm build`           | Build your production site to `./dist/`          |
-| `pnpm preview`         | Preview your build locally, before deploying     |
-| `pnpm astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `pnpm astro -- --help` | Get help using the Astro CLI                     |
+| Command          | Action                                       |
+| :--------------- | :------------------------------------------- |
+| `pnpm install`   | Installs dependencies                        |
+| `pnpm dev`       | Starts local dev server at `localhost:5173`  |
+| `pnpm build`     | Build your production site to `./dist/`      |
+| `pnpm preview`   | Preview your build locally, before deploying |
+| `pnpm lint`      | Run ESLint to check code quality             |
+| `pnpm typecheck` | Run TypeScript compiler to check types       |
+| `pnpm format`    | Format code with Prettier                    |
 
-## 👀 Want to learn more?
+## 🛠️ Tech Stack
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+- [Solid JS](https://www.solidjs.com/) - Reactive UI library
+- [TanStack Router](https://tanstack.com/router) - Type-safe routing
+- [Vite](https://vitejs.dev/) - Build tool and dev server
+- [TypeScript](https://www.typescriptlang.org/) - Type safety

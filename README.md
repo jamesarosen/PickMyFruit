@@ -21,12 +21,13 @@ We may ask for donations or pursue other revenue streams, but only to further th
 
 ## Technology
 
-- [Astro](https://astro.build)
-- [Better Auth](https://www.better-auth.com/)
-- [Fly.io](https://fly.io/)
-- [Docker](https://www.docker.com/)
+- [Solid JS](https://www.solidjs.com/) & [TanStack Router](https://tanstack.com/router) for the frontend
+- [Vite](https://vitejs.dev/) for build tooling
+- [Better Auth](https://www.better-auth.com/) for authentication
+- [Fly.io](https://fly.io/) for hosting
+- [Docker](https://www.docker.com/) for containerization
 - [SQLite](https://sqlite.org/index.html), running on [Turso](https://turso.tech/) in deployed environments
-- [GitHub Actions](https://docs.github.com/en/actions)
+- [GitHub Actions](https://docs.github.com/en/actions) for CI/CD
 
 ## Credits
 

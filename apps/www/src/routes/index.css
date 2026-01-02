@@ -1,0 +1,303 @@
+@layer page {
+	.container {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 0 20px;
+	}
+
+	/* Header */
+	header {
+		padding: 20px 0;
+		background: white;
+	}
+
+	.logo {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 18px;
+		font-weight: 600;
+		color: #333;
+	}
+
+	.logo-icon {
+		font-size: 24px;
+	}
+
+	/* Hero Section */
+	.hero {
+		background: #f8f9fa;
+		padding: 80px 0;
+		text-align: center;
+	}
+
+	.hero h1 {
+		font-size: 48px;
+		font-weight: 700;
+		color: #333;
+		margin: 0 0 24px 0;
+		line-height: 1.2;
+	}
+
+	.hero-subtitle {
+		font-size: 18px;
+		color: #666;
+		margin: 0 0 40px 0;
+		max-width: 500px;
+		margin-left: auto;
+		margin-right: auto;
+		line-height: 1.5;
+	}
+
+	.cta-button {
+		display: inline-block;
+		background: #ee5a52;
+		color: white;
+		padding: 16px 32px;
+		border-radius: 8px;
+		border: none;
+		text-decoration: none;
+		font-weight: 600;
+		font-size: 16px;
+		transition: background-color 0.2s;
+		cursor: pointer;
+	}
+
+	.cta-button:hover {
+		background: #d54940;
+	}
+
+	/* How It Works Section */
+	.how-it-works {
+		padding: 80px 0;
+		text-align: center;
+	}
+
+	.how-it-works h2 {
+		font-size: 36px;
+		font-weight: 700;
+		color: #333;
+		margin: 0 0 60px 0;
+	}
+
+	.steps {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+		gap: 40px;
+		margin-bottom: 60px;
+	}
+
+	.step {
+		text-align: center;
+	}
+
+	.step-number {
+		width: 60px;
+		height: 60px;
+		border-radius: 50%;
+		background: #22c55e;
+		color: white;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 24px;
+		font-weight: 700;
+		margin: 0 auto 20px auto;
+	}
+
+	.step h3 {
+		font-size: 20px;
+		font-weight: 600;
+		color: #333;
+		margin: 0 0 8px 0;
+	}
+
+	.step p {
+		font-size: 16px;
+		color: #666;
+		margin: 0;
+	}
+
+	/* Contact Info */
+	.contact-info {
+		background: #f8f9fa;
+		padding: 40px 0;
+		text-align: center;
+	}
+
+	.contact-info p {
+		font-size: 16px;
+		color: #666;
+		margin: 0;
+	}
+
+	.contact-info a {
+		color: #ee5a52;
+		text-decoration: none;
+	}
+
+	.contact-info a:hover {
+		text-decoration: underline;
+	}
+
+	/* Footer */
+	footer {
+		background: white;
+		padding: 40px 0;
+		border-top: 1px solid #e5e7eb;
+	}
+
+	footer .container {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.footer-left {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		font-size: 14px;
+		color: #666;
+	}
+
+	.footer-avatar {
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		background: #22c55e;
+		color: white;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-weight: 600;
+		font-size: 12px;
+	}
+
+	.footer-left a {
+		color: #ee5a52;
+		text-decoration: none;
+	}
+
+	.footer-left a:hover {
+		text-decoration: underline;
+	}
+
+	.footer-nav {
+		display: flex;
+		gap: 24px;
+	}
+
+	.footer-nav button {
+		color: #666;
+		text-decoration: none;
+		font-size: 14px;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+	}
+
+	.footer-nav button:hover {
+		color: #333;
+	}
+
+	/* Available Plants Section */
+	.available-plants {
+		padding: 80px 0;
+		background: white;
+	}
+
+	.available-plants h2 {
+		font-size: 36px;
+		font-weight: 700;
+		color: #333;
+		margin: 0 0 40px 0;
+		text-align: center;
+	}
+
+	.plants-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 30px;
+		margin-top: 40px;
+	}
+
+	.plant-card {
+		background: #f8f9fa;
+		border-radius: 12px;
+		padding: 24px;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		transition:
+			transform 0.2s,
+			box-shadow 0.2s;
+	}
+
+	.plant-card:hover {
+		transform: translateY(-4px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	}
+
+	.plant-card h3 {
+		font-size: 20px;
+		font-weight: 600;
+		color: #333;
+		margin: 0 0 12px 0;
+		text-transform: capitalize;
+	}
+
+	.plant-variety {
+		font-size: 16px;
+		color: #22c55e;
+		font-weight: 500;
+		margin: 0 0 16px 0;
+		text-transform: capitalize;
+	}
+
+	.plant-quantity,
+	.plant-harvest,
+	.plant-location {
+		font-size: 14px;
+		color: #666;
+		margin: 0 0 8px 0;
+	}
+
+	.plant-quantity {
+		text-transform: capitalize;
+	}
+
+	.plant-notes {
+		font-size: 14px;
+		color: #888;
+		font-style: italic;
+		margin: 12px 0 0 0;
+		padding-top: 12px;
+		border-top: 1px solid #e5e7eb;
+	}
+
+	/* Responsive Design */
+	@media (max-width: 768px) {
+		.hero h1 {
+			font-size: 36px;
+		}
+
+		.hero-subtitle {
+			font-size: 16px;
+		}
+
+		.how-it-works h2 {
+			font-size: 28px;
+		}
+
+		footer .container {
+			flex-direction: column;
+			gap: 20px;
+			text-align: center;
+		}
+
+		.steps {
+			grid-template-columns: 1fr;
+			gap: 30px;
+		}
+	}
+}
