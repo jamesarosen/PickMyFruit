@@ -1,12 +1,17 @@
 import { createFileRoute } from '@tanstack/solid-router'
+import { For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
+import { getAvailablePlants } from '@/api/plants'
 import '@/routes/index.css'
 
 export const Route = createFileRoute('/')({
+	loader: () => getAvailablePlants(3),
 	component: HomePage,
 })
 
 function HomePage() {
+	const plants = Route.useLoaderData()
+
 	return (
 		<Layout title="Pick My Fruit - Turn your backyard abundance into community food">
 			<header>
@@ -26,9 +31,9 @@ function HomePage() {
 							Turn your backyard abundance into community food. We connect you
 							with local gleaners. Serving all of Napa.
 						</p>
-						<a href="#" class="cta-button">
+						<button class="cta-button" type="button">
 							List My Fruit Tree
-						</a>
+						</button>
 					</div>
 				</section>
 
@@ -52,9 +57,31 @@ function HomePage() {
 								<p>Surplus feeds families</p>
 							</div>
 						</div>
-						<a href="#" class="cta-button">
+						<button class="cta-button" type="button">
 							List My Fruit Tree
-						</a>
+						</button>
+					</div>
+				</section>
+
+				<section class="available-plants">
+					<div class="container">
+						<h2>Available Now in Napa</h2>
+						<Show when={plants().length > 0} fallback={<p>No plants available right now.</p>}>
+							<div class="plants-grid">
+								<For each={plants()}>
+									{(plant) => (
+										<div class="plant-card">
+											<h3>{plant.name}</h3>
+											<p class="plant-variety">{plant.type} - {plant.variety}</p>
+											<p class="plant-quantity">Quantity: {plant.quantity}</p>
+											<p class="plant-harvest">Harvest: {plant.harvestWindow}</p>
+											<p class="plant-location">{plant.city}, {plant.state}</p>
+											{plant.notes && <p class="plant-notes">{plant.notes}</p>}
+										</div>
+									)}
+								</For>
+							</div>
+						</Show>
 					</div>
 				</section>
 
@@ -72,13 +99,13 @@ function HomePage() {
 					<div class="footer-left">
 						<span class="footer-avatar">JD</span>
 						<span>
-							Built by <a href="#">Your Name</a>
+							Built by <span>Your Name</span>
 						</span>
 					</div>
 					<nav class="footer-nav">
-						<a href="#">About</a>
-						<a href="#">Contact</a>
-						<a href="#">Privacy</a>
+						<button type="button">About</button>
+						<button type="button">Contact</button>
+						<button type="button">Privacy</button>
 					</nav>
 				</div>
 			</footer>

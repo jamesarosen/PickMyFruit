@@ -1,4 +1,4 @@
-import type { JSX } from 'solid-js'
+import { createEffect, type JSX } from 'solid-js'
 
 export interface LayoutProps {
 	title: string
@@ -7,7 +7,9 @@ export interface LayoutProps {
 
 export default function Layout(props: LayoutProps) {
 	// Update document title when component mounts or title changes
-	document.title = props.title
+	createEffect(() => {
+		document.title = props.title
+	})
 
 	return <>{props.children}</>
 }
