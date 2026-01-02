@@ -25,15 +25,15 @@ This is the main web application for Pick My Fruit, built with Solid JS and TanS
 
 All commands are run from the root of the project, from a terminal:
 
-| Command         | Action                                         |
-| :-------------- | :--------------------------------------------- |
-| `pnpm install`  | Installs dependencies                          |
-| `pnpm dev`      | Starts local dev server at `localhost:5173`    |
-| `pnpm build`    | Build your production site to `./dist/`        |
-| `pnpm preview`  | Preview your build locally, before deploying   |
-| `pnpm lint`     | Run ESLint to check code quality               |
-| `pnpm typecheck`| Run TypeScript compiler to check types         |
-| `pnpm format`   | Format code with Prettier                      |
+| Command          | Action                                       |
+| :--------------- | :------------------------------------------- |
+| `pnpm install`   | Installs dependencies                        |
+| `pnpm dev`       | Starts local dev server at `localhost:5173`  |
+| `pnpm build`     | Build your production site to `./dist/`      |
+| `pnpm preview`   | Preview your build locally, before deploying |
+| `pnpm lint`      | Run ESLint to check code quality             |
+| `pnpm typecheck` | Run TypeScript compiler to check types       |
+| `pnpm format`    | Format code with Prettier                    |
 
 ## 🛠️ Tech Stack
 

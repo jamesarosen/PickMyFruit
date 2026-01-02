@@ -28,8 +28,8 @@ function HomePage() {
 					<div class="container">
 						<h1>Stop Watching Your Fruit Rot</h1>
 						<p class="hero-subtitle">
-							Turn your backyard abundance into community food. We connect you
-							with local gleaners. Serving all of Napa.
+							Turn your backyard abundance into community food. We connect you with
+							local gleaners. Serving all of Napa.
 						</p>
 						<button class="cta-button" type="button">
 							List My Fruit Tree
@@ -66,16 +66,23 @@ function HomePage() {
 				<section class="available-plants">
 					<div class="container">
 						<h2>Available Now in Napa</h2>
-						<Show when={plants().length > 0} fallback={<p>No plants available right now.</p>}>
+						<Show
+							when={plants().length > 0}
+							fallback={<p>No plants available right now.</p>}
+						>
 							<div class="plants-grid">
 								<For each={plants()}>
 									{(plant) => (
 										<div class="plant-card">
 											<h3>{plant.name}</h3>
-											<p class="plant-variety">{plant.type} - {plant.variety}</p>
+											<p class="plant-variety">
+												{plant.type} - {plant.variety}
+											</p>
 											<p class="plant-quantity">Quantity: {plant.quantity}</p>
 											<p class="plant-harvest">Harvest: {plant.harvestWindow}</p>
-											<p class="plant-location">{plant.city}, {plant.state}</p>
+											<p class="plant-location">
+												{plant.city}, {plant.state}
+											</p>
 											{plant.notes && <p class="plant-notes">{plant.notes}</p>}
 										</div>
 									)}

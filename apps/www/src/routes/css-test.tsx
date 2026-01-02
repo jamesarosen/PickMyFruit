@@ -23,8 +23,8 @@ function CssTestPage() {
 				<h1>Pick My Fruit CSS Test Document</h1>
 
 				<p>
-					This document exists to test the Pick My Fruit CSS. Eventually, this
-					should move to Storybook or similar.
+					This document exists to test the Pick My Fruit CSS. Eventually, this should
+					move to Storybook or similar.
 				</p>
 
 				<section>
@@ -34,16 +34,15 @@ function CssTestPage() {
 						<code>text-wrap: balance</code> feature when it spans multiple lines
 					</h3>
 					<p>
-						Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-						eiusmod tempor incididunt ut labore et dolore magna aliqua. This
-						paragraph should demonstrate the <code>text-wrap: pretty</code>{' '}
-						feature for better readability with supercalifragilisticexpialidocious
-						words.
+						Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
+						tempor incididunt ut labore et dolore magna aliqua. This paragraph should
+						demonstrate the <code>text-wrap: pretty</code> feature for better
+						readability with supercalifragilisticexpialidocious words.
 					</p>
 					<p>
 						<em>
-							Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris
-							nisi ut aliquip ex ea commodo consequat.
+							Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi
+							ut aliquip ex ea commodo consequat.
 						</em>
 					</p>
 
@@ -87,18 +86,13 @@ function CssTestPage() {
 							<p>
 								<label for="location">Location:</label>
 								<br />
-								<input
-									type="text"
-									id="location"
-									placeholder="Enter your address"
-								/>
+								<input type="text" id="location" placeholder="Enter your address" />
 							</p>
 							<p>
 								<label for="notes">Additional Notes:</label>
 								<br />
 								<textarea id="notes" rows="4" cols="50">
-									This textarea should resize vertically only and inherit the
-									page font.
+									This textarea should resize vertically only and inherit the page font.
 								</textarea>
 							</p>
 							<p>
@@ -155,9 +149,8 @@ function CssTestPage() {
 				<section>
 					<h2>Links & Focus States</h2>
 					<p>
-						Visit our <a href="#">volunteer opportunities</a> page to learn more.
-						Try tabbing through this page to see <a href="#">focus states</a> in
-						action.
+						Visit our <a href="#">volunteer opportunities</a> page to learn more. Try
+						tabbing through this page to see <a href="#">focus states</a> in action.
 					</p>
 					<p>
 						You can also <a href="#">learn about our mission</a> or{' '}
@@ -188,25 +181,25 @@ registerTree(tree);`}</code>
 				<section>
 					<h2>Quotes & Abbreviations</h2>
 					<blockquote>
-						"Blessed are those who plant trees under which they will never sit."
-						This blockquote should have standard quote marks.
+						"Blessed are those who plant trees under which they will never sit." This
+						blockquote should have standard quote marks.
 					</blockquote>
 					<p>
 						Someone once said{' '}
-						<q>
-							food waste exists alongside hunger because of broken connections
-						</q>{' '}
+						<q>food waste exists alongside hunger because of broken connections</q>{' '}
 						and they were absolutely right.
 					</p>
 					<p>
-						Join <abbr title="Pick My Fruit">PMF</abbr> today and become part of
-						the solution.
+						Join <abbr title="Pick My Fruit">PMF</abbr> today and become part of the
+						solution.
 					</p>
 				</section>
 
 				<section>
 					<h2>Box Model</h2>
-					<div style={{ border: '2px solid #4a7c2c', padding: '1rem', width: '100%' }}>
+					<div
+						style={{ border: '2px solid #4a7c2c', padding: '1rem', width: '100%' }}
+					>
 						This div has width: 100%, padding, and a border. With box-sizing:
 						border-box, it should not overflow its container.
 					</div>

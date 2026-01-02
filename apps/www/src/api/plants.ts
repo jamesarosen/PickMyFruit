@@ -7,7 +7,7 @@ import type { Plant } from '@/data/schema'
 // Mock data that simulates what would come from the database
 export async function getAvailablePlants(limit: number = 3): Promise<Plant[]> {
 	// Simulating network delay
-	await new Promise(resolve => setTimeout(resolve, 500))
+	await new Promise((resolve) => setTimeout(resolve, 500))
 
 	const allPlants = [
 		{
