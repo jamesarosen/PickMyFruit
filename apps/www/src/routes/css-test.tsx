@@ -7,7 +7,7 @@ export const Route = createFileRoute('/css-test')({
 })
 
 function CssTestPage() {
-	let dialogRef: HTMLDialogElement | undefined
+	let dialogRef: HTMLDialogElement | undefined = undefined
 
 	const openDialog = () => {
 		dialogRef?.showModal()
@@ -74,7 +74,7 @@ function CssTestPage() {
 						<fieldset>
 							<legend>Tree Registration Form</legend>
 							<p>
-								<label for="tree-type">Tree Type:</label>
+								<label htmlFor="tree-type">Tree Type:</label>
 								<br />
 								<select id="tree-type">
 									<option>Apple</option>
@@ -84,12 +84,12 @@ function CssTestPage() {
 								</select>
 							</p>
 							<p>
-								<label for="location">Location:</label>
+								<label htmlFor="location">Location:</label>
 								<br />
 								<input type="text" id="location" placeholder="Enter your address" />
 							</p>
 							<p>
-								<label for="notes">Additional Notes:</label>
+								<label htmlFor="notes">Additional Notes:</label>
 								<br />
 								<textarea id="notes" rows="4" cols="50">
 									This textarea should resize vertically only and inherit the page font.
@@ -149,12 +149,13 @@ function CssTestPage() {
 				<section>
 					<h2>Links & Focus States</h2>
 					<p>
-						Visit our <a href="#">volunteer opportunities</a> page to learn more. Try
-						tabbing through this page to see <a href="#">focus states</a> in action.
+						Visit our <a href="/volunteer">volunteer opportunities</a> page to learn
+						more. Try tabbing through this page to see{' '}
+						<a href="/focus">focus states</a> in action.
 					</p>
 					<p>
-						You can also <a href="#">learn about our mission</a> or{' '}
-						<a href="#">contact us</a> directly.
+						You can also <a href="/mission">learn about our mission</a> or{' '}
+						<a href="/contact">contact us</a> directly.
 					</p>
 				</section>
 
