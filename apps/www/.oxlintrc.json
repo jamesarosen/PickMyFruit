@@ -1,0 +1,66 @@
+{
+	"categories": {
+		"correctness": "error",
+		"suspicious": "error",
+		"perf": "error",
+		"pedantic": "warn",
+		"style": "warn"
+	},
+	"plugins": ["react", "jsx-a11y", "import", "vitest"],
+	"rules": {
+		// Solid JS doesn't use React, so React-specific rules don't apply
+		"react/react-in-jsx-scope": "off",
+
+		// Overly opinionated style rules that don't add value
+		"eslint/sort-imports": "off",
+		"eslint/sort-keys": "off",
+		"eslint/func-style": "off",
+		"eslint/new-cap": "off",
+		"eslint/no-magic-numbers": "off",
+		"eslint/max-lines-per-function": "off",
+		"eslint/max-statements": "off",
+		"eslint/one-var": "off",
+		"eslint/capitalized-comments": "off",
+		"eslint/no-inline-comments": "off",
+		"eslint/no-warning-comments": "off",
+
+		// Modern best practice prefers named exports over default exports
+		"import/no-named-export": "off",
+		"import/prefer-default-export": "off",
+		"import/exports-last": "off",
+		"import/group-exports": "off",
+
+		// Allow both inline and top-level type imports
+		"import/consistent-type-specifier-style": "off",
+
+		// CSS imports without assignment are standard in modern web dev
+		"import/no-unassigned-import": "off",
+
+		// Props spreading is common and useful in component composition
+		"react/jsx-props-no-spreading": "off",
+
+		// JSX depth limit of 2 is way too restrictive for real applications
+		"react/jsx-max-depth": "off",
+
+		// Allow quotes and apostrophes in JSX text without escaping
+		"react/no-unescaped-entities": "off",
+
+		// Allow useless fragments for consistency
+		"react/jsx-no-useless-fragment": "off",
+
+		// Wildcard imports are sometimes useful for schema and namespace exports
+		"import/no-namespace": "off",
+
+		// Single letter loop variables (i, j, k) are conventional and clear
+		"eslint/id-length": "off",
+
+		// Ternaries are fundamental to JavaScript and often clearer than alternatives
+		"eslint/no-ternary": "off",
+
+		// setTimeout in Promise executor is valid and commonly used
+		"eslint/no-promise-executor-return": "off",
+
+		// Jest plugin incorrectly flags non-test files
+		"jest/require-hook": "off"
+	}
+}

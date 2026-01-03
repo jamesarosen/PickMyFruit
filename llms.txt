@@ -13,7 +13,7 @@ A site for gardeners to share surplus produce with their community.
 
 ## Code Conventions
 - Prettier for formatting
-- ESLint for linting
+- oxlint for linting
 - 1-tab indentation
 - camelCase for variables and functions
 - PascalCase for components and classes
