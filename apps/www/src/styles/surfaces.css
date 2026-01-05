@@ -1,0 +1,41 @@
+@layer components {
+	/**
+	 * `.surface-subtle`: a light variation of colors to set off a content area.
+	 * Perfect for cards, section breaks, etc.
+	 */
+	.surface-subtle {
+		--color-background: light-dark(
+			oklch(from var(--color-morning-cream) calc(l + 0.1) calc(c * 0.3) h),
+			oklch(from var(--color-warm-charcoal) 0.14 calc(c * 0.4) h)
+		);
+		--color-border: oklch(from var(--color-quiet) l calc(c * 0.2) h);
+
+		background-color: var(--color-background);
+		border-color: var(--color-border);
+	}
+
+	/**
+	 * `.surface-contrast`: a strong contrast of colors, roughly equivalent to
+	 * embedding light mode in dark and vice versa.
+	 */
+	.surface-contrast {
+		/* Override semantic variables to invert the color scheme */
+		--color-background: light-dark(
+			oklch(from var(--color-warm-charcoal) 0.19 c h),
+			var(--color-morning-cream)
+		);
+		--color-foreground: light-dark(
+			var(--color-morning-cream),
+			var(--color-warm-charcoal)
+		);
+		--color-quiet: light-dark(
+			oklch(from var(--color-medium-slate) 0.75 c h),
+			var(--color-medium-slate)
+		);
+		--color-border: currentColor;
+
+		background-color: var(--color-background);
+		border-color: var(--color-border);
+		color: var(--color-foreground);
+	}
+}
