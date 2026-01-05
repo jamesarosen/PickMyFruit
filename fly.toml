@@ -1,0 +1,63 @@
+# Fly.io configuration for Pick My Fruit
+# See https://fly.io/docs/reference/configuration/ for more options
+
+# App name - replace with your actual app name when deploying
+app = 'pickmyfruit'
+
+# Primary region - SJC (San Jose) is closest to Napa, CA
+primary_region = 'sjc'
+
+# Build configuration
+[build]
+  dockerfile = "apps/www/Dockerfile"
+  ignorefile = ".dockerignore"
+
+# HTTP service configuration
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+  # HTTP request timeouts
+  [http_service.concurrency]
+    type = 'requests'
+    hard_limit = 250
+    soft_limit = 200
+
+  # Health check configuration
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/api/health'
+    protocol = 'http'
+
+    [http_service.checks.headers]
+      # Accept JSON response
+      Accept = 'application/json'
+
+# Persistent volume for SQLite database
+[mounts]
+  source = 'data'
+  destination = '/app/data'
+  initial_size = '1gb'
+
+# Environment variables
+[env]
+  NODE_ENV = 'production'
+  DATABASE_URL = 'file:/app/data/production.db'
+
+# VM resources - Start with minimal for MVP
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '256mb'
+  cpus = 1
+
+# Deployment configuration
+[deploy]
+  strategy = 'immediate'
+  max_unavailable = 0.5

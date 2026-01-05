@@ -122,3 +122,6 @@ typings/
 
 # AI Agents
 .claude
+
+# Local Docker Compose volumes
+/data

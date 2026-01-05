@@ -12,6 +12,13 @@
 		"format": "pnpm -r format",
 		"lint:fix": "pnpm -r lint:fix",
 		"lint": "pnpm -r lint",
-		"typecheck": "pnpm -r typecheck"
+		"typecheck": "pnpm -r typecheck",
+		"deploy": "fly deploy",
+		"deploy:setup": "fly launch --no-deploy",
+		"logs": "fly logs",
+		"ssh": "fly ssh console",
+		"docker:up": "docker compose up --build",
+		"docker:down": "docker compose down",
+		"docker:logs": "docker compose logs -f"
 	}
 }

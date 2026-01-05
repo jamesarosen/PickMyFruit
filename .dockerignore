@@ -1,0 +1,60 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+.output
+dist
+.vite
+.vinxi
+apps/*/output
+apps/*/dist
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Database files (but allow data/ directory itself for volume mounting)
+*.db
+*.db-shm
+*.db-wal
+!data/
+data/*
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage
+.nyc_output
+
+# Documentation (except README)
+*.md
+!README.md
+
+# CI/CD
+.github
+
+# Misc
+.prettierrc
+.prettierignore
+.editorconfig

@@ -45,7 +45,7 @@
 
 ## Pull Request Plan
 
-### PR #1: SSR with SQLite Persistence
+### ✅ PR #1: SSR with SQLite Persistence
 
 **Size**: Small (~100 lines)
 **Impact**: HIGH - enables read+write app architecture
@@ -63,7 +63,7 @@
 
 ---
 
-### PR #2: Deploy to Fly.io with SQLite Persistence
+### ✅ PR #2: Deploy to Fly.io with SQLite Persistence
 
 **Size**: Small (~100 lines)
 **Impact**: HIGH - enables production feedback loop
