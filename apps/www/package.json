@@ -17,7 +17,11 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:push": "drizzle-kit push",
-		"db:seed": "tsx src/data/seed.ts"
+		"db:seed": "tsx src/data/seed.ts",
+		"deploy": "fly deploy",
+		"deploy:setup": "fly launch --no-deploy",
+		"logs": "fly logs",
+		"ssh": "fly ssh console"
 	},
 	"dependencies": {
 		"@libsql/client": "^0.15.15",
