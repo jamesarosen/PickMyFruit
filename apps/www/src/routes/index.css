@@ -8,7 +8,7 @@
 	/* Header */
 	header {
 		padding: 20px 0;
-		background: white;
+		background: var(--color-background);
 	}
 
 	.logo {
@@ -17,7 +17,7 @@
 		gap: 8px;
 		font-size: 18px;
 		font-weight: 600;
-		color: #333;
+		color: var(--color-foreground);
 	}
 
 	.logo-icon {
@@ -26,7 +26,9 @@
 
 	/* Hero Section */
 	.hero {
-		background: #f8f9fa;
+		background: oklch(
+			from var(--color-background) calc(l + 0.03) calc(c * 0.3) h
+		);
 		padding: 80px 0;
 		text-align: center;
 	}
@@ -34,14 +36,14 @@
 	.hero h1 {
 		font-size: 48px;
 		font-weight: 700;
-		color: #333;
+		color: var(--color-foreground);
 		margin: 0 0 24px 0;
 		line-height: 1.2;
 	}
 
 	.hero-subtitle {
 		font-size: 18px;
-		color: #666;
+		color: var(--color-quiet);
 		margin: 0 0 40px 0;
 		max-width: 500px;
 		margin-left: auto;
@@ -51,8 +53,8 @@
 
 	.cta-button {
 		display: inline-block;
-		background: #ee5a52;
-		color: white;
+		background: var(--color-primary);
+		color: var(--color-background);
 		padding: 16px 32px;
 		border-radius: 8px;
 		border: none;
@@ -64,7 +66,7 @@
 	}
 
 	.cta-button:hover {
-		background: #d54940;
+		background: oklch(from var(--color-primary) calc(l - 0.08) c h);
 	}
 
 	/* How It Works Section */
@@ -76,7 +78,7 @@
 	.how-it-works h2 {
 		font-size: 36px;
 		font-weight: 700;
-		color: #333;
+		color: var(--color-foreground);
 		margin: 0 0 60px 0;
 	}
 
@@ -95,8 +97,8 @@
 		width: 60px;
 		height: 60px;
 		border-radius: 50%;
-		background: #22c55e;
-		color: white;
+		background: var(--color-secondary);
+		color: var(--color-background);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -108,31 +110,33 @@
 	.step h3 {
 		font-size: 20px;
 		font-weight: 600;
-		color: #333;
+		color: var(--color-foreground);
 		margin: 0 0 8px 0;
 	}
 
 	.step p {
 		font-size: 16px;
-		color: #666;
+		color: var(--color-quiet);
 		margin: 0;
 	}
 
 	/* Contact Info */
 	.contact-info {
-		background: #f8f9fa;
+		background: oklch(
+			from var(--color-background) calc(l + 0.03) calc(c * 0.3) h
+		);
 		padding: 40px 0;
 		text-align: center;
 	}
 
 	.contact-info p {
 		font-size: 16px;
-		color: #666;
+		color: var(--color-quiet);
 		margin: 0;
 	}
 
 	.contact-info a {
-		color: #ee5a52;
+		color: var(--color-primary);
 		text-decoration: none;
 	}
 
@@ -142,9 +146,9 @@
 
 	/* Footer */
 	footer {
-		background: white;
+		background: var(--color-background);
 		padding: 40px 0;
-		border-top: 1px solid #e5e7eb;
+		border-top: 1px solid oklch(from var(--color-quiet) l calc(c * 0.2) h);
 	}
 
 	footer .container {
@@ -158,15 +162,15 @@
 		align-items: center;
 		gap: 12px;
 		font-size: 14px;
-		color: #666;
+		color: var(--color-quiet);
 	}
 
 	.footer-avatar {
 		width: 32px;
 		height: 32px;
 		border-radius: 50%;
-		background: #22c55e;
-		color: white;
+		background: var(--color-secondary);
+		color: var(--color-background);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -175,7 +179,7 @@
 	}
 
 	.footer-left a {
-		color: #ee5a52;
+		color: var(--color-primary);
 		text-decoration: none;
 	}
 
@@ -189,7 +193,7 @@
 	}
 
 	.footer-nav button {
-		color: #666;
+		color: var(--color-quiet);
 		text-decoration: none;
 		font-size: 14px;
 		background: none;
@@ -199,19 +203,19 @@
 	}
 
 	.footer-nav button:hover {
-		color: #333;
+		color: var(--color-foreground);
 	}
 
 	/* Available Plants Section */
 	.available-plants {
 		padding: 80px 0;
-		background: white;
+		background: var(--color-background);
 	}
 
 	.available-plants h2 {
 		font-size: 36px;
 		font-weight: 700;
-		color: #333;
+		color: var(--color-foreground);
 		margin: 0 0 40px 0;
 		text-align: center;
 	}
@@ -224,10 +228,12 @@
 	}
 
 	.plant-card {
-		background: #f8f9fa;
+		background: oklch(
+			from var(--color-background) calc(l + 0.03) calc(c * 0.3) h
+		);
 		border-radius: 12px;
 		padding: 24px;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		box-shadow: 0 2px 8px oklch(from var(--color-foreground) l c h / 0.1);
 		transition:
 			transform 0.2s,
 			box-shadow 0.2s;
@@ -235,20 +241,20 @@
 
 	.plant-card:hover {
 		transform: translateY(-4px);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		box-shadow: 0 4px 12px oklch(from var(--color-foreground) l c h / 0.15);
 	}
 
 	.plant-card h3 {
 		font-size: 20px;
 		font-weight: 600;
-		color: #333;
+		color: var(--color-foreground);
 		margin: 0 0 12px 0;
 		text-transform: capitalize;
 	}
 
 	.plant-variety {
 		font-size: 16px;
-		color: #22c55e;
+		color: var(--color-secondary);
 		font-weight: 500;
 		margin: 0 0 16px 0;
 		text-transform: capitalize;
@@ -258,7 +264,7 @@
 	.plant-harvest,
 	.plant-location {
 		font-size: 14px;
-		color: #666;
+		color: var(--color-quiet);
 		margin: 0 0 8px 0;
 	}
 
@@ -268,11 +274,11 @@
 
 	.plant-notes {
 		font-size: 14px;
-		color: #888;
+		color: oklch(from var(--color-quiet) calc(l + 0.1) calc(c * 0.8) h);
 		font-style: italic;
 		margin: 12px 0 0 0;
 		padding-top: 12px;
-		border-top: 1px solid #e5e7eb;
+		border-top: 1px solid oklch(from var(--color-quiet) l calc(c * 0.2) h);
 	}
 
 	/* Responsive Design */

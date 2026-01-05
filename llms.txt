@@ -21,6 +21,12 @@ A site for gardeners to share surplus produce with their community.
 - Use idiomatic Solid JS, TanStack Router, TypeScript, SQLite.
 - Use context7
 
+### CSS
+
+- Do not use Tailwind. Use CSS layers and variables. Keep CSS near the relevant components
+- For colors, use semantic CSS variables (e.g. `--color-accent`) where possible and named color variables (e.g. `--color-sunset-coral`) where necessary. Avoid inline color definitions (e.g. `#fedbca`).
+- Use CSS relative color syntax to create modifications, e.g. `oklch(from var(--color-accent) 0.65 c h)` to darken the accent color.
+
 ## Project Structure
 
 We use a monorepo structure
@@ -47,7 +53,6 @@ We use a monorepo structure
 ## Important Notes
 - Validate input at system boundaries with Zod
 - HTML: write semantically-meaningful and accessible markup
-- Styling: Do not use Tailwind. Use CSS layers and variables. Keep CSS near the relevant components
 - Use SQLite for the data layer
 - Use the ORM for simple operations; use SQL and prepared statements for complex ones
 - Use Solid JS for reactive UI components
