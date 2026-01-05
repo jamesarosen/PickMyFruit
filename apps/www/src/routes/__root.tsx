@@ -10,6 +10,7 @@ import { HydrationScript } from 'solid-js/web'
 import '../styles/base.css'
 import '../styles/colors.css'
 import '../styles/focus.css'
+import '../styles/surfaces.css'
 
 export const Route = createRootRoute({
 	head: () => ({

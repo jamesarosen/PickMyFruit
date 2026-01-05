@@ -26,9 +26,6 @@
 
 	/* Hero Section */
 	.hero {
-		background: oklch(
-			from var(--color-background) calc(l + 0.03) calc(c * 0.3) h
-		);
 		padding: 80px 0;
 		text-align: center;
 	}
@@ -122,9 +119,6 @@
 
 	/* Contact Info */
 	.contact-info {
-		background: oklch(
-			from var(--color-background) calc(l + 0.03) calc(c * 0.3) h
-		);
 		padding: 40px 0;
 		text-align: center;
 	}
@@ -228,9 +222,6 @@
 	}
 
 	.plant-card {
-		background: oklch(
-			from var(--color-background) calc(l + 0.03) calc(c * 0.3) h
-		);
 		border-radius: 12px;
 		padding: 24px;
 		box-shadow: 0 2px 8px oklch(from var(--color-foreground) l c h / 0.1);

@@ -24,7 +24,7 @@ function HomePage() {
 			</header>
 
 			<main>
-				<section class="hero">
+				<section class="hero surface-subtle">
 					<div class="container">
 						<h1>Stop Watching Your Fruit Rot</h1>
 						<p class="hero-subtitle">
@@ -73,7 +73,7 @@ function HomePage() {
 							<div class="plants-grid">
 								<For each={plants()}>
 									{(plant) => (
-										<div class="plant-card">
+										<div class="plant-card surface-subtle">
 											<h3>{plant.name}</h3>
 											<p class="plant-variety">
 												{plant.type} - {plant.variety}
@@ -92,7 +92,7 @@ function HomePage() {
 					</div>
 				</section>
 
-				<section class="contact-info">
+				<section class="contact-info surface-subtle">
 					<div class="container">
 						<p>
 							Questions? Text me at <a href="tel:+15551234567">(555) 123-4567</a>
