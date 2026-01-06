@@ -18,40 +18,42 @@ const APEX_DOMAIN = 'pickmyfruit.com'
  * @todo support a staging apex domain
  * @see https://community.fly.io/t/new-feature-automatic-https-redirects/4442
  */
-export const tlsMiddleware = createMiddleware().server(async ({ next, request }) => {
-	const url = new URL(request.url)
-	let needsRedirect = false
+export const tlsMiddleware = createMiddleware().server(
+	async ({ next, request }) => {
+		const url = new URL(request.url)
+		let needsRedirect = false
 
-	// Local dev doesn't have a proxy terminating TLS, so we skip TLS logic there
-	const forwardedProto = request.headers.get('x-forwarded-proto')
-	const isTLS = forwardedProto === 'https'
-	if (forwardedProto && !isTLS) {
-		url.protocol = 'https:'
-		needsRedirect = true
-	}
-
-	const host = request.headers.get('x-forwarded-host') ?? url.host
-	if (host === APEX_DOMAIN) {
-		url.host = `www.${APEX_DOMAIN}`
-		needsRedirect = true
-	}
-
-	if (needsRedirect) {
-		const result = new Response(null, {
-			status: 307,
-			headers: { Location: url.toString() },
-		})
-		if (isTLS) {
-			result.headers.set(HSTS_HEADER, HSTS_VALUE)
+		// Local dev doesn't have a proxy terminating TLS, so we skip TLS logic there
+		const forwardedProto = request.headers.get('x-forwarded-proto')
+		const isTLS = forwardedProto === 'https'
+		if (forwardedProto && !isTLS) {
+			url.protocol = 'https:'
+			needsRedirect = true
 		}
+
+		const host = request.headers.get('x-forwarded-host') ?? url.host
+		if (host === APEX_DOMAIN) {
+			url.host = `www.${APEX_DOMAIN}`
+			needsRedirect = true
+		}
+
+		if (needsRedirect) {
+			const result = new Response(null, {
+				status: 307,
+				headers: { Location: url.toString() },
+			})
+			if (isTLS) {
+				result.headers.set(HSTS_HEADER, HSTS_VALUE)
+			}
+			return result
+		}
+
+		const result = await next()
+
+		if (isTLS && !result.response.headers.has(HSTS_HEADER)) {
+			result.response.headers.set(HSTS_HEADER, HSTS_VALUE)
+		}
+
 		return result
 	}
-
-	const result = await next()
-
-	if (isTLS && !result.response.headers.has(HSTS_HEADER)) {
-		result.response.headers.set(HSTS_HEADER, HSTS_VALUE)
-	}
-
-	return result
-})
+)
