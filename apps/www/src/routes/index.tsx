@@ -5,7 +5,7 @@ import { getAvailablePlants } from '@/api/plants'
 import '@/routes/index.css'
 
 export const Route = createFileRoute('/')({
-	loader: () => getAvailablePlants(3),
+	loader: () => getAvailablePlants({ data: 3 }),
 	component: HomePage,
 })
 

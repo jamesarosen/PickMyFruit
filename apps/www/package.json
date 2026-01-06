@@ -29,7 +29,8 @@
 		"@tanstack/solid-start": "^1.145.3",
 		"drizzle-orm": "^0.45.1",
 		"h3-js": "^4.4.0",
-		"solid-js": "^1.9.5"
+		"solid-js": "^1.9.5",
+		"zod": "^4.3.4"
 	},
 	"devDependencies": {
 		"@faker-js/faker": "^10.1.0",

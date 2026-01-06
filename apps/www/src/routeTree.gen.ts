@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as CssTestRouteImport } from './routes/css-test'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPlantsRouteImport } from './routes/api/plants'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 
 const CssTestRoute = CssTestRouteImport.update({
@@ -23,6 +24,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPlantsRoute = ApiPlantsRouteImport.update({
+  id: '/api/plants',
+  path: '/api/plants',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
@@ -33,30 +39,34 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/css-test': typeof CssTestRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/plants': typeof ApiPlantsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/css-test': typeof CssTestRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/plants': typeof ApiPlantsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/css-test': typeof CssTestRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/plants': typeof ApiPlantsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/css-test' | '/api/health'
+  fullPaths: '/' | '/css-test' | '/api/health' | '/api/plants'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/css-test' | '/api/health'
-  id: '__root__' | '/' | '/css-test' | '/api/health'
+  to: '/' | '/css-test' | '/api/health' | '/api/plants'
+  id: '__root__' | '/' | '/css-test' | '/api/health' | '/api/plants'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CssTestRoute: typeof CssTestRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiPlantsRoute: typeof ApiPlantsRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -75,6 +85,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/plants': {
+      id: '/api/plants'
+      path: '/api/plants'
+      fullPath: '/api/plants'
+      preLoaderRoute: typeof ApiPlantsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/health': {
       id: '/api/health'
       path: '/api/health'
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CssTestRoute: CssTestRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiPlantsRoute: ApiPlantsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
