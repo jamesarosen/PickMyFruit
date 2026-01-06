@@ -21,6 +21,10 @@ A site for gardeners to share surplus produce with their community.
 - Use idiomatic Solid JS, TanStack Router, TypeScript, SQLite.
 - Use context7
 
+### Solid JS
+
+- Use definitive assignment for refs, e.g. `let divRef!: HTMLDivElement... <div ref={divRef}/>`
+
 ### CSS
 
 - Do not use Tailwind. Use CSS layers and variables. Keep CSS near the relevant components
