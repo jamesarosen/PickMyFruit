@@ -74,7 +74,7 @@ function CssTestPage() {
 						<fieldset>
 							<legend>Tree Registration Form</legend>
 							<p>
-								<label htmlFor="tree-type">Tree Type:</label>
+								<label for="tree-type">Tree Type:</label>
 								<br />
 								<select id="tree-type">
 									<option>Apple</option>
@@ -84,12 +84,12 @@ function CssTestPage() {
 								</select>
 							</p>
 							<p>
-								<label htmlFor="location">Location:</label>
+								<label for="location">Location:</label>
 								<br />
 								<input type="text" id="location" placeholder="Enter your address" />
 							</p>
 							<p>
-								<label htmlFor="notes">Additional Notes:</label>
+								<label for="notes">Additional Notes:</label>
 								<br />
 								<textarea id="notes" rows="4" cols="50">
 									This textarea should resize vertically only and inherit the page font.

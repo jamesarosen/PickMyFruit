@@ -24,6 +24,7 @@ A site for gardeners to share surplus produce with their community.
 ### Solid JS
 
 - Use definitive assignment for refs, e.g. `let divRef!: HTMLDivElement... <div ref={divRef}/>`
+- Use `for="..."`, not `htmlFor="..."`
 
 ### CSS
 
