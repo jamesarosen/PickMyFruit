@@ -11,6 +11,10 @@
 		// Solid JS doesn't use React, so React-specific rules don't apply
 		"react/react-in-jsx-scope": "off",
 
+		// Solid JS refs appear unassigned. See https://github.com/oxc-project/oxc/issues/14621
+		"eslint/init-declarations": "off",
+		"eslint/no-unassigned-vars": "off",
+
 		// Overly opinionated style rules that don't add value
 		"eslint/sort-imports": "off",
 		"eslint/sort-keys": "off",
