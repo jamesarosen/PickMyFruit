@@ -6,7 +6,7 @@
 	"description": "www.pickmyfruit.com Application",
 	"scripts": {
 		"build": "vite build",
-		"dev": "vite dev",
+		"dev": "PORT=${PORT:-5173} vite dev",
 		"start": "node .output/server/index.mjs",
 		"format:check": "prettier --check .",
 		"format": "prettier --write .",
