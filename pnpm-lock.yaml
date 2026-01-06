@@ -28,6 +28,9 @@ importers:
       solid-js:
         specifier: ^1.9.5
         version: 1.9.10
+      zod:
+        specifier: ^4.3.4
+        version: 4.3.4
     devDependencies:
       '@faker-js/faker':
         specifier: ^10.1.0
@@ -2185,6 +2188,9 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
+  zod@4.3.4:
+    resolution: {integrity: sha512-Zw/uYiiyF6pUT1qmKbZziChgNPRu+ZRneAsMUDU6IwmXdWt5JwcUfy2bvLOCUtz5UniaN/Zx5aFttZYbYc7O/A==}
+
 snapshots:
 
   '@babel/code-frame@7.27.1':
@@ -3960,3 +3966,5 @@ snapshots:
     optional: true
 
   zod@3.25.76: {}
+
+  zod@4.3.4: {}
