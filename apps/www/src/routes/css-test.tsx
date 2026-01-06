@@ -7,7 +7,7 @@ export const Route = createFileRoute('/css-test')({
 })
 
 function CssTestPage() {
-	let dialogRef: HTMLDialogElement | undefined = undefined
+	let dialogRef!: HTMLDialogElement
 
 	const openDialog = () => {
 		dialogRef?.showModal()
