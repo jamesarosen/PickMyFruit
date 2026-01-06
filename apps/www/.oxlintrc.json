@@ -6,7 +6,7 @@
 		"pedantic": "warn",
 		"style": "warn"
 	},
-	"plugins": ["react", "jsx-a11y", "import", "vitest"],
+	"plugins": ["react", "import", "vitest"],
 	"rules": {
 		// Solid JS doesn't use React, so React-specific rules don't apply
 		"react/react-in-jsx-scope": "off",
@@ -62,5 +62,12 @@
 
 		// Jest plugin incorrectly flags non-test files
 		"jest/require-hook": "off"
+	},
+	"settings": {
+		"jsx-a11y": {
+			"attributes": {
+				"for": ["for"]
+			}
+		}
 	}
 }
