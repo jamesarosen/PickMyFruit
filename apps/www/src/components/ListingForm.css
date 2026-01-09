@@ -1,0 +1,218 @@
+@layer components {
+	.listing-form {
+		max-width: 600px;
+		margin: 0 auto;
+	}
+
+	.listing-form fieldset {
+		border: none;
+		padding: 0;
+		margin: 0 0 32px 0;
+	}
+
+	.listing-form legend {
+		font-size: 20px;
+		font-weight: 600;
+		color: var(--color-foreground);
+		margin-bottom: 20px;
+		padding: 0;
+	}
+
+	.form-group {
+		margin-bottom: 20px;
+	}
+
+	.form-group label {
+		display: block;
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--color-foreground);
+		margin-bottom: 6px;
+	}
+
+	.form-group .required {
+		color: var(--color-primary);
+	}
+
+	.form-group input[type='text'],
+	.form-group input[type='email'],
+	.form-group input[type='tel'],
+	.form-group select,
+	.form-group textarea {
+		width: 100%;
+		padding: 12px 14px;
+		font-size: 16px;
+		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.3) h);
+		border-radius: 8px;
+		background: var(--color-background);
+		color: var(--color-foreground);
+		transition: border-color 0.2s;
+	}
+
+	.form-group input:focus,
+	.form-group select:focus,
+	.form-group textarea:focus {
+		border-color: var(--color-accent);
+		outline: none;
+	}
+
+	.form-group input.error,
+	.form-group select.error,
+	.form-group textarea.error {
+		border-color: var(--color-primary);
+	}
+
+	.form-group textarea {
+		min-height: 100px;
+		resize: vertical;
+	}
+
+	.form-group select {
+		appearance: none;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 14px center;
+		padding-right: 40px;
+	}
+
+	.hint {
+		font-size: 13px;
+		color: var(--color-quiet);
+		margin-top: 4px;
+	}
+
+	.form-error {
+		font-size: 13px;
+		color: var(--color-primary);
+		margin-top: 4px;
+	}
+
+	.contact-hint {
+		margin-top: -8px;
+		margin-bottom: 8px;
+	}
+
+	.form-row {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 16px;
+	}
+
+	.form-row-3 {
+		display: grid;
+		grid-template-columns: 2fr 1fr 1fr;
+		gap: 16px;
+	}
+
+	.form-actions {
+		display: flex;
+		gap: 16px;
+		margin-top: 32px;
+	}
+
+	.form-actions .submit-button {
+		background: var(--color-primary);
+		color: var(--color-background);
+		padding: 14px 28px;
+		border-radius: 8px;
+		border: none;
+		font-weight: 600;
+		font-size: 16px;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+
+	.form-actions .submit-button:hover:not(:disabled) {
+		background: oklch(from var(--color-primary) calc(l - 0.08) c h);
+	}
+
+	.form-actions .submit-button:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.form-actions .cancel-button {
+		background: transparent;
+		color: var(--color-quiet);
+		padding: 14px 28px;
+		border-radius: 8px;
+		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.3) h);
+		font-weight: 500;
+		font-size: 16px;
+		cursor: pointer;
+		transition:
+			border-color 0.2s,
+			color 0.2s;
+	}
+
+	.form-actions .cancel-button:hover {
+		border-color: var(--color-foreground);
+		color: var(--color-foreground);
+	}
+
+	.form-message {
+		padding: 16px;
+		border-radius: 8px;
+		margin-bottom: 24px;
+		font-size: 14px;
+	}
+
+	.form-message.error {
+		background: oklch(from var(--color-primary) l c h / 0.1);
+		color: var(--color-primary);
+		border: 1px solid oklch(from var(--color-primary) l c h / 0.3);
+	}
+
+	.form-message.success {
+		background: oklch(from var(--color-secondary) l c h / 0.1);
+		color: var(--color-secondary);
+		border: 1px solid oklch(from var(--color-secondary) l c h / 0.3);
+	}
+
+	.success-content {
+		text-align: center;
+		padding: 40px 20px;
+	}
+
+	.success-content h2 {
+		font-size: 28px;
+		font-weight: 700;
+		color: var(--color-secondary);
+		margin: 0 0 16px 0;
+	}
+
+	.success-content p {
+		font-size: 16px;
+		color: var(--color-quiet);
+		margin: 0 0 24px 0;
+	}
+
+	.success-content .back-button {
+		display: inline-block;
+		background: var(--color-secondary);
+		color: var(--color-background);
+		padding: 14px 28px;
+		border-radius: 8px;
+		border: none;
+		font-weight: 600;
+		font-size: 16px;
+		text-decoration: none;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+
+	.success-content .back-button:hover {
+		background: oklch(from var(--color-secondary) calc(l - 0.08) c h);
+	}
+
+	@media (max-width: 600px) {
+		.form-row,
+		.form-row-3 {
+			grid-template-columns: 1fr;
+		}
+
+		.form-actions {
+			flex-direction: column;
+		}
+	}
+}
