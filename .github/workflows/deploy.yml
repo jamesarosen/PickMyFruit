@@ -50,6 +50,9 @@ jobs:
     needs: test
     # Only deploy on push to main branch
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://www.pickmyfruit.com
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
