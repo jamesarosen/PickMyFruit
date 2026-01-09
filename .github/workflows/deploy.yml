@@ -5,6 +5,11 @@ on:
     branches: ['**']
   workflow_dispatch:
 
+# Prevent concurrent deployments to the same environment
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Test and Lint
