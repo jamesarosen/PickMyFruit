@@ -1,0 +1,39 @@
+@layer page {
+	.page-container {
+		max-width: 800px;
+		margin: 0 auto;
+		padding: 40px 20px 80px;
+	}
+
+	.page-header {
+		text-align: center;
+		margin-bottom: 48px;
+	}
+
+	.page-header h1 {
+		font-size: 36px;
+		font-weight: 700;
+		color: var(--color-foreground);
+		margin: 0 0 12px 0;
+	}
+
+	.page-header p {
+		font-size: 18px;
+		color: var(--color-quiet);
+		margin: 0;
+	}
+
+	@media (max-width: 600px) {
+		.page-container {
+			padding: 24px 16px 60px;
+		}
+
+		.page-header h1 {
+			font-size: 28px;
+		}
+
+		.page-header p {
+			font-size: 16px;
+		}
+	}
+}

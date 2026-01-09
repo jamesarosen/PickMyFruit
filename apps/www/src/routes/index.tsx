@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/solid-router'
+import { createFileRoute, Link } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import { getAvailablePlants } from '@/api/plants'
@@ -31,9 +31,9 @@ function HomePage() {
 							Turn your backyard abundance into community food. We connect you with
 							local gleaners. Serving all of Napa.
 						</p>
-						<button class="cta-button" type="button">
+						<Link to="/garden/new" class="cta-button">
 							List My Fruit Tree
-						</button>
+						</Link>
 					</div>
 				</section>
 
@@ -57,9 +57,9 @@ function HomePage() {
 								<p>Surplus feeds families</p>
 							</div>
 						</div>
-						<button class="cta-button" type="button">
+						<Link to="/garden/new" class="cta-button">
 							List My Fruit Tree
-						</button>
+						</Link>
 					</div>
 				</section>
 

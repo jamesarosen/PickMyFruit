@@ -5,6 +5,7 @@
 **Target**: 10 beta users with 3 successful gatherings
 
 > **Terminology**: See [docs/terminology.md](docs/terminology.md) for domain model naming decisions.
+>
 > - **ProduceType** (`/produce/*`): Canonical category (e.g., "Rangpur Lime")
 > - **Listing** (`/garden/*`): A specific shareable source (e.g., "James's lime tree in Napa")
 > - **Gathering**: A completed transfer
@@ -32,16 +33,19 @@
 ### Sequencing Philosophy
 
 **Phase 1 (PRs 1-4)**: Ship to Production
+
 - Deploy infrastructure and real database first
 - Get something live, even if incomplete
 - Enable real-world testing immediately
 
 **Phase 2 (PRs 5-7)**: Core User Flows
+
 - Add listing form (user-generated content)
 - Add basic contact/claim mechanism (gatherings)
 - Validate the core value proposition
 
 **Phase 3 (PRs 8-11)**: Iterate Faster
+
 - Improve developer experience for rapid iteration
 - Add monitoring and feedback loops
 - Prepare for scaling insights
@@ -56,6 +60,7 @@
 **Impact**: HIGH - enables read+write app architecture
 
 **Changes**:
+
 - Create Dockerfile for Node.js + SQLite deployment
 - Configure Vite for SSR (server-side rendering)
 - Add health check endpoint
@@ -74,6 +79,7 @@
 **Impact**: HIGH - enables production feedback loop
 
 **Changes**:
+
 - Add fly.toml configuration with persistent volume for SQLite
 - Update package.json with production build scripts
 
@@ -91,6 +97,7 @@
 **Impact**: HIGH - enables data persistence
 
 **Changes**:
+
 - Add Vinxi/Solid-Start API routes (or alternative SSR framework)
 - Wire up existing schema.ts to real database queries
 - Replace mock data in api/plants.ts with real DB calls
@@ -105,12 +112,13 @@
 
 ---
 
-### PR #4: Add CI/CD Pipeline with GitHub Actions
+### ✅ PR #4: Add CI/CD Pipeline with GitHub Actions
 
 **Size**: Small (~60 lines)
 **Impact**: HIGH - enables rapid iteration
 
 **Changes**:
+
 - Expand existing GitHub Actions workflow (already has test & lint)
 - Add deployment step to Fly.io on main branch push
 - Add PR preview deployments (optional but valuable)
@@ -125,12 +133,13 @@
 
 ---
 
-### PR #5: Add Listing Form with Validation
+### ✅ PR #5: Add Listing Form with Validation
 
 **Size**: Medium (~200 lines)
 **Impact**: CRITICAL - enables user-generated content
 
 **Changes**:
+
 - Create `/garden/new` route with TanStack Router
 - Build form component with Solid JS
 - Add Zod validation schema (matches schema.ts)
@@ -144,6 +153,7 @@
 **Reasoning**: The homepage prominently features a "List My Fruit Tree" CTA (index.tsx:35, 60), but it doesn't do anything. This is the most critical gap preventing users from using the platform.
 
 **Form Fields** (from schema):
+
 - ProduceType selection (or free-text for unlisted types)
 - Quantity estimate, harvest window
 - Address (geocoded to lat/lng/H3)
@@ -160,6 +170,7 @@
 **Impact**: HIGH - enables gatherings
 
 **Changes**:
+
 - Add "Contact Owner" button on listing cards
 - Create contact form that sends email to owner
 - Add status update: available → pending → gathered
@@ -183,6 +194,7 @@
 **Impact**: MEDIUM - improves trust and accountability
 
 **Changes**:
+
 - Install and configure Better Auth (already in CLAUDE.md as the chosen solution)
 - Add magic link email authentication
 - Create user table in schema
@@ -204,6 +216,7 @@
 **Impact**: MEDIUM - improves iteration speed
 
 **Changes**:
+
 - Add Vitest configuration (already in tech stack)
 - Write tests for database queries
 - Write tests for form validation
@@ -226,6 +239,7 @@
 **Impact**: MEDIUM - enables data-driven decisions
 
 **Changes**:
+
 - Add simple analytics: listings created, contacts made, gatherings completed
 - Create /admin route with basic auth
 - Show key metrics dashboard
@@ -247,6 +261,7 @@
 **Impact**: MEDIUM - improves Claude and human DX
 
 **Changes**:
+
 - Enhance existing seed.ts with realistic data
 - Add pnpm dev:seed script for quick reset
 - Document local development setup in README
@@ -268,6 +283,7 @@
 **Impact**: LOW (nice-to-have) - improves mobile UX
 
 **Changes**:
+
 - Add service worker for offline capabilities
 - Add web app manifest
 - Enable "Add to Home Screen" on mobile
@@ -296,6 +312,7 @@ All PRs are human-reviewable in under 15 minutes.
 ## Success Metrics
 
 After these 10 PRs:
+
 - ✅ Platform deployed and live
 - ✅ Users can create listings
 - ✅ Users can contact/claim produce (gatherings)
@@ -306,6 +323,7 @@ After these 10 PRs:
 - ✅ Developer experience enables Claude to iterate quickly
 
 **Measurable Outcomes**:
+
 - Deploy time: push to production in < 5 minutes
 - Form completion: > 70% of users who start the form finish it
 - Time to first listing: < 2 minutes from landing page
@@ -351,6 +369,7 @@ These features might be valuable later, but they don't help us reach 10 beta use
 ## Timeline Estimate
 
 **Not including actual time estimates per your instructions**, but noting dependencies:
+
 - PRs 1-3 can proceed in sequence (deploy → database → CI/CD)
 - PRs 4-5 can proceed after PR 2 completes
 - PR 6 can proceed after PR 5
@@ -364,6 +383,7 @@ Parallel work: PR 3, PR 7, PR 8 can happen alongside feature development
 ## Alignment with Project Goals
 
 From CLAUDE.md:
+
 - **30 days (past due)**: MVP with 10 beta users - ✅ PRs 1-6 deliver this
 - **60 days**: Gleaning group support - 🔄 Not in these 10 PRs (manual matching sufficient)
 - **90 days (past due)**: Automation complete - ✅ PR 4 (CI/CD) enables this
@@ -384,4 +404,11 @@ These 11 PRs focus on the most critical gap: **getting to 10 beta users**. We're
 
 ---
 
-*This roadmap prioritizes shipping over perfection, learning over assumptions, and user value over feature bloat. Every PR is scoped to be reviewable by humans in under 15 minutes and independently deployable.*
+_This roadmap prioritizes shipping over perfection, learning over assumptions, and user value over feature bloat. Every PR is scoped to be reviewable by humans in under 15 minutes and independently deployable._
+
+---
+
+## Future Enhancements (TODO)
+
+- [ ] **Address privacy preview**: Add interactive map preview to the listing form showing the H3 cell at resolution 9 (~174m). Users would see the hexagonal area that gleaners will see, reinforcing the privacy message. Requires adding a mapping library (Leaflet recommended - free, no API key).
+- [ ] **Fruit type autocomplete with varieties**: Replace the fruit type dropdown with an autocomplete search that includes varieties (e.g., "Apple - Honeycrisp", "Lemon - Meyer"). This provides better categorization without adding a separate variety field.
