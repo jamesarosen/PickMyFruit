@@ -1,8 +1,13 @@
 # Roadmap: Path to 10 Beta Users
 
-**Updated**: 2026-01-02
+**Updated**: 2026-01-08
 **Goal**: Get the platform live, collect real user data, and iterate rapidly
-**Target**: 10 beta users with 3 successful fruit transfers
+**Target**: 10 beta users with 3 successful gatherings
+
+> **Terminology**: See [docs/terminology.md](docs/terminology.md) for domain model naming decisions.
+> - **ProduceType** (`/produce/*`): Canonical category (e.g., "Rangpur Lime")
+> - **Listing** (`/garden/*`): A specific shareable source (e.g., "James's lime tree in Napa")
+> - **Gathering**: A completed transfer
 
 ## Strategic Reasoning
 
@@ -32,8 +37,8 @@
 - Enable real-world testing immediately
 
 **Phase 2 (PRs 5-7)**: Core User Flows
-- Add fruit listing form (user-generated content)
-- Add basic contact/claim mechanism
+- Add listing form (user-generated content)
+- Add basic contact/claim mechanism (gatherings)
 - Validate the core value proposition
 
 **Phase 3 (PRs 8-11)**: Iterate Faster
@@ -120,26 +125,26 @@
 
 ---
 
-### PR #5: Add "List My Fruit" Form with Validation
+### PR #5: Add Listing Form with Validation
 
 **Size**: Medium (~200 lines)
 **Impact**: CRITICAL - enables user-generated content
 
 **Changes**:
-- Create /list route with TanStack Router
+- Create `/garden/new` route with TanStack Router
 - Build form component with Solid JS
 - Add Zod validation schema (matches schema.ts)
 - Add geocoding via Nominatim API (free, no key required)
 - Generate H3 index from coordinates
-- Add form submission endpoint
+- Add form submission endpoint (creates a Listing)
 - Show success/error states
 
-**Why Fourth**: First feature that lets users DO something. This is the primary value prop: "List My Fruit Tree" button actually works now.
+**Why Fourth**: First feature that lets users DO something. This is the primary value prop: "List My Produce" button actually works now.
 
 **Reasoning**: The homepage prominently features a "List My Fruit Tree" CTA (index.tsx:35, 60), but it doesn't do anything. This is the most critical gap preventing users from using the platform.
 
 **Form Fields** (from schema):
-- Plant name, type, variety
+- ProduceType selection (or free-text for unlisted types)
 - Quantity estimate, harvest window
 - Address (geocoded to lat/lng/H3)
 - Owner name, email, phone
@@ -149,22 +154,22 @@
 
 ---
 
-### PR #6: Add Simple Contact/Claim Flow
+### PR #6: Add Simple Contact/Claim Flow (Gatherings)
 
 **Size**: Medium (~150 lines)
-**Impact**: HIGH - enables fruit transfers
+**Impact**: HIGH - enables gatherings
 
 **Changes**:
-- Add "Contact Owner" button on plant cards
+- Add "Contact Owner" button on listing cards
 - Create contact form that sends email to owner
-- Add status update: available → pending → harvested
+- Add status update: available → pending → gathered
 - Owner receives email with gleaner contact info
 - Simple email templates (text-based, no fancy HTML)
-- Log all contact attempts to database
+- Log all contact attempts as Gathering records
 
-**Why Fifth**: Completes the core loop. Users can now list fruit AND be contacted by gleaners. This enables our first successful transfers.
+**Why Fifth**: Completes the core loop. Users can now create listings AND be contacted by gleaners. This enables our first successful gatherings.
 
-**Reasoning**: Manual matching is fine for 10 users, but we need a way to track that someone is claiming fruit. A simple "send email to owner" flow with status tracking is sufficient. Avoids complex authentication or messaging systems.
+**Reasoning**: Manual matching is fine for 10 users, but we need a way to track that someone is claiming produce. A simple "send email to owner" flow with status tracking is sufficient. Avoids complex authentication or messaging systems.
 
 **Alternative Considered**: SMS via Twilio. Email is simpler and doesn't require paid service initially.
 
@@ -181,8 +186,8 @@
 - Install and configure Better Auth (already in CLAUDE.md as the chosen solution)
 - Add magic link email authentication
 - Create user table in schema
-- Link plants to authenticated users
-- Add "My Listings" page
+- Link listings to authenticated users
+- Add "My Listings" page (`/garden`)
 - Allow users to edit/delete their own listings only
 
 **Why Sixth**: Now that we have core functionality working, add auth to improve trust. Users can manage their listings. This also enables us to track repeat users and gather metrics.
@@ -221,16 +226,16 @@
 **Impact**: MEDIUM - enables data-driven decisions
 
 **Changes**:
-- Add simple analytics: listings created, contacts made, conversions
+- Add simple analytics: listings created, contacts made, gatherings completed
 - Create /admin route with basic auth
 - Show key metrics dashboard
 - Add user feedback form ("How did it go?")
 - Log page views and user flows
 - Add error tracking (could use Sentry free tier)
 
-**Why Eighth**: We need to measure progress toward "3 successful fruit transfers." This enables us to see what's working and what's not.
+**Why Eighth**: We need to measure progress toward "3 successful gatherings." This enables us to see what's working and what's not.
 
-**Reasoning**: At this stage (goal: 10 beta users, 3 transfers), we need visibility into the funnel. Where do users drop off? Are listings being contacted? Are transfers completed? Manual tracking doesn't scale past 5 users.
+**Reasoning**: At this stage (goal: 10 beta users, 3 gatherings), we need visibility into the funnel. Where do users drop off? Are listings being contacted? Are gatherings completed? Manual tracking doesn't scale past 5 users.
 
 **Review Focus**: Privacy compliance, performance impact of logging
 
@@ -292,8 +297,8 @@ All PRs are human-reviewable in under 15 minutes.
 
 After these 10 PRs:
 - ✅ Platform deployed and live
-- ✅ Users can list fruit
-- ✅ Users can contact/claim fruit
+- ✅ Users can create listings
+- ✅ Users can contact/claim produce (gatherings)
 - ✅ Users can manage their listings
 - ✅ Manual matching works
 - ✅ Fast iteration cycle (< 5 minutes to deploy)
@@ -320,7 +325,7 @@ After these 10 PRs:
 7. **Photo uploads** - Adds complexity, not needed to prove value
 8. **Multi-language support** - English only for Napa, CA
 
-These features might be valuable later, but they don't help us reach 10 beta users or 3 successful transfers. Ship minimal, learn fast, iterate based on real user needs.
+These features might be valuable later, but they don't help us reach 10 beta users or 3 successful gatherings. Ship minimal, learn fast, iterate based on real user needs.
 
 ---
 
@@ -361,7 +366,7 @@ Parallel work: PR 3, PR 7, PR 8 can happen alongside feature development
 From CLAUDE.md:
 - **30 days (past due)**: MVP with 10 beta users - ✅ PRs 1-6 deliver this
 - **60 days**: Gleaning group support - 🔄 Not in these 10 PRs (manual matching sufficient)
-- **90 days (today!)**: Automation complete - ✅ PR 3 (CI/CD) enables this
+- **90 days (past due)**: Automation complete - ✅ PR 4 (CI/CD) enables this
 - **180 days**: Expand to 2-3 cities - 🔮 Future work
 - **365 days**: Revenue model - 🔮 Future work
 
