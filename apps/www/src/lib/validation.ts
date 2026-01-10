@@ -24,18 +24,10 @@ export const fruitTypes = [
 ] as const
 export type FruitType = (typeof fruitTypes)[number]
 
-// Normalize empty strings and null to undefined for optional fields
-const optionalEmail = z.preprocess(
-	(val) => (val === '' || val === null ? undefined : val),
-	z.string().email('Invalid email address').optional()
-)
-
-const optionalPhone = z.preprocess(
-	(val) => (val === '' || val === null ? undefined : val),
-	z
-		.string()
-		.regex(/^[\d\s\-().+]+$/, 'Invalid phone number')
-		.optional()
+// Coerce null to empty string for required email (triggers email error)
+const requiredEmail = z.preprocess(
+	(val) => (val === null ? '' : val),
+	z.string().min(1, 'Email is required').email('Invalid email address')
 )
 
 const optionalZip = z.preprocess(
@@ -54,29 +46,23 @@ const requiredString = (message: string, max: number = 200) =>
 	)
 
 // Schema for form input (before geocoding)
-export const listingFormSchema = z
-	.object({
-		type: z.enum(fruitTypes, { message: 'Please select a fruit type' }),
-		harvestWindow: requiredString('Harvest window is required', 50),
-		address: requiredString('Address is required', 200),
-		city: requiredString('City is required', 100),
-		state: z.preprocess(
-			(val) => (val === null ? '' : val),
-			z.string().length(2, 'State must be 2 characters')
-		),
-		zip: optionalZip,
-		ownerName: requiredString('Your name is required', 100),
-		ownerEmail: optionalEmail,
-		ownerPhone: optionalPhone,
-		notes: z.preprocess(
-			(val) => (val === '' || val === null ? undefined : val),
-			z.string().max(1000).optional()
-		),
-	})
-	.refine((data) => data.ownerEmail || data.ownerPhone, {
-		message: 'Please provide either an email or phone number',
-		path: ['ownerEmail'],
-	})
+export const listingFormSchema = z.object({
+	type: z.enum(fruitTypes, { message: 'Please select a fruit type' }),
+	harvestWindow: requiredString('Harvest window is required', 50),
+	address: requiredString('Address is required', 200),
+	city: requiredString('City is required', 100),
+	state: z.preprocess(
+		(val) => (val === null ? '' : val),
+		z.string().length(2, 'State must be 2 characters')
+	),
+	zip: optionalZip,
+	ownerName: requiredString('Your name is required', 100),
+	ownerEmail: requiredEmail,
+	notes: z.preprocess(
+		(val) => (val === '' || val === null ? undefined : val),
+		z.string().max(1000).optional()
+	),
+})
 
 export type ListingFormData = z.infer<typeof listingFormSchema>
 

@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker'
 import { latLngToCell } from 'h3-js'
 import { db } from './db'
-import { plants, type NewPlant } from './schema'
+import { plants, owners, type NewPlant, type NewOwner } from './schema'
 
 // Napa Valley approximate bounds
 const NAPA_BOUNDS = {
@@ -48,7 +48,19 @@ const FRUIT_TYPES = [
 const QUANTITIES = ['abundant', 'moderate', 'few']
 const STATUSES = ['available', 'available', 'available', 'claimed'] // More weight to available
 
-function generatePlant(): NewPlant {
+function generateOwner(): NewOwner {
+	return {
+		name: faker.person.fullName(),
+		email: faker.internet.email(),
+		phone: faker.helpers.maybe(() => faker.phone.number({ style: 'national' }), {
+			probability: 0.7,
+		}),
+		createdAt: faker.date.past({ years: 1 }),
+		updatedAt: faker.date.recent({ days: 30 }),
+	}
+}
+
+function generatePlant(ownerId: number): NewPlant {
 	const fruitType = faker.helpers.arrayElement(FRUIT_TYPES)
 	const lat = faker.number.float({
 		min: NAPA_BOUNDS.latMin,
@@ -95,10 +107,8 @@ function generatePlant(): NewPlant {
 		zip: faker.helpers.arrayElement(['94558', '94559', '94581', '94574']),
 		lat,
 		lng,
-		h3Index, // Keep as hex string
-		ownerName: faker.person.fullName(),
-		ownerEmail: faker.internet.email(),
-		ownerPhone: faker.phone.number({ style: 'national' }),
+		h3Index,
+		ownerId,
 		notes: faker.helpers.maybe(() => faker.lorem.sentence(), {
 			probability: 0.3,
 		}),
@@ -121,11 +131,20 @@ function generatePlant(): NewPlant {
 async function seed() {
 	console.log('🌱 Seeding database...')
 
-	// Clear existing data
+	// Clear existing data (plants first due to foreign key)
 	await db.delete(plants)
+	await db.delete(owners)
 
-	// Generate 50 plants
-	const plantsData: NewPlant[] = Array.from({ length: 50 }, generatePlant)
+	// Generate 20 owners
+	const ownersData: NewOwner[] = Array.from({ length: 20 }, generateOwner)
+	const insertedOwners = await db.insert(owners).values(ownersData).returning()
+	console.log(`✅ Seeded ${insertedOwners.length} owners`)
+
+	// Generate 50 plants with random owners
+	const plantsData: NewPlant[] = Array.from({ length: 50 }, () => {
+		const owner = faker.helpers.arrayElement(insertedOwners)
+		return generatePlant(owner.id)
+	})
 
 	// Insert plants
 	await db.insert(plants).values(plantsData)

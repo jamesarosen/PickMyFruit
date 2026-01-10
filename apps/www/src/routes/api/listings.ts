@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/solid-router'
 import { listingFormSchema } from '@/lib/validation'
 import { geocodeAddress } from '@/lib/geocoding'
-import { createListing } from '@/data/queries'
+import { createListing, findOrCreateOwner } from '@/data/queries'
 
 export const Route = createFileRoute('/api/listings')({
 	server: {
@@ -36,8 +36,13 @@ export const Route = createFileRoute('/api/listings')({
 					return Response.json({ error: message }, { status: 400 })
 				}
 
-				// Create the listing
+				// Find or create owner, then create the listing
 				try {
+					const owner = await findOrCreateOwner({
+						name: formData.ownerName,
+						email: formData.ownerEmail,
+					})
+
 					const listing = await createListing({
 						name: formData.type, // Use fruit type as name for now
 						type: formData.type,
@@ -49,9 +54,7 @@ export const Route = createFileRoute('/api/listings')({
 						lat: geocodeResult.lat,
 						lng: geocodeResult.lng,
 						h3Index: geocodeResult.h3Index,
-						ownerName: formData.ownerName,
-						ownerEmail: formData.ownerEmail || null,
-						ownerPhone: formData.ownerPhone || null,
+						ownerId: owner.id,
 						notes: formData.notes || null,
 						status: 'available',
 					})

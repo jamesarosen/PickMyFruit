@@ -1,6 +1,22 @@
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 
+export const owners = sqliteTable('owners', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	name: text('name').notNull(),
+	email: text('email').notNull().unique(),
+	phone: text('phone'),
+	createdAt: integer('created_at', { mode: 'timestamp' })
+		.notNull()
+		.default(sql`(unixepoch())`),
+	updatedAt: integer('updated_at', { mode: 'timestamp' })
+		.notNull()
+		.default(sql`(unixepoch())`),
+})
+
+export type Owner = typeof owners.$inferSelect
+export type NewOwner = typeof owners.$inferInsert
+
 export const plants = sqliteTable('plants', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
 	name: text('name').notNull(),
@@ -19,10 +35,10 @@ export const plants = sqliteTable('plants', {
 	lng: real('lng').notNull(),
 	h3Index: text('h3_index').notNull(), // H3 index at resolution 9
 
-	// Owner info
-	ownerName: text('owner_name').notNull(),
-	ownerEmail: text('owner_email'),
-	ownerPhone: text('owner_phone'),
+	// Owner reference
+	ownerId: integer('owner_id')
+		.notNull()
+		.references(() => owners.id),
 
 	// Metadata
 	notes: text('notes'),
