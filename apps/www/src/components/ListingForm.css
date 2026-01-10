@@ -200,6 +200,80 @@
 		background: oklch(from var(--color-secondary) calc(l - 0.08) c h);
 	}
 
+	/* Magic link waiting state */
+	.magic-link-content {
+		text-align: center;
+		padding: 40px 20px;
+		max-width: 400px;
+		margin: 0 auto;
+	}
+
+	.magic-link-content h2 {
+		font-size: 28px;
+		font-weight: 700;
+		color: var(--color-foreground);
+		margin: 0 0 16px 0;
+	}
+
+	.magic-link-content p {
+		font-size: 16px;
+		color: var(--color-quiet);
+		margin: 0 0 16px 0;
+		line-height: 1.5;
+	}
+
+	.magic-link-content p strong {
+		color: var(--color-foreground);
+	}
+
+	.magic-link-actions {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		margin-top: 32px;
+	}
+
+	.magic-link-actions .resend-button {
+		background: var(--color-accent);
+		color: var(--color-background);
+		padding: 12px 24px;
+		border-radius: 8px;
+		border: none;
+		font-weight: 600;
+		font-size: 14px;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+
+	.magic-link-actions .resend-button:hover {
+		background: oklch(from var(--color-accent) calc(l - 0.08) c h);
+	}
+
+	.magic-link-actions .cancel-button {
+		background: transparent;
+		color: var(--color-quiet);
+		padding: 12px 24px;
+		border-radius: 8px;
+		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.3) h);
+		font-weight: 500;
+		font-size: 14px;
+		cursor: pointer;
+		transition:
+			border-color 0.2s,
+			color 0.2s;
+	}
+
+	.magic-link-actions .cancel-button:hover {
+		border-color: var(--color-foreground);
+		color: var(--color-foreground);
+	}
+
+	/* Readonly input styling */
+	.form-group input[readonly] {
+		background: oklch(from var(--color-quiet) l c h / 0.1);
+		cursor: not-allowed;
+	}
+
 	@media (max-width: 600px) {
 		.form-row,
 		.form-row-3 {

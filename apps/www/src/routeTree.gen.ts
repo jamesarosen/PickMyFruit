@@ -10,21 +10,34 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as CssTestRouteImport } from './routes/css-test'
+import { Route as MyRouteRouteImport } from './routes/my/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MyGardenRouteImport } from './routes/my/garden'
 import { Route as GardenNewRouteImport } from './routes/garden/new'
 import { Route as ApiPlantsRouteImport } from './routes/api/plants'
 import { Route as ApiListingsRouteImport } from './routes/api/listings'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const CssTestRoute = CssTestRouteImport.update({
   id: '/css-test',
   path: '/css-test',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MyRouteRoute = MyRouteRouteImport.update({
+  id: '/my',
+  path: '/my',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MyGardenRoute = MyGardenRouteImport.update({
+  id: '/garden',
+  path: '/garden',
+  getParentRoute: () => MyRouteRoute,
 } as any)
 const GardenNewRoute = GardenNewRouteImport.update({
   id: '/garden/new',
@@ -46,66 +59,91 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/my': typeof MyRouteRouteWithChildren
   '/css-test': typeof CssTestRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRoute
   '/api/plants': typeof ApiPlantsRoute
   '/garden/new': typeof GardenNewRoute
+  '/my/garden': typeof MyGardenRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/my': typeof MyRouteRouteWithChildren
   '/css-test': typeof CssTestRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRoute
   '/api/plants': typeof ApiPlantsRoute
   '/garden/new': typeof GardenNewRoute
+  '/my/garden': typeof MyGardenRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/my': typeof MyRouteRouteWithChildren
   '/css-test': typeof CssTestRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRoute
   '/api/plants': typeof ApiPlantsRoute
   '/garden/new': typeof GardenNewRoute
+  '/my/garden': typeof MyGardenRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/my'
     | '/css-test'
     | '/api/health'
     | '/api/listings'
     | '/api/plants'
     | '/garden/new'
+    | '/my/garden'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/my'
     | '/css-test'
     | '/api/health'
     | '/api/listings'
     | '/api/plants'
     | '/garden/new'
+    | '/my/garden'
+    | '/api/auth/$'
   id:
     | '__root__'
     | '/'
+    | '/my'
     | '/css-test'
     | '/api/health'
     | '/api/listings'
     | '/api/plants'
     | '/garden/new'
+    | '/my/garden'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  MyRouteRoute: typeof MyRouteRouteWithChildren
   CssTestRoute: typeof CssTestRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiListingsRoute: typeof ApiListingsRoute
   ApiPlantsRoute: typeof ApiPlantsRoute
   GardenNewRoute: typeof GardenNewRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -117,12 +155,26 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof CssTestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/my': {
+      id: '/my'
+      path: '/my'
+      fullPath: '/my'
+      preLoaderRoute: typeof MyRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/my/garden': {
+      id: '/my/garden'
+      path: '/garden'
+      fullPath: '/my/garden'
+      preLoaderRoute: typeof MyGardenRouteImport
+      parentRoute: typeof MyRouteRoute
     }
     '/garden/new': {
       id: '/garden/new'
@@ -152,16 +204,36 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface MyRouteRouteChildren {
+  MyGardenRoute: typeof MyGardenRoute
+}
+
+const MyRouteRouteChildren: MyRouteRouteChildren = {
+  MyGardenRoute: MyGardenRoute,
+}
+
+const MyRouteRouteWithChildren =
+  MyRouteRoute._addFileChildren(MyRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  MyRouteRoute: MyRouteRouteWithChildren,
   CssTestRoute: CssTestRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiListingsRoute: ApiListingsRoute,
   ApiPlantsRoute: ApiPlantsRoute,
   GardenNewRoute: GardenNewRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

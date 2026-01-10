@@ -172,15 +172,15 @@
 **Changes**:
 
 - Install and configure Better Auth (already in CLAUDE.md as the chosen solution)
-- Add magic link email authentication
-- Create user table in schema
+- Add magic link email authentication via Resend
+- Require email verification to complete listing signup flow
 - Link listings to authenticated users
-- Add "My Listings" page (`/garden`)
+- Add "My Listings" page (`/my/garden`)
 - Allow users to edit/delete their own listings only
 
 **Why Sixth**: Now that we have core functionality working, add auth to improve trust. Users can manage their listings. This also enables us to track repeat users and gather metrics.
 
-**Reasoning**: Better Auth is already specified in the tech stack (CLAUDE.md:9). Passwordless auth (magic links) has the lowest friction for non-technical users (elderly gardeners). Deferred until after core flows work to avoid complexity blocking launch.
+**Reasoning**: Better Auth is already specified in the tech stack (CLAUDE.md:9). Passwordless auth (magic links) has the lowest friction for non-technical users. Deferred until after core flows work to avoid complexity blocking launch.
 
 **Review Focus**: Email security, session management, authorization checks
 

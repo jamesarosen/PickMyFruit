@@ -39,3 +39,34 @@ export async function createListing(data: NewPlant): Promise<Plant> {
 	const result = await db.insert(plants).values(data).returning()
 	return result[0]
 }
+
+export async function getUserListings(userId: string): Promise<Plant[]> {
+	return await db
+		.select()
+		.from(plants)
+		.where(eq(plants.userId, userId))
+		.orderBy(desc(plants.createdAt))
+}
+
+export async function getListingById(id: number): Promise<Plant | undefined> {
+	const result = await db.select().from(plants).where(eq(plants.id, id)).limit(1)
+	return result[0]
+}
+
+export async function deleteListingById(
+	id: number,
+	userId: string
+): Promise<boolean> {
+	const result = await db
+		.delete(plants)
+		.where(eq(plants.id, id))
+		.returning({ id: plants.id })
+
+	// Verify the listing belonged to the user
+	const listing = await getListingById(id)
+	if (listing && listing.userId !== userId) {
+		return false
+	}
+
+	return result.length > 0
+}

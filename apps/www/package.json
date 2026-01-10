@@ -27,8 +27,10 @@
 		"@libsql/client": "^0.15.15",
 		"@tanstack/solid-router": "^1.144.0",
 		"@tanstack/solid-start": "^1.145.3",
+		"better-auth": "^1.4.10",
 		"drizzle-orm": "^0.45.1",
 		"h3-js": "^4.4.0",
+		"resend": "^6.6.0",
 		"solid-js": "^1.9.5",
 		"zod": "^4.3.4"
 	},
