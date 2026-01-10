@@ -64,7 +64,6 @@ export default function ListingForm() {
 			zip: formData.get('zip'),
 			ownerName: formData.get('ownerName'),
 			ownerEmail: formData.get('ownerEmail'),
-			ownerPhone: formData.get('ownerPhone'),
 			notes: formData.get('notes'),
 		}
 
@@ -216,34 +215,22 @@ export default function ListingForm() {
 							required
 						/>
 					</FormField>
-					<div class="form-row">
-						<FormField
+					<FormField
+						id="ownerEmail"
+						label="Email"
+						required
+						error={fieldErrors().ownerEmail}
+						hint="Pick My Fruit will send you a code to verify"
+					>
+						<input
+							type="email"
 							id="ownerEmail"
-							label="Email"
-							error={fieldErrors().ownerEmail}
-							hint="Pick My Fruit will send you a code to verify"
-						>
-							<input
-								type="email"
-								id="ownerEmail"
-								name="ownerEmail"
-								placeholder="jane@example.com"
-								class={fieldErrors().ownerEmail ? 'error' : ''}
-							/>
-						</FormField>
-						<FormField id="ownerPhone" label="Phone" error={fieldErrors().ownerPhone}>
-							<input
-								type="tel"
-								id="ownerPhone"
-								name="ownerPhone"
-								placeholder="(555) 123-4567"
-								class={fieldErrors().ownerPhone ? 'error' : ''}
-							/>
-						</FormField>
-					</div>
-					<div class="hint contact-hint">
-						Email or phone required so gleaners can reach you.
-					</div>
+							name="ownerEmail"
+							placeholder="jane@example.com"
+							class={fieldErrors().ownerEmail ? 'error' : ''}
+							required
+						/>
+					</FormField>
 				</fieldset>
 
 				<fieldset>

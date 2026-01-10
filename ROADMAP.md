@@ -164,31 +164,7 @@
 
 ---
 
-### PR #6: Add Simple Contact/Claim Flow (Gatherings)
-
-**Size**: Medium (~150 lines)
-**Impact**: HIGH - enables gatherings
-
-**Changes**:
-
-- Add "Contact Owner" button on listing cards
-- Create contact form that sends email to owner
-- Add status update: available → pending → gathered
-- Owner receives email with gleaner contact info
-- Simple email templates (text-based, no fancy HTML)
-- Log all contact attempts as Gathering records
-
-**Why Fifth**: Completes the core loop. Users can now create listings AND be contacted by gleaners. This enables our first successful gatherings.
-
-**Reasoning**: Manual matching is fine for 10 users, but we need a way to track that someone is claiming produce. A simple "send email to owner" flow with status tracking is sufficient. Avoids complex authentication or messaging systems.
-
-**Alternative Considered**: SMS via Twilio. Email is simpler and doesn't require paid service initially.
-
-**Review Focus**: Email deliverability, privacy protection, spam prevention
-
----
-
-### PR #7: Add Basic Authentication with Better Auth
+### PR #6: Add Basic Authentication with Better Auth
 
 **Size**: Medium (~180 lines)
 **Impact**: MEDIUM - improves trust and accountability
@@ -207,6 +183,30 @@
 **Reasoning**: Better Auth is already specified in the tech stack (CLAUDE.md:9). Passwordless auth (magic links) has the lowest friction for non-technical users (elderly gardeners). Deferred until after core flows work to avoid complexity blocking launch.
 
 **Review Focus**: Email security, session management, authorization checks
+
+---
+
+### PR #7: Add Simple Contact/Claim Flow (Gatherings)
+
+**Size**: Medium (~150 lines)
+**Impact**: HIGH - enables gatherings
+
+**Changes**:
+
+- Add "Contact Owner" button on listing cards
+- Create contact form that sends email to owner
+- Add status update: available → pending → gathered
+- Owner receives email with gleaner contact info
+- Simple email templates (text-based, no fancy HTML)
+- Log all contact attempts as Gathering records
+
+**Why Seventh**: Completes the core loop. Users can now create listings AND be contacted by gleaners. This enables our first successful gatherings.
+
+**Reasoning**: Manual matching is fine for 10 users, but we need a way to track that someone is claiming produce. A simple "send email to owner" flow with status tracking is sufficient. Avoids complex authentication or messaging systems.
+
+**Alternative Considered**: SMS via Twilio. Email is simpler and doesn't require paid service initially.
+
+**Review Focus**: Email deliverability, privacy protection, spam prevention
 
 ---
 
@@ -353,7 +353,7 @@ These features might be valuable later, but they don't help us reach 10 beta use
 **Mitigation**: Use free Nominatim (rate-limited but sufficient for MVP), cache results, add fallback to manual lat/lng entry
 
 **Risk**: Email deliverability issues
-**Mitigation**: Start with transactional email service (SendGrid free tier), add SPF/DKIM records, monitor bounce rates
+**Mitigation**: Start with transactional email service (Resend free tier), add SPF/DKIM records, monitor bounce rates
 
 **Risk**: SQLite write concurrency on Fly.io
 **Mitigation**: SQLite handles this well for < 1000 users. Monitor, plan migration to Turso (LibSQL) if needed
