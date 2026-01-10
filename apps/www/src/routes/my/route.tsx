@@ -1,7 +1,6 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/solid-router'
 import { auth } from '@/lib/auth'
 
-// @ts-expect-error - route types not yet generated
 export const Route = createFileRoute('/my')({
 	beforeLoad: async ({ context }) => {
 		// Server-side session check

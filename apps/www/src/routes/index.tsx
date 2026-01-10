@@ -26,12 +26,11 @@ function HomePage() {
 						<Show
 							when={session().data?.user}
 							fallback={
-								<Link to="/garden/new" class="nav-link">
+								<Link to="/login" class="nav-link">
 									Sign In
 								</Link>
 							}
 						>
-							{/* @ts-expect-error - route types not yet generated */}
 							<Link to="/my/garden" class="nav-link">
 								My Garden
 							</Link>

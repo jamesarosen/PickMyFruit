@@ -25,7 +25,6 @@ const getMyListings = createServerFn({ method: 'GET' }).handler(
 	}
 )
 
-// @ts-expect-error - route types not yet generated
 export const Route = createFileRoute('/my/garden')({
 	loader: () => getMyListings(),
 	component: MyGardenPage,

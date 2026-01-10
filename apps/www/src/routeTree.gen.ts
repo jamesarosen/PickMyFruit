@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as CssTestRouteImport } from './routes/css-test'
 import { Route as MyRouteRouteImport } from './routes/my/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -19,6 +20,11 @@ import { Route as ApiListingsRouteImport } from './routes/api/listings'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CssTestRoute = CssTestRouteImport.update({
   id: '/css-test',
   path: '/css-test',
@@ -69,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/my': typeof MyRouteRouteWithChildren
   '/css-test': typeof CssTestRoute
+  '/login': typeof LoginRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRoute
   '/api/plants': typeof ApiPlantsRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/my': typeof MyRouteRouteWithChildren
   '/css-test': typeof CssTestRoute
+  '/login': typeof LoginRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRoute
   '/api/plants': typeof ApiPlantsRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/my': typeof MyRouteRouteWithChildren
   '/css-test': typeof CssTestRoute
+  '/login': typeof LoginRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRoute
   '/api/plants': typeof ApiPlantsRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/'
     | '/my'
     | '/css-test'
+    | '/login'
     | '/api/health'
     | '/api/listings'
     | '/api/plants'
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/'
     | '/my'
     | '/css-test'
+    | '/login'
     | '/api/health'
     | '/api/listings'
     | '/api/plants'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/'
     | '/my'
     | '/css-test'
+    | '/login'
     | '/api/health'
     | '/api/listings'
     | '/api/plants'
@@ -139,6 +151,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   MyRouteRoute: typeof MyRouteRouteWithChildren
   CssTestRoute: typeof CssTestRoute
+  LoginRoute: typeof LoginRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiListingsRoute: typeof ApiListingsRoute
   ApiPlantsRoute: typeof ApiPlantsRoute
@@ -148,6 +161,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/solid-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/css-test': {
       id: '/css-test'
       path: '/css-test'
@@ -229,6 +249,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MyRouteRoute: MyRouteRouteWithChildren,
   CssTestRoute: CssTestRoute,
+  LoginRoute: LoginRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiListingsRoute: ApiListingsRoute,
   ApiPlantsRoute: ApiPlantsRoute,
