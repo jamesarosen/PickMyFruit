@@ -1,5 +1,4 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/solid-router'
-import { auth } from '@/lib/auth'
 
 export const Route = createFileRoute('/my')({
 	beforeLoad: async ({ context }) => {
@@ -11,6 +10,8 @@ export const Route = createFileRoute('/my')({
 			return {}
 		}
 
+		// Dynamic import to avoid bundling server-only code for browser
+		const { auth } = await import('@/lib/auth')
 		const session = await auth.api.getSession({ headers })
 
 		if (!session?.user) {

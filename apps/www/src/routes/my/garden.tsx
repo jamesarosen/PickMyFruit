@@ -2,8 +2,6 @@ import { createFileRoute, Link } from '@tanstack/solid-router'
 import { createServerFn } from '@tanstack/solid-start'
 import { For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
-import { getUserListings } from '@/data/queries'
-import { auth } from '@/lib/auth'
 import { useSession } from '@/lib/auth-client'
 import type { Plant } from '@/data/schema'
 import '@/routes/my/garden.css'
@@ -15,6 +13,10 @@ const getMyListings = createServerFn({ method: 'GET' }).handler(
 		if (!headers) {
 			return [] as Plant[]
 		}
+
+		// Dynamic imports to avoid bundling server-only code for browser
+		const { auth } = await import('@/lib/auth')
+		const { getUserListings } = await import('@/data/queries')
 
 		const session = await auth.api.getSession({ headers })
 		if (!session?.user) {

@@ -1,13 +1,17 @@
 import { createFileRoute } from '@tanstack/solid-router'
 import { listingFormSchema } from '@/lib/validation'
 import { geocodeAddress } from '@/lib/geocoding'
-import { createListing, findOrCreateOwner } from '@/data/queries'
-import { auth } from '@/lib/auth'
 
 export const Route = createFileRoute('/api/listings')({
 	server: {
 		handlers: {
 			async POST({ request }) {
+				// Dynamic imports to avoid bundling server-only code for browser
+				const { auth } = await import('@/lib/auth')
+				const { createListing, findOrCreateOwner } = await import(
+					'@/data/queries'
+				)
+
 				// Require authentication
 				const session = await auth.api.getSession({
 					headers: request.headers,
