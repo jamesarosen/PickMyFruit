@@ -97,7 +97,9 @@ function MyGardenPage() {
 
 				<Show when={(listings() ?? []).length > 0} fallback={<EmptyState />}>
 					<div class="listings-grid">
-						<For each={listings()}>{(listing) => <ListingCard listing={listing} />}</For>
+						<For each={listings()}>
+							{(listing) => <ListingCard listing={listing} />}
+						</For>
 					</div>
 
 					<div class="page-actions">

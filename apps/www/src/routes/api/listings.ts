@@ -8,9 +8,7 @@ export const Route = createFileRoute('/api/listings')({
 			async POST({ request }) {
 				// Dynamic imports to avoid bundling server-only code for browser
 				const { auth } = await import('@/lib/auth')
-				const { createListing, findOrCreateOwner } = await import(
-					'@/data/queries'
-				)
+				const { createListing, findOrCreateOwner } = await import('@/data/queries')
 
 				// Require authentication
 				const session = await auth.api.getSession({
@@ -18,10 +16,7 @@ export const Route = createFileRoute('/api/listings')({
 				})
 
 				if (!session?.user) {
-					return Response.json(
-						{ error: 'Authentication required' },
-						{ status: 401 }
-					)
+					return Response.json({ error: 'Authentication required' }, { status: 401 })
 				}
 
 				let body: unknown

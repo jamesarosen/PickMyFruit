@@ -208,161 +208,161 @@ export default function ListingForm() {
 				}
 			>
 				<form class="listing-form" onSubmit={handleSubmit}>
-				<Show when={submitError()}>
-					<div class="form-message error">{submitError()}</div>
-				</Show>
+					<Show when={submitError()}>
+						<div class="form-message error">{submitError()}</div>
+					</Show>
 
-				<fieldset>
-					<legend>What are you sharing?</legend>
-					<div class="form-row">
-						<FormField
-							id="type"
-							label="Fruit Type"
-							required
-							error={fieldErrors().type}
-						>
-							<select
+					<fieldset>
+						<legend>What are you sharing?</legend>
+						<div class="form-row">
+							<FormField
 								id="type"
-								name="type"
-								class={fieldErrors().type ? 'error' : ''}
+								label="Fruit Type"
 								required
+								error={fieldErrors().type}
 							>
-								<option value="">Select fruit type</option>
-								<For each={fruitTypes}>
-									{(type) => <option value={type}>{capitalize(type)}</option>}
-								</For>
-							</select>
-						</FormField>
+								<select
+									id="type"
+									name="type"
+									class={fieldErrors().type ? 'error' : ''}
+									required
+								>
+									<option value="">Select fruit type</option>
+									<For each={fruitTypes}>
+										{(type) => <option value={type}>{capitalize(type)}</option>}
+									</For>
+								</select>
+							</FormField>
+							<FormField
+								id="harvestWindow"
+								label="When to Pick"
+								required
+								error={fieldErrors().harvestWindow}
+							>
+								<input
+									type="text"
+									id="harvestWindow"
+									name="harvestWindow"
+									placeholder="e.g., Now through February"
+									class={fieldErrors().harvestWindow ? 'error' : ''}
+									required
+								/>
+							</FormField>
+						</div>
+					</fieldset>
+
+					<fieldset>
+						<legend>Where is it?</legend>
 						<FormField
-							id="harvestWindow"
-							label="When to Pick"
+							id="address"
+							label="Street Address"
 							required
-							error={fieldErrors().harvestWindow}
+							error={fieldErrors().address}
+							hint="Others will see your neighborhood, but not your exact address."
 						>
 							<input
 								type="text"
-								id="harvestWindow"
-								name="harvestWindow"
-								placeholder="e.g., Now through February"
-								class={fieldErrors().harvestWindow ? 'error' : ''}
+								id="address"
+								name="address"
+								placeholder="123 Main Street"
+								class={fieldErrors().address ? 'error' : ''}
 								required
 							/>
 						</FormField>
-					</div>
-				</fieldset>
+						<div class="form-row-3">
+							<FormField id="city" label="City" required error={fieldErrors().city}>
+								<input
+									type="text"
+									id="city"
+									name="city"
+									value="Napa"
+									class={fieldErrors().city ? 'error' : ''}
+									required
+								/>
+							</FormField>
+							<FormField id="state" label="State" required error={fieldErrors().state}>
+								<input
+									type="text"
+									id="state"
+									name="state"
+									value="CA"
+									maxlength="2"
+									class={fieldErrors().state ? 'error' : ''}
+									required
+								/>
+							</FormField>
+							<FormField id="zip" label="ZIP" error={fieldErrors().zip}>
+								<input type="text" id="zip" name="zip" placeholder="94558" />
+							</FormField>
+						</div>
+					</fieldset>
 
-				<fieldset>
-					<legend>Where is it?</legend>
-					<FormField
-						id="address"
-						label="Street Address"
-						required
-						error={fieldErrors().address}
-						hint="Others will see your neighborhood, but not your exact address."
-					>
-						<input
-							type="text"
-							id="address"
-							name="address"
-							placeholder="123 Main Street"
-							class={fieldErrors().address ? 'error' : ''}
-							required
-						/>
-					</FormField>
-					<div class="form-row-3">
-						<FormField id="city" label="City" required error={fieldErrors().city}>
-							<input
-								type="text"
-								id="city"
-								name="city"
-								value="Napa"
-								class={fieldErrors().city ? 'error' : ''}
-								required
-							/>
-						</FormField>
-						<FormField id="state" label="State" required error={fieldErrors().state}>
-							<input
-								type="text"
-								id="state"
-								name="state"
-								value="CA"
-								maxlength="2"
-								class={fieldErrors().state ? 'error' : ''}
-								required
-							/>
-						</FormField>
-						<FormField id="zip" label="ZIP" error={fieldErrors().zip}>
-							<input type="text" id="zip" name="zip" placeholder="94558" />
-						</FormField>
-					</div>
-				</fieldset>
-
-				<fieldset>
-					<legend>How do we get in touch?</legend>
-					<FormField
-						id="ownerName"
-						label="Your Name"
-						required
-						error={fieldErrors().ownerName}
-					>
-						<input
-							type="text"
+					<fieldset>
+						<legend>How do we get in touch?</legend>
+						<FormField
 							id="ownerName"
-							name="ownerName"
-							placeholder="Jane Smith"
-							value={session().data?.user?.name || ''}
-							class={fieldErrors().ownerName ? 'error' : ''}
+							label="Your Name"
 							required
-						/>
-					</FormField>
-					<FormField
-						id="ownerEmail"
-						label="Email"
-						required
-						error={fieldErrors().ownerEmail}
-						hint={
-							session().data?.user
-								? 'Signed in - your listing will be linked to this account'
-								: 'Pick My Fruit will send you a link to verify'
-						}
-					>
-						<input
-							type="email"
+							error={fieldErrors().ownerName}
+						>
+							<input
+								type="text"
+								id="ownerName"
+								name="ownerName"
+								placeholder="Jane Smith"
+								value={session().data?.user?.name || ''}
+								class={fieldErrors().ownerName ? 'error' : ''}
+								required
+							/>
+						</FormField>
+						<FormField
 							id="ownerEmail"
-							name="ownerEmail"
-							placeholder="jane@example.com"
-							value={session().data?.user?.email || ''}
-							class={fieldErrors().ownerEmail ? 'error' : ''}
+							label="Email"
 							required
-							readonly={Boolean(session().data?.user)}
-						/>
-					</FormField>
-				</fieldset>
+							error={fieldErrors().ownerEmail}
+							hint={
+								session().data?.user
+									? 'Signed in - your listing will be linked to this account'
+									: 'Pick My Fruit will send you a link to verify'
+							}
+						>
+							<input
+								type="email"
+								id="ownerEmail"
+								name="ownerEmail"
+								placeholder="jane@example.com"
+								value={session().data?.user?.email || ''}
+								class={fieldErrors().ownerEmail ? 'error' : ''}
+								required
+								readonly={Boolean(session().data?.user)}
+							/>
+						</FormField>
+					</fieldset>
 
-				<fieldset>
-					<legend>Notes</legend>
-					<FormField
-						id="notes"
-						label="Additional Details"
-						error={fieldErrors().notes}
-					>
-						<textarea
+					<fieldset>
+						<legend>Notes</legend>
+						<FormField
 							id="notes"
-							name="notes"
-							placeholder="e.g., Ring doorbell first. Take a few. Take 'em all! Gate code is 1234."
-							rows="3"
-						/>
-					</FormField>
-				</fieldset>
+							label="Additional Details"
+							error={fieldErrors().notes}
+						>
+							<textarea
+								id="notes"
+								name="notes"
+								placeholder="e.g., Ring doorbell first. Take a few. Take 'em all! Gate code is 1234."
+								rows="3"
+							/>
+						</FormField>
+					</fieldset>
 
-				<div class="form-actions">
-					<button type="submit" class="submit-button" disabled={isSubmitting()}>
-						{isSubmitting() ? 'Submitting…' : 'List My Fruit'}
-					</button>
-					<Link to="/" class="cancel-button">
-						Cancel
-					</Link>
-				</div>
+					<div class="form-actions">
+						<button type="submit" class="submit-button" disabled={isSubmitting()}>
+							{isSubmitting() ? 'Submitting…' : 'List My Fruit'}
+						</button>
+						<Link to="/" class="cancel-button">
+							Cancel
+						</Link>
+					</div>
 				</form>
 			</Show>
 		</Show>
