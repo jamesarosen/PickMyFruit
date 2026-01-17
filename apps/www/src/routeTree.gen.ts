@@ -12,11 +12,16 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CssTestRouteImport } from './routes/css-test'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ListingsIdRouteImport } from './routes/listings.$id'
 import { Route as GardenNewRouteImport } from './routes/garden/new'
 import { Route as GardenMineRouteImport } from './routes/garden/mine'
+import { Route as ApiPlantsRouteImport } from './routes/api/plants'
 import { Route as ApiListingsRouteImport } from './routes/api/listings'
+import { Route as ApiInquiriesRouteImport } from './routes/api/inquiries'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiListingsIdRouteImport } from './routes/api/listings.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiPlantsIdUnavailableRouteImport } from './routes/api/plants.$id.unavailable'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -33,6 +38,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ListingsIdRoute = ListingsIdRouteImport.update({
+  id: '/listings/$id',
+  path: '/listings/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GardenNewRoute = GardenNewRouteImport.update({
   id: '/garden/new',
   path: '/garden/new',
@@ -43,9 +53,19 @@ const GardenMineRoute = GardenMineRouteImport.update({
   path: '/garden/mine',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPlantsRoute = ApiPlantsRouteImport.update({
+  id: '/api/plants',
+  path: '/api/plants',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiListingsRoute = ApiListingsRouteImport.update({
   id: '/api/listings',
   path: '/api/listings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInquiriesRoute = ApiInquiriesRouteImport.update({
+  id: '/api/inquiries',
+  path: '/api/inquiries',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -53,10 +73,20 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiListingsIdRoute = ApiListingsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiListingsRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlantsIdUnavailableRoute = ApiPlantsIdUnavailableRouteImport.update({
+  id: '/$id/unavailable',
+  path: '/$id/unavailable',
+  getParentRoute: () => ApiPlantsRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -64,20 +94,30 @@ export interface FileRoutesByFullPath {
   '/css-test': typeof CssTestRoute
   '/login': typeof LoginRoute
   '/api/health': typeof ApiHealthRoute
-  '/api/listings': typeof ApiListingsRoute
+  '/api/inquiries': typeof ApiInquiriesRoute
+  '/api/listings': typeof ApiListingsRouteWithChildren
+  '/api/plants': typeof ApiPlantsRouteWithChildren
   '/garden/mine': typeof GardenMineRoute
   '/garden/new': typeof GardenNewRoute
+  '/listings/$id': typeof ListingsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/listings/$id': typeof ApiListingsIdRoute
+  '/api/plants/$id/unavailable': typeof ApiPlantsIdUnavailableRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/css-test': typeof CssTestRoute
   '/login': typeof LoginRoute
   '/api/health': typeof ApiHealthRoute
-  '/api/listings': typeof ApiListingsRoute
+  '/api/inquiries': typeof ApiInquiriesRoute
+  '/api/listings': typeof ApiListingsRouteWithChildren
+  '/api/plants': typeof ApiPlantsRouteWithChildren
   '/garden/mine': typeof GardenMineRoute
   '/garden/new': typeof GardenNewRoute
+  '/listings/$id': typeof ListingsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/listings/$id': typeof ApiListingsIdRoute
+  '/api/plants/$id/unavailable': typeof ApiPlantsIdUnavailableRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -85,10 +125,15 @@ export interface FileRoutesById {
   '/css-test': typeof CssTestRoute
   '/login': typeof LoginRoute
   '/api/health': typeof ApiHealthRoute
-  '/api/listings': typeof ApiListingsRoute
+  '/api/inquiries': typeof ApiInquiriesRoute
+  '/api/listings': typeof ApiListingsRouteWithChildren
+  '/api/plants': typeof ApiPlantsRouteWithChildren
   '/garden/mine': typeof GardenMineRoute
   '/garden/new': typeof GardenNewRoute
+  '/listings/$id': typeof ListingsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/listings/$id': typeof ApiListingsIdRoute
+  '/api/plants/$id/unavailable': typeof ApiPlantsIdUnavailableRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -97,30 +142,45 @@ export interface FileRouteTypes {
     | '/css-test'
     | '/login'
     | '/api/health'
+    | '/api/inquiries'
     | '/api/listings'
+    | '/api/plants'
     | '/garden/mine'
     | '/garden/new'
+    | '/listings/$id'
     | '/api/auth/$'
+    | '/api/listings/$id'
+    | '/api/plants/$id/unavailable'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/css-test'
     | '/login'
     | '/api/health'
+    | '/api/inquiries'
     | '/api/listings'
+    | '/api/plants'
     | '/garden/mine'
     | '/garden/new'
+    | '/listings/$id'
     | '/api/auth/$'
+    | '/api/listings/$id'
+    | '/api/plants/$id/unavailable'
   id:
     | '__root__'
     | '/'
     | '/css-test'
     | '/login'
     | '/api/health'
+    | '/api/inquiries'
     | '/api/listings'
+    | '/api/plants'
     | '/garden/mine'
     | '/garden/new'
+    | '/listings/$id'
     | '/api/auth/$'
+    | '/api/listings/$id'
+    | '/api/plants/$id/unavailable'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -128,9 +188,12 @@ export interface RootRouteChildren {
   CssTestRoute: typeof CssTestRoute
   LoginRoute: typeof LoginRoute
   ApiHealthRoute: typeof ApiHealthRoute
-  ApiListingsRoute: typeof ApiListingsRoute
+  ApiInquiriesRoute: typeof ApiInquiriesRoute
+  ApiListingsRoute: typeof ApiListingsRouteWithChildren
+  ApiPlantsRoute: typeof ApiPlantsRouteWithChildren
   GardenMineRoute: typeof GardenMineRoute
   GardenNewRoute: typeof GardenNewRoute
+  ListingsIdRoute: typeof ListingsIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -157,6 +220,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/listings/$id': {
+      id: '/listings/$id'
+      path: '/listings/$id'
+      fullPath: '/listings/$id'
+      preLoaderRoute: typeof ListingsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/garden/new': {
       id: '/garden/new'
       path: '/garden/new'
@@ -171,11 +241,25 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof GardenMineRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/plants': {
+      id: '/api/plants'
+      path: '/api/plants'
+      fullPath: '/api/plants'
+      preLoaderRoute: typeof ApiPlantsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/listings': {
       id: '/api/listings'
       path: '/api/listings'
       fullPath: '/api/listings'
       preLoaderRoute: typeof ApiListingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/inquiries': {
+      id: '/api/inquiries'
+      path: '/api/inquiries'
+      fullPath: '/api/inquiries'
+      preLoaderRoute: typeof ApiInquiriesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health': {
@@ -185,6 +269,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/listings/$id': {
+      id: '/api/listings/$id'
+      path: '/$id'
+      fullPath: '/api/listings/$id'
+      preLoaderRoute: typeof ApiListingsIdRouteImport
+      parentRoute: typeof ApiListingsRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -192,17 +283,51 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/plants/$id/unavailable': {
+      id: '/api/plants/$id/unavailable'
+      path: '/$id/unavailable'
+      fullPath: '/api/plants/$id/unavailable'
+      preLoaderRoute: typeof ApiPlantsIdUnavailableRouteImport
+      parentRoute: typeof ApiPlantsRoute
+    }
   }
 }
+
+interface ApiListingsRouteChildren {
+  ApiListingsIdRoute: typeof ApiListingsIdRoute
+}
+
+const ApiListingsRouteChildren: ApiListingsRouteChildren = {
+  ApiListingsIdRoute: ApiListingsIdRoute,
+}
+
+const ApiListingsRouteWithChildren = ApiListingsRoute._addFileChildren(
+  ApiListingsRouteChildren,
+)
+
+interface ApiPlantsRouteChildren {
+  ApiPlantsIdUnavailableRoute: typeof ApiPlantsIdUnavailableRoute
+}
+
+const ApiPlantsRouteChildren: ApiPlantsRouteChildren = {
+  ApiPlantsIdUnavailableRoute: ApiPlantsIdUnavailableRoute,
+}
+
+const ApiPlantsRouteWithChildren = ApiPlantsRoute._addFileChildren(
+  ApiPlantsRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CssTestRoute: CssTestRoute,
   LoginRoute: LoginRoute,
   ApiHealthRoute: ApiHealthRoute,
-  ApiListingsRoute: ApiListingsRoute,
+  ApiInquiriesRoute: ApiInquiriesRoute,
+  ApiListingsRoute: ApiListingsRouteWithChildren,
+  ApiPlantsRoute: ApiPlantsRouteWithChildren,
   GardenMineRoute: GardenMineRoute,
   GardenNewRoute: GardenNewRoute,
+  ListingsIdRoute: ListingsIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
