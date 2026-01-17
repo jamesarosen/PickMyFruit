@@ -63,6 +63,14 @@ We use a monorepo structure
 - Use Solid JS for reactive UI components
 - Routes are defined using TanStack Router's file-based routing
 
+### Authentication
+- Better Auth with magic link (passwordless) authentication
+- Server config: `src/lib/auth.ts`
+- Client: `src/lib/auth-client.ts` - use `useSession()` hook for session state
+- API routes at `/api/auth/*` handled by catch-all route
+- Protected route `/garden/mine` requires authentication
+- Magic links: set `RESEND_API_KEY` for email delivery, otherwise logs to console
+
 ## Known Issues
 (none yet)
 

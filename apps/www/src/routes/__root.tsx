@@ -5,14 +5,20 @@ import {
 	createRootRoute,
 	HeadContent,
 	Scripts,
+	Link,
 } from '@tanstack/solid-router'
 import { HydrationScript } from 'solid-js/web'
+import { getSession } from '@/lib/session'
 import '../styles/base.css'
 import '../styles/colors.css'
 import '../styles/focus.css'
 import '../styles/surfaces.css'
 
 export const Route = createRootRoute({
+	beforeLoad: async ({ context }) => {
+		const session = await getSession(context)
+		return { session }
+	},
 	head: () => ({
 		meta: [
 			{
@@ -28,6 +34,7 @@ export const Route = createRootRoute({
 		],
 	}),
 	component: RootComponent,
+	notFoundComponent: NotFound,
 })
 
 function RootComponent() {
@@ -50,5 +57,15 @@ function RootDocument({ children }: Readonly<{ children: Solid.JSX.Element }>) {
 				<Scripts />
 			</body>
 		</html>
+	)
+}
+
+function NotFound() {
+	return (
+		<div style={{ padding: '40px', 'text-align': 'center' }}>
+			<h1>Page Not Found</h1>
+			<p>The page you're looking for doesn't exist.</p>
+			<Link to="/">Go Home</Link>
+		</div>
 	)
 }

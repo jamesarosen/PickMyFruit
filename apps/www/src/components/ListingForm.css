@@ -200,6 +200,12 @@
 		background: oklch(from var(--color-secondary) calc(l - 0.08) c h);
 	}
 
+	/* Readonly input styling */
+	.form-group input[readonly] {
+		background: oklch(from var(--color-quiet) l c h / 0.1);
+		cursor: not-allowed;
+	}
+
 	@media (max-width: 600px) {
 		.form-row,
 		.form-row-3 {

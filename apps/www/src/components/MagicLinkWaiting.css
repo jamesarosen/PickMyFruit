@@ -1,0 +1,133 @@
+@layer components {
+	.magic-link-waiting {
+		text-align: center;
+		padding: 32px 20px;
+		max-width: 400px;
+		margin: 0 auto;
+	}
+
+	.magic-link-waiting h2 {
+		font-size: 24px;
+		font-weight: 700;
+		color: var(--color-foreground);
+		margin: 0 0 16px 0;
+	}
+
+	.magic-link-waiting p {
+		font-size: 14px;
+		color: var(--color-quiet);
+		margin: 0 0 12px 0;
+		line-height: 1.5;
+	}
+
+	.magic-link-waiting p strong {
+		color: var(--color-foreground);
+	}
+
+	/* Token input form */
+	.magic-link-waiting .token-form {
+		margin-top: 24px;
+		padding: 20px;
+		background: oklch(from var(--color-quiet) l c h / 0.05);
+		border-radius: 8px;
+		text-align: left;
+	}
+
+	.magic-link-waiting .token-form label {
+		display: block;
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--color-quiet);
+		margin-bottom: 8px;
+	}
+
+	.magic-link-waiting .token-input-row {
+		display: flex;
+		gap: 8px;
+	}
+
+	.magic-link-waiting .token-input-row input {
+		flex: 1;
+		padding: 10px 12px;
+		font-size: 14px;
+		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.3) h);
+		border-radius: 6px;
+		background: var(--color-background);
+		color: var(--color-foreground);
+	}
+
+	.magic-link-waiting .token-input-row input:focus {
+		border-color: var(--color-accent);
+		outline: none;
+	}
+
+	.magic-link-waiting .verify-button {
+		padding: 10px 16px;
+		background: var(--color-primary);
+		color: var(--color-background);
+		border: none;
+		border-radius: 6px;
+		font-weight: 600;
+		font-size: 14px;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.magic-link-waiting .verify-button:hover:not(:disabled) {
+		background: oklch(from var(--color-primary) calc(l - 0.08) c h);
+	}
+
+	.magic-link-waiting .verify-button:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.magic-link-waiting .token-error {
+		margin-top: 8px;
+		font-size: 13px;
+		color: var(--color-primary);
+	}
+
+	/* Action buttons */
+	.magic-link-waiting .actions {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		margin-top: 24px;
+	}
+
+	.magic-link-waiting .resend-button {
+		padding: 12px;
+		background: var(--color-accent);
+		color: var(--color-background);
+		border: none;
+		border-radius: 8px;
+		font-size: 14px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+
+	.magic-link-waiting .resend-button:hover {
+		background: oklch(from var(--color-accent) calc(l - 0.08) c h);
+	}
+
+	.magic-link-waiting .cancel-button {
+		padding: 12px;
+		background: transparent;
+		color: var(--color-quiet);
+		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.3) h);
+		border-radius: 8px;
+		font-size: 14px;
+		font-weight: 500;
+		cursor: pointer;
+		transition:
+			border-color 0.2s,
+			color 0.2s;
+	}
+
+	.magic-link-waiting .cancel-button:hover {
+		border-color: var(--color-foreground);
+		color: var(--color-foreground);
+	}
+}

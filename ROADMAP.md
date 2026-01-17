@@ -164,7 +164,7 @@
 
 ---
 
-### PR #6: Add Basic Authentication with Better Auth
+### ✅ PR #6: Add Basic Authentication with Better Auth
 
 **Size**: Medium (~180 lines)
 **Impact**: MEDIUM - improves trust and accountability
@@ -172,15 +172,15 @@
 **Changes**:
 
 - Install and configure Better Auth (already in CLAUDE.md as the chosen solution)
-- Add magic link email authentication
-- Create user table in schema
+- Add magic link email authentication via Resend
+- Require email verification to complete listing signup flow
 - Link listings to authenticated users
-- Add "My Listings" page (`/garden`)
+- Add "My Listings" page (`/garden/mine`)
 - Allow users to edit/delete their own listings only
 
 **Why Sixth**: Now that we have core functionality working, add auth to improve trust. Users can manage their listings. This also enables us to track repeat users and gather metrics.
 
-**Reasoning**: Better Auth is already specified in the tech stack (CLAUDE.md:9). Passwordless auth (magic links) has the lowest friction for non-technical users (elderly gardeners). Deferred until after core flows work to avoid complexity blocking launch.
+**Reasoning**: Better Auth is already specified in the tech stack (CLAUDE.md:9). Passwordless auth (magic links) has the lowest friction for non-technical users. Deferred until after core flows work to avoid complexity blocking launch.
 
 **Review Focus**: Email security, session management, authorization checks
 
@@ -412,3 +412,5 @@ _This roadmap prioritizes shipping over perfection, learning over assumptions, a
 
 - [ ] **Address privacy preview**: Add interactive map preview to the listing form showing the H3 cell at resolution 9 (~174m). Users would see the hexagonal area that gleaners will see, reinforcing the privacy message. Requires adding a mapping library (Leaflet recommended - free, no API key).
 - [ ] **Fruit type autocomplete with varieties**: Replace the fruit type dropdown with an autocomplete search that includes varieties (e.g., "Apple - Honeycrisp", "Lemon - Meyer"). This provides better categorization without adding a separate variety field.
+- [ ] **Rate-limit magic link resend buttons**: Add debounce/cooldown to "Resend email" buttons on login page and listing form to prevent abuse and avoid hitting Resend API rate limits.
+- [ ] **Server-side pending listings**: Store unconfirmed listings and user state in the database instead of sessionStorage. This preserves form data if user opens magic link in a different browser/tab. Add `status: 'pending_verification' | 'active'` to listings and clean up unverified listings after 24 hours.

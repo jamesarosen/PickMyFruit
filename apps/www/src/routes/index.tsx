@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import { getAvailablePlants } from '@/api/plants'
+import { useSession, signOut } from '@/lib/auth-client'
 import '@/routes/index.css'
 
 export const Route = createFileRoute('/')({
@@ -11,6 +12,7 @@ export const Route = createFileRoute('/')({
 
 function HomePage() {
 	const plants = Route.useLoaderData()
+	const session = useSession()
 
 	return (
 		<Layout title="Pick My Fruit - Turn your backyard abundance into community food">
@@ -20,6 +22,27 @@ function HomePage() {
 						<span class="logo-icon">🍑</span>
 						<span class="logo-text">Pick My Fruit</span>
 					</div>
+					<nav class="header-nav">
+						<Show
+							when={session().data?.user}
+							fallback={
+								<Link to="/login" class="nav-link">
+									Sign In
+								</Link>
+							}
+						>
+							<Link to="/garden/mine" class="nav-link">
+								My Garden
+							</Link>
+							<button
+								type="button"
+								class="nav-link sign-out"
+								onClick={() => signOut()}
+							>
+								Sign Out
+							</button>
+						</Show>
+					</nav>
 				</div>
 			</header>
 

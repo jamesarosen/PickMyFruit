@@ -1,12 +1,24 @@
 import { createFileRoute } from '@tanstack/solid-router'
 import { listingFormSchema } from '@/lib/validation'
 import { geocodeAddress } from '@/lib/geocoding'
-import { createListing, findOrCreateOwner } from '@/data/queries'
 
 export const Route = createFileRoute('/api/listings')({
 	server: {
 		handlers: {
 			async POST({ request }) {
+				// Dynamic imports to avoid bundling server-only code for browser
+				const { auth } = await import('@/lib/auth')
+				const { createListing, findOrCreateOwner } = await import('@/data/queries')
+
+				// Require authentication
+				const session = await auth.api.getSession({
+					headers: request.headers,
+				})
+
+				if (!session?.user) {
+					return Response.json({ error: 'Authentication required' }, { status: 401 })
+				}
+
 				let body: unknown
 				try {
 					body = await request.json()
@@ -36,7 +48,7 @@ export const Route = createFileRoute('/api/listings')({
 					return Response.json({ error: message }, { status: 400 })
 				}
 
-				// Find or create owner, then create the listing
+				// Find or create owner (for backward compatibility), then create the listing
 				try {
 					const owner = await findOrCreateOwner({
 						name: formData.ownerName,
@@ -55,6 +67,7 @@ export const Route = createFileRoute('/api/listings')({
 						lng: geocodeResult.lng,
 						h3Index: geocodeResult.h3Index,
 						ownerId: owner.id,
+						userId: session.user.id, // Link to authenticated user
 						notes: formData.notes || null,
 						status: 'available',
 					})
