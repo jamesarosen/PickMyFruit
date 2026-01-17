@@ -1,0 +1,137 @@
+@layer page {
+	.login-page {
+		min-height: 100vh;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 20px;
+		background: var(--color-background);
+	}
+
+	.login-container {
+		width: 100%;
+		max-width: 400px;
+	}
+
+	.login-header {
+		text-align: center;
+		margin-bottom: 40px;
+	}
+
+	.login-header .logo {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 20px;
+		font-weight: 600;
+		color: var(--color-foreground);
+		text-decoration: none;
+	}
+
+	.login-header .logo-icon {
+		font-size: 28px;
+	}
+
+	.login-content {
+		background: var(--color-background);
+		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.2) h);
+		border-radius: 12px;
+		padding: 32px;
+	}
+
+	.login-content h1 {
+		font-size: 24px;
+		font-weight: 700;
+		color: var(--color-foreground);
+		margin: 0 0 8px 0;
+		text-align: center;
+	}
+
+	.login-content > p {
+		font-size: 14px;
+		color: var(--color-quiet);
+		margin: 0 0 24px 0;
+		text-align: center;
+	}
+
+	.login-form {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+
+	.login-form .form-group {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.login-form label {
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--color-foreground);
+	}
+
+	.login-form input[type='email'] {
+		width: 100%;
+		padding: 12px 14px;
+		font-size: 16px;
+		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.3) h);
+		border-radius: 8px;
+		background: var(--color-background);
+		color: var(--color-foreground);
+		transition: border-color 0.2s;
+	}
+
+	.login-form input[type='email']:focus {
+		border-color: var(--color-accent);
+		outline: none;
+	}
+
+	.login-form .form-error {
+		padding: 12px;
+		background: oklch(from var(--color-primary) l c h / 0.1);
+		border: 1px solid oklch(from var(--color-primary) l c h / 0.3);
+		border-radius: 8px;
+		color: var(--color-primary);
+		font-size: 14px;
+	}
+
+	.login-form .submit-button {
+		width: 100%;
+		padding: 14px;
+		background: var(--color-primary);
+		color: var(--color-background);
+		border: none;
+		border-radius: 8px;
+		font-size: 16px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+
+	.login-form .submit-button:hover:not(:disabled) {
+		background: oklch(from var(--color-primary) calc(l - 0.08) c h);
+	}
+
+	.login-form .submit-button:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.login-footer {
+		margin-top: 24px;
+		font-size: 14px;
+		color: var(--color-quiet);
+		text-align: center;
+	}
+
+	.login-footer a {
+		color: var(--color-accent);
+		text-decoration: none;
+	}
+
+	.login-footer a:hover {
+		text-decoration: underline;
+	}
+}
