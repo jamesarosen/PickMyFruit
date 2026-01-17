@@ -73,5 +73,22 @@
 				"for": ["for"]
 			}
 		}
-	}
+	},
+	"overrides": [
+		{
+			"files": [
+				"src/**/*.test.ts",
+				"src/**/*.test.tsx",
+				"tests/**/*.ts",
+				"tests/**/*.tsx"
+			],
+			"rules": {
+				"no-untyped-mock-factory": "error",
+				"eslint-plugin-import/first": "off", // support mock before import
+				"eslint-plugin-import/max-dependencies": "off",
+				"eslint-plugin-jest/no-hooks": "off",
+				"require-await": "off"
+			}
+		}
+	]
 }
