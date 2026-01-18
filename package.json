@@ -8,8 +8,9 @@
 	"author": "James A Rosen, Pick My Fruit",
 	"scripts": {
 		"build": "pnpm -r build",
-		"format:check": "pnpm -r format:check",
 		"format": "pnpm -r format",
+		"format:check": "pnpm -r format:check",
+		"format:write": "pnpm -r format:write",
 		"lint:fix": "pnpm -r lint:fix",
 		"lint": "pnpm -r lint",
 		"typecheck": "pnpm -r typecheck",
@@ -17,6 +18,9 @@
 		"deploy:setup": "fly launch --no-deploy",
 		"logs": "fly logs",
 		"ssh": "fly ssh console",
+		"test": "pnpm run test:watch",
+		"test:run": "pnpm run -r test:run",
+		"test:watch": "pnpm run -r test:watch",
 		"docker:up": "docker compose up --build",
 		"docker:down": "docker compose down",
 		"docker:logs": "docker compose logs -f"

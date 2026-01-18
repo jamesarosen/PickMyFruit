@@ -1,0 +1,17 @@
+{
+	"hooks": {
+		"Stop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bin/after-turn.sh"
+					}
+				]
+			}
+		]
+	},
+	"permissions": {
+		"allow": ["Bash(./bin/*)", "Bash(bin/*)", "mcp__context7__query-docs"]
+	}
+}
