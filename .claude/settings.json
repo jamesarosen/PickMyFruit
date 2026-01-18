@@ -1,11 +1,22 @@
 {
 	"hooks": {
+		"PostToolUse": [
+			{
+				"matcher": "Edit|Write",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "jq -r '.tool_input.file_path' | { read file_path; if echo \"$file_path\" | grep -q '\\.ts$'; then pnpm exec prettier --write \"$file_path\"; fi; }"
+					}
+				]
+			}
+		],
 		"Stop": [
 			{
 				"hooks": [
 					{
 						"type": "command",
-						"command": "bin/after-turn.sh"
+						"command": "${CLAUDE_PROJECT_DIR}/bin/code-quality.sh"
 					}
 				]
 			}
