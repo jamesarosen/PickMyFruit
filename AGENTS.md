@@ -1,9 +1,18 @@
 # Project: Pick My Fruit
 
 ## Project Description
+
 A site for gardeners to share surplus produce with their community.
 
+## Documentation
+
+- Plans, architecture designs, and other larger-scale documentation go in `docs/`
+- Use Mermaid for diagrams when possible
+- Write JSDoc comments for exported values. Use a single short sentence unless the value being documented is particularly complex.
+- Avoid inline comments that simply reiterate what the code does.
+
 ## Tech Stack
+
 - Frontend: Solid JS, TanStack Router, TypeScript
 - Build Tool: Vite
 - Database: SQLite, Drizzle ORM
@@ -12,6 +21,7 @@ A site for gardeners to share surplus produce with their community.
 - Deployed environment: Fly.io, via Docker
 
 ## Code Conventions
+
 - Prettier for formatting
 - oxlint for linting
 - 1-tab indentation
@@ -37,18 +47,19 @@ A site for gardeners to share surplus produce with their community.
 We use a monorepo structure
 
 - /apps/www - a Solid JS + TanStack Router application
-	- /src
-		- /assets - images and other assets transformed by Vite
-		- /components - Reusable Solid JS components and their related CSS
-		- /routes - Page components (TanStack Router file-based routing) and their related CSS
-		- /data - SQL schema, SQL queries, and TypeScript wrappers
-		- /lib - Utility functions
-		- /styles - Global styles and CSS
-	- /public - Static assets, not transformed by Vite
-	- /tests - Test files
+  - /src
+    - /assets - images and other assets transformed by Vite
+    - /components - Reusable Solid JS components and their related CSS
+    - /routes - Page components (TanStack Router file-based routing) and their related CSS
+    - /data - SQL schema, SQL queries, and TypeScript wrappers
+    - /lib - Utility functions
+    - /styles - Global styles and CSS
+  - /public - Static assets, not transformed by Vite
+  - /tests - Test files
 - /packages/ - libraries extracted for reuse across applications
 
 ## Goals
+
 - 30 days (2025-11-04): MVP with 10 beta users in one city. Manual matching OK. 3 successful fruit transfers.
 - 60 days (2025-12-04): Add gleaning group support. Partner with 1-2 food banks/orgs. 20 total rescues.
 - 90 days (2026-01-03): Automation complete. One week of transfers without founder intervention.
@@ -56,6 +67,7 @@ We use a monorepo structure
 - 365 days (2026-10-05): Revenue model identified. 500+ rescues. <2 hrs/week maintenance required.
 
 ## Important Notes
+
 - Validate input at system boundaries with Zod
 - HTML: write semantically-meaningful and accessible markup
 - Use SQLite for the data layer
@@ -64,6 +76,7 @@ We use a monorepo structure
 - Routes are defined using TanStack Router's file-based routing
 
 ### Authentication
+
 - Better Auth with magic link (passwordless) authentication
 - Server config: `src/lib/auth.ts`
 - Client: `src/lib/auth-client.ts` - use `useSession()` hook for session state
@@ -72,7 +85,9 @@ We use a monorepo structure
 - Magic links: set `RESEND_API_KEY` for email delivery, otherwise logs to console
 
 ## Known Issues
+
 (none yet)
 
 ## Future Plans
+
 (none yet)
