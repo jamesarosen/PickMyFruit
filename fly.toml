@@ -49,7 +49,6 @@ primary_region = 'sjc'
 # Environment variables
 [env]
   NODE_ENV = 'production'
-  DATABASE_URL = 'file:/app/data/production.db'
 
 # VM resources - Start with minimal for MVP
 [[vm]]
