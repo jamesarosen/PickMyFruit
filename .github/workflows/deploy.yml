@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: ['**']
+    branches: ["**"]
   workflow_dispatch:
 
 # Prevent concurrent deployments to the same environment
@@ -26,8 +26,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -36,10 +36,13 @@ jobs:
         run: pnpm format:check
 
       - name: Run lint
-        run: pnpm lint
+        run: pnpm lint:ci
 
       - name: Run typecheck
         run: pnpm typecheck
+
+      - name: Run tests
+        run: pnpm test:ci
 
       - name: Build application
         run: pnpm build
