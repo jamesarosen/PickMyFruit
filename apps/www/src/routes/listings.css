@@ -59,7 +59,7 @@
 		text-transform: capitalize;
 	}
 
-	.listing-detail .status-badge.status-active {
+	.listing-detail .status-badge.status-available {
 		background: oklch(from var(--color-secondary) l c h / 0.15);
 		color: var(--color-secondary);
 	}

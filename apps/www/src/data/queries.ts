@@ -12,6 +12,7 @@ import {
 	type NewInquiry,
 } from './schema'
 import { eq, desc, and, isNull, gt } from 'drizzle-orm'
+import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 
 export async function getAvailableListings(
 	limit: number = 10
@@ -19,7 +20,9 @@ export async function getAvailableListings(
 	return await db
 		.select()
 		.from(listings)
-		.where(and(eq(listings.status, 'available'), isNull(listings.deletedAt)))
+		.where(
+			and(eq(listings.status, ListingStatus.available), isNull(listings.deletedAt))
+		)
 		.orderBy(desc(listings.createdAt))
 		.limit(limit)
 }
@@ -144,7 +147,7 @@ export async function getListingForInquiry(
 			and(
 				eq(listings.id, id),
 				isNull(listings.deletedAt)
-				// Status validation (active or private) done at API layer
+				// Status validation (available or private) done at API layer
 			)
 		)
 		.limit(1)
@@ -154,7 +157,7 @@ export async function getListingForInquiry(
 export async function updateListingStatus(
 	id: number,
 	userId: string,
-	status: 'active' | 'unavailable' | 'private'
+	status: ListingStatusValue
 ): Promise<boolean> {
 	const result = await db
 		.update(listings)
@@ -182,7 +185,7 @@ export async function getUserById(
 export async function markListingUnavailable(id: number): Promise<boolean> {
 	const result = await db
 		.update(listings)
-		.set({ status: 'unavailable', updatedAt: new Date() })
+		.set({ status: ListingStatus.unavailable, updatedAt: new Date() })
 		.where(and(eq(listings.id, id), isNull(listings.deletedAt)))
 		.returning({ id: listings.id })
 	return result.length > 0

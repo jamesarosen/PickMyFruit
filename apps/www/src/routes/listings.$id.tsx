@@ -4,6 +4,7 @@ import { Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import InquiryForm from '@/components/InquiryForm'
 import { useSession } from '@/lib/auth-client'
+import { ListingStatus } from '@/lib/validation'
 import type { Plant } from '@/data/schema'
 import '@/routes/listings.css'
 
@@ -25,10 +26,10 @@ export const Route = createFileRoute('/listings/$id')({
 })
 
 function getStatusClass(status: string): string {
-	if (status === 'active') {
-		return 'status-active'
+	if (status === ListingStatus.available) {
+		return 'status-available'
 	}
-	if (status === 'unavailable') {
+	if (status === ListingStatus.unavailable) {
 		return 'status-unavailable'
 	}
 	return 'status-private'
@@ -59,7 +60,9 @@ function ListingDetailPage() {
 
 	const isOwner = () => session().data?.user?.id === plant.userId
 	const canInquire = () =>
-		(plant.status === 'active' || plant.status === 'private') && !isOwner()
+		(plant.status === ListingStatus.available ||
+			plant.status === ListingStatus.private) &&
+		!isOwner()
 
 	return (
 		<Layout title={`${plant.type} - Pick My Fruit`}>
@@ -115,7 +118,7 @@ function ListingDetailPage() {
 						</Show>
 					</div>
 
-					<Show when={plant.status === 'unavailable'}>
+					<Show when={plant.status === ListingStatus.unavailable}>
 						<div class="listing-unavailable">
 							<h3>This listing is currently unavailable</h3>
 							<p>Check back later or browse other available listings.</p>

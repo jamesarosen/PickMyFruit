@@ -4,6 +4,7 @@ import { createSignal, For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import { useSession } from '@/lib/auth-client'
 import { authMiddleware } from '@/middleware/auth'
+import { ListingStatus } from '@/lib/validation'
 import type { Listing } from '@/data/schema'
 import '@/routes/garden/mine.css'
 import { getRequest } from '@tanstack/solid-start/server'
@@ -38,18 +39,14 @@ export const Route = createFileRoute('/garden/mine')({
 })
 
 function getStatusClass(status: string): string {
-	if (status === 'active') {
-		return 'status-active'
+	if (status === ListingStatus.available) {
+		return 'status-available'
 	}
-	if (status === 'unavailable') {
+	if (status === ListingStatus.unavailable) {
 		return 'status-unavailable'
 	}
-	if (status === 'private') {
+	if (status === ListingStatus.private) {
 		return 'status-private'
-	}
-	// Legacy support
-	if (status === 'available') {
-		return 'status-active'
 	}
 	return 'status-unavailable'
 }
@@ -58,10 +55,10 @@ function getToggleButtonText(isToggling: boolean, status: string): string {
 	if (isToggling) {
 		return 'Updating...'
 	}
-	if (status === 'active') {
+	if (status === ListingStatus.available) {
 		return 'Mark Unavailable'
 	}
-	return 'Mark Active'
+	return 'Mark Available'
 }
 
 function ListingCard(props: { listing: Listing; onStatusChange: () => void }) {
@@ -71,17 +68,12 @@ function ListingCard(props: { listing: Listing; onStatusChange: () => void }) {
 	const [error, setError] = createSignal<string | null>(null)
 
 	const statusClass = () => getStatusClass(currentStatus())
-	const displayStatus = () => {
-		const s = currentStatus()
-		// Show user-friendly status (map legacy values)
-		if (s === 'available') {
-			return 'active'
-		}
-		return s
-	}
 
 	async function toggleStatus() {
-		const newStatus = currentStatus() === 'active' ? 'unavailable' : 'active'
+		const newStatus =
+			currentStatus() === ListingStatus.available
+				? ListingStatus.unavailable
+				: ListingStatus.available
 		setIsToggling(true)
 		setError(null)
 
@@ -110,7 +102,7 @@ function ListingCard(props: { listing: Listing; onStatusChange: () => void }) {
 		<article class="listing-card">
 			<div class="listing-header">
 				<h3>{listing.name}</h3>
-				<span class={`status-badge ${statusClass()}`}>{displayStatus()}</span>
+				<span class={`status-badge ${statusClass()}`}>{currentStatus()}</span>
 			</div>
 			<div class="listing-details">
 				<p class="listing-location">

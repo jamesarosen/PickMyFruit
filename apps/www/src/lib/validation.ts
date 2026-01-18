@@ -89,9 +89,20 @@ export const inquiryFormSchema = z.object({
 
 export type InquiryFormData = z.infer<typeof inquiryFormSchema>
 
-export const listingStatuses = ['active', 'unavailable', 'private'] as const
-export type ListingStatus = (typeof listingStatuses)[number]
+export const ListingStatus = {
+	available: 'available',
+	unavailable: 'unavailable',
+	private: 'private',
+} as const
+
+export type ListingStatusValue =
+	(typeof ListingStatus)[keyof typeof ListingStatus]
+
+const listingStatusValues = Object.values(ListingStatus) as [
+	ListingStatusValue,
+	...ListingStatusValue[],
+]
 
 export const updateListingStatusSchema = z.object({
-	status: z.enum(listingStatuses, { message: 'Invalid status' }),
+	status: z.enum(listingStatusValues, { message: 'Invalid status' }),
 })

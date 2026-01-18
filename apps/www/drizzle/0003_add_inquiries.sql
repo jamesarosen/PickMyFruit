@@ -1,5 +1,3 @@
--- Update existing status values (must happen before query code changes)
-UPDATE plants SET status = 'active' WHERE status = 'available';
 --> statement-breakpoint
 UPDATE plants SET status = 'unavailable' WHERE status IN ('claimed', 'harvested');
 --> statement-breakpoint

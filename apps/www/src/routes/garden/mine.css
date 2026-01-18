@@ -40,7 +40,7 @@
 		text-transform: capitalize;
 	}
 
-	.status-badge.status-active {
+	.status-badge.status-available {
 		background: oklch(from var(--color-secondary) l c h / 0.15);
 		color: var(--color-secondary);
 	}

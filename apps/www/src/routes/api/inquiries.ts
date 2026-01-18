@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/solid-router'
-import { inquiryFormSchema } from '@/lib/validation'
+import { inquiryFormSchema, ListingStatus } from '@/lib/validation'
 
 export const Route = createFileRoute('/api/inquiries')({
 	server: {
@@ -49,7 +49,10 @@ export const Route = createFileRoute('/api/inquiries')({
 				const { listing, owner } = result
 
 				// Check listing status allows inquiries
-				if (listing.status !== 'active' && listing.status !== 'private') {
+				if (
+					listing.status !== ListingStatus.available &&
+					listing.status !== ListingStatus.private
+				) {
 					return Response.json(
 						{ error: 'This listing is not accepting inquiries' },
 						{ status: 404 }
