@@ -6,9 +6,11 @@ import {
 	HeadContent,
 	Scripts,
 	Link,
+	type ErrorComponentProps,
 } from '@tanstack/solid-router'
 import { HydrationScript } from 'solid-js/web'
 import { getSession } from '@/lib/session'
+import { Sentry } from '@/lib/sentry'
 import '../styles/base.css'
 import '../styles/colors.css'
 import '../styles/focus.css'
@@ -33,19 +35,13 @@ export const Route = createRootRoute({
 			},
 		],
 	}),
+	shellComponent: RootShell,
 	component: RootComponent,
+	errorComponent: RootError,
 	notFoundComponent: NotFound,
 })
 
-function RootComponent() {
-	return (
-		<RootDocument>
-			<Outlet />
-		</RootDocument>
-	)
-}
-
-function RootDocument({ children }: Readonly<{ children: Solid.JSX.Element }>) {
+function RootShell(props: { children: Solid.JSX.Element }) {
 	return (
 		<html lang="en-US">
 			<head>
@@ -53,10 +49,42 @@ function RootDocument({ children }: Readonly<{ children: Solid.JSX.Element }>) {
 			</head>
 			<body>
 				<HeadContent />
-				<Solid.Suspense>{children}</Solid.Suspense>
+				<Solid.Suspense>{props.children}</Solid.Suspense>
 				<Scripts />
 			</body>
 		</html>
+	)
+}
+
+function RootComponent() {
+	return <Outlet />
+}
+
+function RootError({ error, reset }: ErrorComponentProps) {
+	Solid.onMount(() => {
+		Sentry.captureException(error)
+	})
+
+	return (
+		<div style={{ padding: '40px', 'text-align': 'center' }}>
+			<h1>Something went wrong</h1>
+			<p style={{ color: 'var(--color-text-muted)', margin: '16px 0' }}>
+				{error.message}
+			</p>
+			<button
+				onClick={reset}
+				style={{
+					padding: '8px 16px',
+					'background-color': 'var(--color-primary)',
+					color: 'white',
+					border: 'none',
+					'border-radius': '4px',
+					cursor: 'pointer',
+				}}
+			>
+				Try again
+			</button>
+		</div>
 	)
 }
 
