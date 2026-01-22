@@ -31,6 +31,7 @@
 	},
 	"dependencies": {
 		"@libsql/client": "^0.15.15",
+		"@sentry/solidstart": "^10.34.0",
 		"@tanstack/solid-router": "^1.144.0",
 		"@tanstack/solid-start": "^1.145.3",
 		"better-auth": "^1.4.10",

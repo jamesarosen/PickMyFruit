@@ -30,6 +30,7 @@ A site for gardeners to share surplus produce with their community.
 - Use semantic names for variables and functions to document what they do. Use comments to document why, especially for non-intuitive or unusual code.
 - Use idiomatic Solid JS, TanStack Router, TypeScript, SQLite.
 - Use context7
+- When handling exceptions, import Sentry from `@/lib/sentry` and use `Sentry.captureException`. Do not separately log errors.
 
 ### Solid JS
 
