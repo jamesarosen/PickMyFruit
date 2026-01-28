@@ -17,7 +17,7 @@
 		"preview": "vite preview",
 		"test": "pnpm run test:watch",
 		"test:run": "vitest run",
-		"test:ci": "vitest run --reporter=default --reporter=github-actions && playwright test",
+		"test:ci": "vitest run --reporter=default --reporter=github-actions",
 		"test:watch": "vitest",
 		"test:e2e": "playwright test",
 		"test:e2e:ui": "playwright test --ui",
