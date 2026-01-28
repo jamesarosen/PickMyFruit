@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { magicLink } from 'better-auth/plugins'
+import { tanstackStartCookies } from 'better-auth/tanstack-start/solid'
 import { db } from '../data/db'
 
 // Conditionally import Resend only if API key is available
@@ -16,14 +17,16 @@ const sendMagicLinkEmail = async ({
 	const resendApiKey = process.env.RESEND_API_KEY
 
 	if (!resendApiKey) {
-		// Development mode: log to console
-		console.log('\n========================================')
-		console.log('MAGIC LINK (dev mode - no RESEND_API_KEY)')
-		console.log('========================================')
-		console.log(`Email: ${email}`)
-		console.log(`URL: ${url}`)
-		console.log(`Token: ${token}`)
-		console.log('========================================\n')
+		// Development mode: log to console (can be disabled via AUTH_LOG_MAGIC_LINK=false)
+		if (process.env.AUTH_LOG_MAGIC_LINK !== 'false') {
+			console.log('\n========================================')
+			console.log('MAGIC LINK (dev mode - no RESEND_API_KEY)')
+			console.log('========================================')
+			console.log(`Email: ${email}`)
+			console.log(`URL: ${url}`)
+			console.log(`Token: ${token}`)
+			console.log('========================================\n')
+		}
 		return
 	}
 
@@ -75,6 +78,7 @@ export const auth = betterAuth({
 			sendMagicLink: sendMagicLinkEmail,
 			expiresIn: 300, // 5 minutes
 		}),
+		tanstackStartCookies(), // must be the last in the plugins array
 	],
 	user: {
 		additionalFields: {

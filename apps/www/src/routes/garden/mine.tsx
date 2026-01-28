@@ -3,16 +3,16 @@ import { createIsomorphicFn } from '@tanstack/solid-start'
 import { For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import { useSession } from '@/lib/auth-client'
-import { requireAuth } from '@/lib/require-auth'
+import { authMiddleware } from '@/middleware/auth'
 import type { Plant } from '@/data/schema'
 import '@/routes/garden/mine.css'
+import { getRequest } from '@tanstack/solid-start/server'
 
 const getMyListings = createIsomorphicFn()
-	.server(async ({ context }) => {
+	.server(async () => {
+		const { headers } = await getRequest()
 		const { auth } = await import('@/lib/auth')
-		const session = await auth.api.getSession({
-			headers: context.request.headers,
-		})
+		const session = await auth.api.getSession({ headers })
 		if (!session?.user) {
 			return [] as Plant[]
 		}
@@ -23,8 +23,7 @@ const getMyListings = createIsomorphicFn()
 	.client(() => undefined)
 
 export const Route = createFileRoute('/garden/mine')({
-	beforeLoad: ({ context }) => requireAuth(context),
-	loader: (ctx) => getMyListings(ctx),
+	loader: getMyListings,
 	pendingComponent: () => (
 		<Layout title="My Garden - Pick My Fruit">
 			<main class="page-container">
@@ -33,6 +32,9 @@ export const Route = createFileRoute('/garden/mine')({
 		</Layout>
 	),
 	component: MyGardenPage,
+	server: {
+		middleware: [authMiddleware],
+	},
 })
 
 function getStatusClass(status: string): string {

@@ -49,10 +49,59 @@ jobs:
       - name: Build application
         run: pnpm build
 
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: test
+    defaults:
+      run:
+        working-directory: apps/www
+    env:
+      DATABASE_URL: file:test.db
+      BETTER_AUTH_SECRET: test-secret-for-ci-minimum-32-characters
+      BETTER_AUTH_URL: http://localhost:5174
+      VITE_SENTRY_DSN: https://test@test.ingest.sentry.io/123
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(pnpm list @playwright/test --json | jq -r '.[0].devDependencies["@playwright/test"].version')" >> $GITHUB_OUTPUT
+        working-directory: .
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: apps/www/playwright-report/
+          retention-days: 7
+
   deploy:
     name: Deploy to Fly.io
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, e2e]
     # Only deploy on push to main branch
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment:
