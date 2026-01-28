@@ -29,6 +29,9 @@ export default function MagicLinkWaiting(props: MagicLinkWaitingProps) {
 				query: {
 					token: tokenValue,
 				},
+				fetchOptions: {
+					redirect: 'manual',
+				},
 			})
 
 			if (result.error) {

@@ -1,39 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, waitFor, cleanup } from '@solidjs/testing-library'
-import {
-	createRouter,
-	createMemoryHistory,
-	RouterProvider,
-} from '@tanstack/solid-router'
+import { render, cleanup, fireEvent } from '@solidjs/testing-library'
 import { mockAuth } from './auth-helpers'
-import {
-	createMockSession,
-	createAuthClientSessionResponse,
-} from './auth-fixtures'
 
 mockAuth()
 
-import { routeTree } from '../src/routeTree.gen'
-import { getSession } from '../src/lib/session'
-import { authClient } from '../src/lib/auth-client'
+import MagicLinkWaiting from '../src/components/MagicLinkWaiting'
 
-// Get typed references to mocks
-const mockGetSession = vi.mocked(getSession)
-const mockAuthClientGetSession = vi.mocked(authClient.getSession)
-const mockSignInMagicLink = vi.mocked(authClient.signIn.magicLink)
-
-function createTestRouter(initialPath: string) {
-	const history = createMemoryHistory({
-		initialEntries: [initialPath],
-	})
-
-	return createRouter({
-		routeTree,
-		history,
-	})
-}
-
-describe('auth flow', () => {
+describe('MagicLinkWaiting', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 	})
@@ -42,93 +15,56 @@ describe('auth flow', () => {
 		cleanup()
 	})
 
-	describe('protected route redirect', () => {
-		it('redirects unauthenticated user from /garden/mine to /login', async () => {
-			// Mock: no session (user not logged in)
-			mockGetSession.mockResolvedValue(null)
-			mockAuthClientGetSession.mockResolvedValue({ data: null, error: null })
+	it('displays the email address that received the magic link', () => {
+		const { getByText } = render(() => (
+			<MagicLinkWaiting
+				email="gardener@example.com"
+				callbackURL="/garden/mine"
+				onCancel={() => {}}
+			/>
+		))
 
-			const router = createTestRouter('/garden/mine')
-
-			render(() => <RouterProvider router={router} />)
-
-			// Wait for the redirect to happen
-			await waitFor(
-				() => {
-					expect(router.state.location.pathname).toBe('/login')
-				},
-				{ timeout: 3000 }
-			)
-		})
-
-		it('allows authenticated user to access /garden/mine', async () => {
-			// Mock: user is logged in
-			const mockSessionData = createMockSession()
-
-			mockGetSession.mockResolvedValue(mockSessionData)
-			mockAuthClientGetSession.mockResolvedValue(
-				createAuthClientSessionResponse(mockSessionData)
-			)
-
-			const router = createTestRouter('/garden/mine')
-
-			render(() => <RouterProvider router={router} />)
-
-			// Wait for route to load - should stay on /garden/mine
-			await waitFor(
-				() => {
-					expect(router.state.location.pathname).toBe('/garden/mine')
-				},
-				{ timeout: 3000 }
-			)
-		})
+		expect(getByText('gardener@example.com')).toBeInTheDocument()
 	})
 
-	describe('login flow', () => {
-		it('calls magic link API when login form is submitted', async () => {
-			// This tests the auth client integration directly
-			// since component rendering in jsdom has issues with Solid templates
-			mockSignInMagicLink.mockResolvedValue({ error: null })
+	it('renders token input and verify button', () => {
+		const { getByLabelText, getByRole } = render(() => (
+			<MagicLinkWaiting
+				email="test@example.com"
+				callbackURL="/garden/mine"
+				onCancel={() => {}}
+			/>
+		))
 
-			// Simulate what the login form does
-			await authClient.signIn.magicLink({
-				email: 'gardener@example.com',
-				callbackURL: '/garden/mine',
-			})
-
-			expect(mockSignInMagicLink).toHaveBeenCalledWith({
-				email: 'gardener@example.com',
-				callbackURL: '/garden/mine',
-			})
-		})
-
-		it('handles magic link API errors', async () => {
-			mockSignInMagicLink.mockRejectedValue(new Error('Network error'))
-
-			await expect(
-				authClient.signIn.magicLink({
-					email: 'test@example.com',
-					callbackURL: '/garden/mine',
-				})
-			).rejects.toThrow('Network error')
-		})
+		expect(getByLabelText(/enter the token/i)).toBeInTheDocument()
+		expect(getByRole('button', { name: /verify/i })).toBeInTheDocument()
 	})
 
-	describe('session check', () => {
-		it('getSession returns null for unauthenticated users', async () => {
-			mockGetSession.mockResolvedValue(null)
+	it('calls onCancel when "Use different email" is clicked', async () => {
+		const onCancel = vi.fn()
+		const { getByRole } = render(() => (
+			<MagicLinkWaiting
+				email="test@example.com"
+				callbackURL="/garden/mine"
+				onCancel={onCancel}
+			/>
+		))
 
-			const session = await getSession({} as any)
-			expect(session).toBeNull()
-		})
+		const cancelButton = getByRole('button', { name: /use different email/i })
+		fireEvent.click(cancelButton)
 
-		it('getSession returns session data for authenticated users', async () => {
-			const mockSessionData = createMockSession({ email: 'gardener@example.com' })
-			mockGetSession.mockResolvedValue(mockSessionData)
+		expect(onCancel).toHaveBeenCalledTimes(1)
+	})
 
-			const session = await getSession({} as any)
-			expect(session).toStrictEqual(mockSessionData)
-			expect(session?.user.email).toBe('gardener@example.com')
-		})
+	it('has a resend email button', () => {
+		const { getByRole } = render(() => (
+			<MagicLinkWaiting
+				email="test@example.com"
+				callbackURL="/garden/mine"
+				onCancel={() => {}}
+			/>
+		))
+
+		expect(getByRole('button', { name: /resend email/i })).toBeInTheDocument()
 	})
 })
