@@ -43,6 +43,15 @@ A site for gardeners to share surplus produce with their community.
 - For colors, use semantic CSS variables (e.g. `--color-accent`) where possible and named color variables (e.g. `--color-sunset-coral`) where necessary. Avoid inline color definitions (e.g. `#fedbca`).
 - Use CSS relative color syntax to create modifications, e.g. `oklch(from var(--color-accent) 0.65 c h)` to darken the accent color.
 
+### Testing
+
+- Use E2E tests to cover the most important flows
+- Write a unit test for each non-trivial module
+- Identify the 1-2 core intents of each module and test them
+- Identify key risks of each module, especially around state or algorithmic complexity and test them
+- Use test.each to build broad coverage of low-level primitives like formatters and parsers
+- Use faker to generate test data for anything that a user might supply
+
 ## Project Structure
 
 We use a monorepo structure

@@ -23,8 +23,8 @@ importers:
         specifier: ^1.145.3
         version: 1.145.3(crossws@0.4.1(srvx@0.9.8))(solid-js@1.9.10)(vite-plugin-solid@2.11.10(@testing-library/jest-dom@6.9.1)(solid-js@1.9.10)(vite@7.3.0(@types/node@25.0.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1)))(vite@7.3.0(@types/node@25.0.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1))
       better-auth:
-        specifier: ^1.4.10
-        version: 1.4.10(drizzle-kit@0.31.8)(drizzle-orm@0.45.1(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(kysely@0.28.9))(solid-js@1.9.10)(vitest@4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.0.3)(jiti@2.6.1)(jsdom@27.4.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1))
+        specifier: ^1.4.15
+        version: 1.4.15(@tanstack/solid-start@1.145.3(crossws@0.4.1(srvx@0.9.8))(solid-js@1.9.10)(vite-plugin-solid@2.11.10(@testing-library/jest-dom@6.9.1)(solid-js@1.9.10)(vite@7.3.0(@types/node@25.0.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1)))(vite@7.3.0(@types/node@25.0.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1)))(drizzle-kit@0.31.8)(drizzle-orm@0.45.1(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(kysely@0.28.9))(solid-js@1.9.10)(vitest@4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.0.3)(jiti@2.6.1)(jsdom@27.4.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1))
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(kysely@0.28.9)
@@ -44,6 +44,9 @@ importers:
       '@faker-js/faker':
         specifier: ^10.1.0
         version: 10.1.0
+      '@playwright/test':
+        specifier: ^1.57.0
+        version: 1.57.0
       '@solidjs/testing-library':
         specifier: ^0.8.10
         version: 0.8.10(solid-js@1.9.10)
@@ -221,20 +224,20 @@ packages:
     resolution: {integrity: sha512-qQ5m48eI/MFLQ5PxQj4PFaprjyCTLI37ElWMmNs0K8Lk3dVeOdNpB3ks8jc7yM5CDmVC73eMVk/trk3fgmrUpA==}
     engines: {node: '>=6.9.0'}
 
-  '@better-auth/core@1.4.10':
-    resolution: {integrity: sha512-AThrfb6CpG80wqkanfrbN2/fGOYzhGladHFf3JhaWt/3/Vtf4h084T6PJLrDE7M/vCCGYvDI1DkvP3P1OB2HAg==}
+  '@better-auth/core@1.4.15':
+    resolution: {integrity: sha512-uAvq8YA7SaS7v+TrvH/Kwt7LAJihzUqB3FX8VweDsqu3gn5t51M+Bve+V1vVWR9qBAtC6cN68V6b+scxZxDY4A==}
     peerDependencies:
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
-      better-call: 1.1.7
+      better-call: 1.1.8
       jose: ^6.1.0
       kysely: ^0.28.5
       nanostores: ^1.0.1
 
-  '@better-auth/telemetry@1.4.10':
-    resolution: {integrity: sha512-Dq4XJX6EKsUu0h3jpRagX739p/VMOTcnJYWRrLtDYkqtZFg+sFiFsSWVcfapZoWpRSUGYX9iKwl6nDHn6Ju2oQ==}
+  '@better-auth/telemetry@1.4.15':
+    resolution: {integrity: sha512-7NW/2PS4RN85rv+ozpAezP/kSLPZeWkxqcA6RA/CFXqWp2YR2e5q5E6Hym1qBgVBkoAQa3lWFdX3b+jEs+vvrQ==}
     peerDependencies:
-      '@better-auth/core': 1.4.10
+      '@better-auth/core': 1.4.15
 
   '@better-auth/utils@0.3.0':
     resolution: {integrity: sha512-W+Adw6ZA6mgvnSnhOki270rwJ42t4XzSK6YWGF//BbVXL6SwCLWfyzBc1lN2m/4RM28KubdBKQ4X5VMoLRNPQw==}
@@ -1468,6 +1471,11 @@ packages:
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
 
+  '@playwright/test@1.57.0':
+    resolution: {integrity: sha512-6TyEnHgd6SArQO8UO2OMTxshln3QMWBtPGrOCgs3wVEmQmwyuNtB10IZMfmYDE0riwNR1cu4q+pPcxMVtaG3TA==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   '@poppinss/colors@4.1.6':
     resolution: {integrity: sha512-H9xkIdFswbS8n1d6vmRd8+c10t2Qe+rZITbbDHHkQixH5+2x1FDGmi/0K+WgWiqQFKPSlIYB7jlH6Kpfn6Fleg==}
 
@@ -2471,13 +2479,14 @@ packages:
     resolution: {integrity: sha512-Sg0xJUNDU1sJNGdfGWhVHX0kkZ+HWcvmVymJbj6NSgZZmW/8S9Y2HQ5euytnIgakgxN6papOAWiwDo1ctFDcoQ==}
     hasBin: true
 
-  better-auth@1.4.10:
-    resolution: {integrity: sha512-0kqwEBJLe8eyFzbUspRG/htOriCf9uMLlnpe34dlIJGdmDfPuQISd4shShvUrvIVhPxsY1dSTXdXPLpqISYOYg==}
+  better-auth@1.4.15:
+    resolution: {integrity: sha512-XZr4GnFPbjvf8wip8AAjTrpGNn3Sba600zT+DgsR3NNCMWCt9aD8+nuRah6BHwHWnVP1nfnby07tPmti72SRBw==}
     peerDependencies:
       '@lynx-js/react': '*'
       '@prisma/client': ^5.0.0 || ^6.0.0 || ^7.0.0
       '@sveltejs/kit': ^2.0.0
       '@tanstack/react-start': ^1.0.0
+      '@tanstack/solid-start': ^1.0.0
       better-sqlite3: ^12.0.0
       drizzle-kit: '>=0.31.4'
       drizzle-orm: '>=0.41.0'
@@ -2500,6 +2509,8 @@ packages:
       '@sveltejs/kit':
         optional: true
       '@tanstack/react-start':
+        optional: true
+      '@tanstack/solid-start':
         optional: true
       better-sqlite3:
         optional: true
@@ -2530,8 +2541,8 @@ packages:
       vue:
         optional: true
 
-  better-call@1.1.7:
-    resolution: {integrity: sha512-6gaJe1bBIEgVebQu/7q9saahVzvBsGaByEnE8aDVncZEDiJO7sdNB28ot9I6iXSbR25egGmmZ6aIURXyQHRraQ==}
+  better-call@1.1.8:
+    resolution: {integrity: sha512-XMQ2rs6FNXasGNfMjzbyroSwKwYbZ/T3IxruSS6U2MJRsSYh3wYtG3o6H00ZlKZ/C/UPOAD97tqgQJNsxyeTXw==}
     peerDependencies:
       zod: ^4.0.0
     peerDependenciesMeta:
@@ -3161,6 +3172,11 @@ packages:
   fresh@2.0.0:
     resolution: {integrity: sha512-Rx/WycZ60HOaqLKAi6cHRKKI7zxWbJ31MhntmtwMoaTeF7XFH9hhBp8vITaMidfljRQ6eYWCKkaTK+ykVJHP2A==}
     engines: {node: '>= 0.8'}
+
+  fsevents@2.3.2:
+    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    os: [darwin]
 
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
@@ -3884,6 +3900,16 @@ packages:
   pkg-types@2.3.0:
     resolution: {integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==}
 
+  playwright-core@1.57.0:
+    resolution: {integrity: sha512-agTcKlMw/mjBWOnD6kFZttAAGHgi/Nw0CZ2o6JqWSbMlI219lAFLZZCyqByTsvVAJq5XA5H8cA6PrvBRpBWEuQ==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.57.0:
+    resolution: {integrity: sha512-ilYQj1s8sr2ppEJ2YVadYBN0Mb3mdo9J0wQ+UuDhzYqURwSoW4n1Xs5vs7ORwgDGmyEh33tRMeS8KhdkMoLXQw==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   postcss@8.5.6:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
@@ -4309,6 +4335,7 @@ packages:
   tar@7.5.2:
     resolution: {integrity: sha512-7NyxrTE4Anh8km8iEy7o0QYPs+0JKBTj5ZaqHg6B39erLg0qYXN3BijtShwbsNSvQ+LN75+KV+C4QR/f6Gwnpg==}
     engines: {node: '>=18'}
+    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exhorbitant rates) by contacting i@izs.me
 
   terracotta@1.1.0:
     resolution: {integrity: sha512-kfQciWUBUBgYkXu7gh3CK3FAJng/iqZslAaY08C+k1Hdx17aVEpcFFb/WPaysxAfcupNH3y53s/pc53xxZauww==}
@@ -5104,20 +5131,20 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
 
-  '@better-auth/core@1.4.10(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@4.3.4))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0)':
+  '@better-auth/core@1.4.15(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.4))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0)':
     dependencies:
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
       '@standard-schema/spec': 1.1.0
-      better-call: 1.1.7(zod@4.3.4)
+      better-call: 1.1.8(zod@4.3.4)
       jose: 6.1.3
       kysely: 0.28.9
       nanostores: 1.1.0
       zod: 4.3.4
 
-  '@better-auth/telemetry@1.4.10(@better-auth/core@1.4.10(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@4.3.4))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0))':
+  '@better-auth/telemetry@1.4.15(@better-auth/core@1.4.15(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.4))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0))':
     dependencies:
-      '@better-auth/core': 1.4.10(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@4.3.4))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0)
+      '@better-auth/core': 1.4.15(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.4))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0)
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
 
@@ -5520,7 +5547,7 @@ snapshots:
   '@mapbox/node-pre-gyp@2.0.3':
     dependencies:
       consola: 3.4.2
-      detect-libc: 2.0.2
+      detect-libc: 2.1.2
       https-proxy-agent: 7.0.6
       node-fetch: 2.7.0
       nopt: 8.1.0
@@ -6018,6 +6045,10 @@ snapshots:
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
+
+  '@playwright/test@1.57.0':
+    dependencies:
+      playwright: 1.57.0
 
   '@poppinss/colors@4.1.6':
     dependencies:
@@ -6954,14 +6985,14 @@ snapshots:
       consola: 3.4.2
       defu: 6.1.4
       get-port-please: 3.2.0
-      h3: 1.15.3
+      h3: 1.15.5
       http-shutdown: 1.2.2
       jiti: 1.21.7
       mlly: 1.8.0
       node-forge: 1.3.3
       pathe: 1.1.2
       std-env: 3.10.0
-      ufo: 1.6.1
+      ufo: 1.6.3
       untun: 0.1.3
       uqr: 0.1.2
 
@@ -7161,27 +7192,28 @@ snapshots:
 
   baseline-browser-mapping@2.9.11: {}
 
-  better-auth@1.4.10(drizzle-kit@0.31.8)(drizzle-orm@0.45.1(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(kysely@0.28.9))(solid-js@1.9.10)(vitest@4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.0.3)(jiti@2.6.1)(jsdom@27.4.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1)):
+  better-auth@1.4.15(@tanstack/solid-start@1.145.3(crossws@0.4.1(srvx@0.9.8))(solid-js@1.9.10)(vite-plugin-solid@2.11.10(@testing-library/jest-dom@6.9.1)(solid-js@1.9.10)(vite@7.3.0(@types/node@25.0.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1)))(vite@7.3.0(@types/node@25.0.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1)))(drizzle-kit@0.31.8)(drizzle-orm@0.45.1(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(kysely@0.28.9))(solid-js@1.9.10)(vitest@4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.0.3)(jiti@2.6.1)(jsdom@27.4.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1)):
     dependencies:
-      '@better-auth/core': 1.4.10(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@4.3.4))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0)
-      '@better-auth/telemetry': 1.4.10(@better-auth/core@1.4.10(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@4.3.4))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0))
+      '@better-auth/core': 1.4.15(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.4))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0)
+      '@better-auth/telemetry': 1.4.15(@better-auth/core@1.4.15(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.4))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0))
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
       '@noble/ciphers': 2.1.1
       '@noble/hashes': 2.0.1
-      better-call: 1.1.7(zod@4.3.4)
+      better-call: 1.1.8(zod@4.3.4)
       defu: 6.1.4
       jose: 6.1.3
       kysely: 0.28.9
       nanostores: 1.1.0
       zod: 4.3.4
     optionalDependencies:
+      '@tanstack/solid-start': 1.145.3(crossws@0.4.1(srvx@0.9.8))(solid-js@1.9.10)(vite-plugin-solid@2.11.10(@testing-library/jest-dom@6.9.1)(solid-js@1.9.10)(vite@7.3.0(@types/node@25.0.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1)))(vite@7.3.0(@types/node@25.0.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1))
       drizzle-kit: 0.31.8
       drizzle-orm: 0.45.1(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(kysely@0.28.9)
       solid-js: 1.9.10
       vitest: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.0.3)(jiti@2.6.1)(jsdom@27.4.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1)
 
-  better-call@1.1.7(zod@4.3.4):
+  better-call@1.1.8(zod@4.3.4):
     dependencies:
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
@@ -7744,6 +7776,9 @@ snapshots:
 
   fresh@2.0.0: {}
 
+  fsevents@2.3.2:
+    optional: true
+
   fsevents@2.3.3:
     optional: true
 
@@ -7819,7 +7854,7 @@ snapshots:
       iron-webcrypto: 1.2.1
       node-mock-http: 1.0.4
       radix3: 1.1.2
-      ufo: 1.6.1
+      ufo: 1.6.3
       uncrypto: 0.1.3
 
   h3@1.15.5:
@@ -8262,7 +8297,7 @@ snapshots:
       acorn: 8.15.0
       pathe: 2.0.3
       pkg-types: 1.3.1
-      ufo: 1.6.1
+      ufo: 1.6.3
 
   module-details-from-path@1.0.4: {}
 
@@ -8646,6 +8681,14 @@ snapshots:
       confbox: 0.2.2
       exsolve: 1.0.8
       pathe: 2.0.3
+
+  playwright-core@1.57.0: {}
+
+  playwright@1.57.0:
+    dependencies:
+      playwright-core: 1.57.0
+    optionalDependencies:
+      fsevents: 2.3.2
 
   postcss@8.5.6:
     dependencies:
@@ -9404,7 +9447,7 @@ snapshots:
       serve-placeholder: 2.0.2
       serve-static: 1.16.3
       tinyglobby: 0.2.15
-      ufo: 1.6.1
+      ufo: 1.6.3
       unctx: 2.5.0
       unenv: 1.10.0
       unstorage: 1.17.4(db0@0.3.4(@libsql/client@0.15.15)(drizzle-orm@0.45.1(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(kysely@0.28.9)))(ioredis@5.9.2)
@@ -9487,7 +9530,7 @@ snapshots:
       fdir: 6.5.0(picomatch@4.0.3)
       picomatch: 4.0.3
       postcss: 8.5.6
-      rollup: 4.52.4
+      rollup: 4.55.1
       tinyglobby: 0.2.15
     optionalDependencies:
       '@types/node': 25.0.3
