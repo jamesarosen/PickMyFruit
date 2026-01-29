@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from '@tanstack/solid-router'
 import { createIsomorphicFn } from '@tanstack/solid-start'
-import { For, Show } from 'solid-js'
+import { createSignal, For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import { useSession } from '@/lib/auth-client'
 import { authMiddleware } from '@/middleware/auth'
+import { ListingStatus } from '@/lib/validation'
 import type { Listing } from '@/data/schema'
 import '@/routes/garden/mine.css'
 import { getRequest } from '@tanstack/solid-start/server'
@@ -38,24 +39,70 @@ export const Route = createFileRoute('/garden/mine')({
 })
 
 function getStatusClass(status: string): string {
-	if (status === 'available') {
+	if (status === ListingStatus.available) {
 		return 'status-available'
 	}
-	if (status === 'claimed') {
-		return 'status-claimed'
+	if (status === ListingStatus.unavailable) {
+		return 'status-unavailable'
 	}
-	return 'status-harvested'
+	if (status === ListingStatus.private) {
+		return 'status-private'
+	}
+	return 'status-unavailable'
 }
 
-function ListingCard(props: { listing: Listing }) {
+function getToggleButtonText(isToggling: boolean, status: string): string {
+	if (isToggling) {
+		return 'Updating...'
+	}
+	if (status === ListingStatus.available) {
+		return 'Mark Unavailable'
+	}
+	return 'Mark Available'
+}
+
+function ListingCard(props: { listing: Listing; onStatusChange: () => void }) {
 	const { listing } = props
-	const statusClass = getStatusClass(listing.status)
+	const [isToggling, setIsToggling] = createSignal(false)
+	const [currentStatus, setCurrentStatus] = createSignal(listing.status)
+	const [error, setError] = createSignal<string | null>(null)
+
+	const statusClass = () => getStatusClass(currentStatus())
+
+	async function toggleStatus() {
+		const newStatus =
+			currentStatus() === ListingStatus.available
+				? ListingStatus.unavailable
+				: ListingStatus.available
+		setIsToggling(true)
+		setError(null)
+
+		try {
+			const response = await fetch(`/api/listings/${listing.id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ status: newStatus }),
+			})
+
+			if (!response.ok) {
+				const data = await response.json()
+				throw new Error(data.error || 'Failed to update status')
+			}
+
+			setCurrentStatus(newStatus)
+			props.onStatusChange()
+		} catch (err) {
+			setError(err instanceof Error ? err.message : 'Failed to update')
+		} finally {
+			setIsToggling(false)
+		}
+	}
 
 	return (
 		<article class="listing-card">
 			<div class="listing-header">
 				<h3>{listing.name}</h3>
-				<span class={`status-badge ${statusClass}`}>{listing.status}</span>
+				<span class={`status-badge ${statusClass()}`}>{currentStatus()}</span>
 			</div>
 			<div class="listing-details">
 				<p class="listing-location">
@@ -65,7 +112,18 @@ function ListingCard(props: { listing: Listing }) {
 					<p class="listing-harvest">Harvest: {listing.harvestWindow}</p>
 				</Show>
 			</div>
+			<Show when={error()}>
+				<p class="listing-error">{error()}</p>
+			</Show>
 			<div class="listing-actions">
+				<button
+					type="button"
+					class="status-toggle-button"
+					onClick={toggleStatus}
+					disabled={isToggling()}
+				>
+					{getToggleButtonText(isToggling(), currentStatus())}
+				</button>
 				<button type="button" class="edit-button" disabled>
 					Edit
 				</button>
@@ -89,6 +147,14 @@ function EmptyState() {
 function MyGardenPage() {
 	const listings = Route.useLoaderData()
 	const session = useSession()
+	const search = Route.useSearch()
+	const [showMarkedMessage, setShowMarkedMessage] = createSignal(
+		() => (search as () => { marked?: string })()?.marked === 'unavailable'
+	)
+
+	function handleStatusChange() {
+		// Could trigger a re-fetch here if needed
+	}
 
 	return (
 		<Layout title="My Garden - Pick My Fruit">
@@ -100,10 +166,26 @@ function MyGardenPage() {
 					</Show>
 				</header>
 
+				<Show when={showMarkedMessage()()}>
+					<div class="success-message">
+						Listing marked as unavailable. Gleaners won't be able to contact you about
+						this listing.
+						<button
+							type="button"
+							class="dismiss-button"
+							onClick={() => setShowMarkedMessage(() => () => false)}
+						>
+							Dismiss
+						</button>
+					</div>
+				</Show>
+
 				<Show when={(listings() ?? []).length > 0} fallback={<EmptyState />}>
 					<div class="listings-grid">
 						<For each={listings()}>
-							{(listing) => <ListingCard listing={listing} />}
+							{(listing) => (
+								<ListingCard listing={listing} onStatusChange={handleStatusChange} />
+							)}
 						</For>
 					</div>
 

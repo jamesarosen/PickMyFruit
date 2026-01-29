@@ -13,19 +13,24 @@
 
 # Now
 
-## PR #7: Add Simple Contact/Claim Flow (Gatherings)
+## PR #7: Inquiries Feature (branch: `inquiries`)
+
+- [x] Run migration: `pnpm db:migrate`
+- [x] Set up `HMAC_SECRET` in `.env`
+- [ ] Manual testing per verification checklist in `docs/0002-inquiry-system.md:526-589`
+- [ ] Add E2E tests for inquiry flow
 
 **Size**: Medium (~150 lines)
 **Impact**: HIGH - enables gatherings
 
 **Changes**:
 
-- Add "Contact Owner" button on listing cards
-- Create contact form that sends email to owner
-- Add status update: available → pending → gathered
-- Owner receives email with gleaner contact info
-- Simple email templates (text-based, no fancy HTML)
-- Log all contact attempts as Gathering records
+- [x] Add "Contact Owner" button on listing cards
+- [x] Create contact form that sends email to owner
+- [x] Add status update: available → pending → gathered
+- [x] Owner receives email with gleaner contact info
+- [x] Email templates (HTML)
+- [x] Log all contact attempts as Inquiry records
 
 **Why Now**: Completes the core loop. Users can now create listings AND be contacted by gleaners. This enables our first successful gatherings.
 
@@ -198,13 +203,13 @@ Configured Better Auth with magic link authentication via Resend, linked listing
 
 # Risk Mitigation
 
-| Risk | Mitigation |
-|------|------------|
-| Geocoding API rate limits | Use free Nominatim (rate-limited but sufficient for MVP), cache results, add fallback to manual lat/lng entry |
-| Email deliverability issues | Start with transactional email service (Resend free tier), add SPF/DKIM records, monitor bounce rates |
-| SQLite write concurrency on Fly.io | SQLite handles this well for < 1000 users. Monitor, plan migration to Turso (LibSQL) if needed |
-| Spam submissions | Start with simple rate limiting, add Cloudflare Turnstile (free) if spam becomes an issue |
-| Poor mobile UX | Mobile-first CSS already in use. PWA (Later) further improves mobile experience |
+| Risk                               | Mitigation                                                                                                    |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Geocoding API rate limits          | Use free Nominatim (rate-limited but sufficient for MVP), cache results, add fallback to manual lat/lng entry |
+| Email deliverability issues        | Start with transactional email service (Resend free tier), add SPF/DKIM records, monitor bounce rates         |
+| SQLite write concurrency on Fly.io | SQLite handles this well for < 1000 users. Monitor, plan migration to Turso (LibSQL) if needed                |
+| Spam submissions                   | Start with simple rate limiting, add Cloudflare Turnstile (free) if spam becomes an issue                     |
+| Poor mobile UX                     | Mobile-first CSS already in use. PWA (Later) further improves mobile experience                               |
 
 ---
 
