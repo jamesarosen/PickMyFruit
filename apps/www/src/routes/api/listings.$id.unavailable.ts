@@ -10,7 +10,7 @@ const querySchema = z.object({
 	sig: z.string().min(1),
 })
 
-export const Route = createFileRoute('/api/plants/$id/unavailable')({
+export const Route = createFileRoute('/api/listings/$id/unavailable')({
 	server: {
 		handlers: {
 			async GET({ request, params }) {

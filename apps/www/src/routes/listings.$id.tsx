@@ -5,7 +5,7 @@ import Layout from '@/components/Layout'
 import InquiryForm from '@/components/InquiryForm'
 import { useSession } from '@/lib/auth-client'
 import { ListingStatus } from '@/lib/validation'
-import type { Plant } from '@/data/schema'
+import type { Listing } from '@/data/schema'
 import '@/routes/listings.css'
 
 const getListing = createIsomorphicFn()
@@ -40,7 +40,7 @@ function ListingDetailPage() {
 	const session = useSession()
 	const params = Route.useParams()
 
-	const plant = listing() as Plant | null | undefined
+	const plant = listing() as Listing | null | undefined
 
 	if (!plant) {
 		return (
