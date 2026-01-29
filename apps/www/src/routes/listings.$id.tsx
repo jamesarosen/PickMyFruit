@@ -1,27 +1,21 @@
 import { createFileRoute, Link } from '@tanstack/solid-router'
-import { createIsomorphicFn } from '@tanstack/solid-start'
 import { Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import InquiryForm from '@/components/InquiryForm'
 import { useSession } from '@/lib/auth-client'
 import { ListingStatus } from '@/lib/validation'
+import { getListingById } from '@/api/listings'
 import type { Listing } from '@/data/schema'
 import '@/routes/listings.css'
 
-const getListing = createIsomorphicFn()
-	.server(async ({ params }) => {
+export const Route = createFileRoute('/listings/$id')({
+	loader: ({ params }) => {
 		const id = parseInt(params.id, 10)
 		if (isNaN(id) || id <= 0) {
 			return null
 		}
-
-		const { getListingForInquiry } = await import('@/data/queries')
-		return getListingForInquiry(id)
-	})
-	.client(() => undefined)
-
-export const Route = createFileRoute('/listings/$id')({
-	loader: (ctx) => getListing(ctx),
+		return getListingById({ data: id })
+	},
 	component: ListingDetailPage,
 })
 
