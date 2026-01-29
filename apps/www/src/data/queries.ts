@@ -1,20 +1,22 @@
 import { db } from './db'
 import {
-	plants,
+	listings,
 	owners,
-	type Plant,
-	type NewPlant,
+	type Listing,
+	type NewListing,
 	type Owner,
 	type NewOwner,
 } from './schema'
 import { eq, desc, and } from 'drizzle-orm'
 
-export async function getAvailablePlants(limit: number = 10): Promise<Plant[]> {
+export async function getAvailableListings(
+	limit: number = 10
+): Promise<Listing[]> {
 	return await db
 		.select()
-		.from(plants)
-		.where(eq(plants.status, 'available'))
-		.orderBy(desc(plants.createdAt))
+		.from(listings)
+		.where(eq(listings.status, 'available'))
+		.orderBy(desc(listings.createdAt))
 		.limit(limit)
 }
 
@@ -35,21 +37,25 @@ export async function findOrCreateOwner(
 	return result[0]
 }
 
-export async function createListing(data: NewPlant): Promise<Plant> {
-	const result = await db.insert(plants).values(data).returning()
+export async function createListing(data: NewListing): Promise<Listing> {
+	const result = await db.insert(listings).values(data).returning()
 	return result[0]
 }
 
-export async function getUserListings(userId: string): Promise<Plant[]> {
+export async function getUserListings(userId: string): Promise<Listing[]> {
 	return await db
 		.select()
-		.from(plants)
-		.where(eq(plants.userId, userId))
-		.orderBy(desc(plants.createdAt))
+		.from(listings)
+		.where(eq(listings.userId, userId))
+		.orderBy(desc(listings.createdAt))
 }
 
-export async function getListingById(id: number): Promise<Plant | undefined> {
-	const result = await db.select().from(plants).where(eq(plants.id, id)).limit(1)
+export async function getListingById(id: number): Promise<Listing | undefined> {
+	const result = await db
+		.select()
+		.from(listings)
+		.where(eq(listings.id, id))
+		.limit(1)
 	return result[0]
 }
 
@@ -58,9 +64,9 @@ export async function deleteListingById(
 	userId: string
 ): Promise<boolean> {
 	const result = await db
-		.delete(plants)
-		.where(and(eq(plants.id, id), eq(plants.userId, userId)))
-		.returning({ id: plants.id })
+		.delete(listings)
+		.where(and(eq(listings.id, id), eq(listings.userId, userId)))
+		.returning({ id: listings.id })
 
 	return result.length > 0
 }

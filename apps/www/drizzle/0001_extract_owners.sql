@@ -10,10 +10,10 @@ CREATE TABLE `owners` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `owners_email_unique` ON `owners` (`email`);
 --> statement-breakpoint
--- Recreate plants table with owner_id foreign key
-DROP TABLE `plants`;
+-- Recreate listings table with owner_id foreign key
+DROP TABLE `listings`;
 --> statement-breakpoint
-CREATE TABLE `plants` (
+CREATE TABLE `listings` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,
 	`type` text NOT NULL,

@@ -4,7 +4,7 @@ import { For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import { useSession } from '@/lib/auth-client'
 import { authMiddleware } from '@/middleware/auth'
-import type { Plant } from '@/data/schema'
+import type { Listing } from '@/data/schema'
 import '@/routes/garden/mine.css'
 import { getRequest } from '@tanstack/solid-start/server'
 
@@ -14,7 +14,7 @@ const getMyListings = createIsomorphicFn()
 		const { auth } = await import('@/lib/auth')
 		const session = await auth.api.getSession({ headers })
 		if (!session?.user) {
-			return [] as Plant[]
+			return [] as Listing[]
 		}
 
 		const { getUserListings } = await import('@/data/queries')
@@ -47,7 +47,7 @@ function getStatusClass(status: string): string {
 	return 'status-harvested'
 }
 
-function ListingCard(props: { listing: Plant }) {
+function ListingCard(props: { listing: Listing }) {
 	const { listing } = props
 	const statusClass = getStatusClass(listing.status)
 

@@ -1,17 +1,17 @@
 import { createFileRoute, Link } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
-import { getAvailablePlants } from '@/api/plants'
+import { getAvailableListings } from '@/api/listings'
 import { useSession, signOut } from '@/lib/auth-client'
 import '@/routes/index.css'
 
 export const Route = createFileRoute('/')({
-	loader: () => getAvailablePlants({ data: 3 }),
+	loader: () => getAvailableListings({ data: 3 }),
 	component: HomePage,
 })
 
 function HomePage() {
-	const plants = Route.useLoaderData()
+	const listings = Route.useLoaderData()
 	const session = useSession()
 
 	return (
@@ -86,27 +86,27 @@ function HomePage() {
 					</div>
 				</section>
 
-				<section class="available-plants">
+				<section class="available-listings">
 					<div class="container">
 						<h2>Available Now in Napa</h2>
 						<Show
-							when={plants().length > 0}
-							fallback={<p>No plants available right now.</p>}
+							when={listings().length > 0}
+							fallback={<p>No listings available right now.</p>}
 						>
-							<div class="plants-grid">
-								<For each={plants()}>
-									{(plant) => (
-										<div class="plant-card surface-subtle">
-											<h3>{plant.name}</h3>
-											<p class="plant-variety">
-												{plant.type} - {plant.variety}
+							<div class="listings-grid">
+								<For each={listings()}>
+									{(listing) => (
+										<div class="listing-card surface-subtle">
+											<h3>{listing.name}</h3>
+											<p class="listing-variety">
+												{listing.type} - {listing.variety}
 											</p>
-											<p class="plant-quantity">Quantity: {plant.quantity}</p>
-											<p class="plant-harvest">Harvest: {plant.harvestWindow}</p>
-											<p class="plant-location">
-												{plant.city}, {plant.state}
+											<p class="listing-quantity">Quantity: {listing.quantity}</p>
+											<p class="listing-harvest">Harvest: {listing.harvestWindow}</p>
+											<p class="listing-location">
+												{listing.city}, {listing.state}
 											</p>
-											{plant.notes && <p class="plant-notes">{plant.notes}</p>}
+											{listing.notes && <p class="listing-notes">{listing.notes}</p>}
 										</div>
 									)}
 								</For>

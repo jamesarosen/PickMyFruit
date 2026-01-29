@@ -1,4 +1,4 @@
-CREATE TABLE `plants` (
+CREATE TABLE `listings` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,
 	`type` text NOT NULL,
