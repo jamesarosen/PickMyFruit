@@ -1,10 +1,37 @@
 import { createFileRoute } from '@tanstack/solid-router'
+import { z } from 'zod'
 import { listingFormSchema } from '@/lib/validation'
 import { geocodeAddress } from '@/lib/geocoding'
+
+const querySchema = z.object({
+	limit: z.coerce.number().int().positive().max(100).default(10),
+})
 
 export const Route = createFileRoute('/api/listings')({
 	server: {
 		handlers: {
+			async GET({ request }) {
+				const url = new URL(request.url)
+				const parsed = querySchema.safeParse({
+					limit: url.searchParams.get('limit') ?? undefined,
+				})
+
+				if (!parsed.success) {
+					return Response.json({ error: parsed.error.flatten() }, { status: 400 })
+				}
+
+				try {
+					const { getAvailableListings } = await import('@/data/queries')
+					const listings = await getAvailableListings(parsed.data.limit)
+					return Response.json(listings)
+				} catch (error) {
+					console.error('Failed to fetch listings:', error)
+					return Response.json(
+						{ error: 'Failed to fetch listings' },
+						{ status: 500 }
+					)
+				}
+			},
 			async POST({ request }) {
 				// Dynamic imports to avoid bundling server-only code for browser
 				const { auth } = await import('@/lib/auth')

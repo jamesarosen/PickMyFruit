@@ -4,8 +4,8 @@
 	"id": "850c5f87-a951-4d24-b93f-910f4b1bcfc6",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"tables": {
-		"plants": {
-			"name": "plants",
+		"listings": {
+			"name": "listings",
 			"columns": {
 				"id": {
 					"name": "id",

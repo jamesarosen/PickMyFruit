@@ -56,5 +56,5 @@ CREATE TABLE `verification` (
 --> statement-breakpoint
 CREATE INDEX `verification_identifier_idx` ON `verification` (`identifier`);
 --> statement-breakpoint
--- Add user_id column to plants table for Better Auth integration
-ALTER TABLE `plants` ADD COLUMN `user_id` text REFERENCES `user`(`id`);
+-- Add user_id column to listings table for Better Auth integration
+ALTER TABLE `listings` ADD COLUMN `user_id` text REFERENCES `user`(`id`);

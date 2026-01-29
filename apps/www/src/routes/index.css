@@ -232,13 +232,13 @@
 		color: var(--color-foreground);
 	}
 
-	/* Available Plants Section */
-	.available-plants {
+	/* Available Listings Section */
+	.available-listings {
 		padding: 80px 0;
 		background: var(--color-background);
 	}
 
-	.available-plants h2 {
+	.available-listings h2 {
 		font-size: 36px;
 		font-weight: 700;
 		color: var(--color-foreground);
@@ -246,14 +246,14 @@
 		text-align: center;
 	}
 
-	.plants-grid {
+	.listings-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 		gap: 30px;
 		margin-top: 40px;
 	}
 
-	.plant-card {
+	.listing-card {
 		border-radius: 12px;
 		padding: 24px;
 		box-shadow: 0 2px 8px oklch(from var(--color-foreground) l c h / 0.1);
@@ -262,12 +262,12 @@
 			box-shadow 0.2s;
 	}
 
-	.plant-card:hover {
+	.listing-card:hover {
 		transform: translateY(-4px);
 		box-shadow: 0 4px 12px oklch(from var(--color-foreground) l c h / 0.15);
 	}
 
-	.plant-card h3 {
+	.listing-card h3 {
 		font-size: 20px;
 		font-weight: 600;
 		color: var(--color-foreground);
@@ -275,7 +275,7 @@
 		text-transform: capitalize;
 	}
 
-	.plant-variety {
+	.listing-variety {
 		font-size: 16px;
 		color: var(--color-secondary);
 		font-weight: 500;
@@ -283,19 +283,19 @@
 		text-transform: capitalize;
 	}
 
-	.plant-quantity,
-	.plant-harvest,
-	.plant-location {
+	.listing-quantity,
+	.listing-harvest,
+	.listing-location {
 		font-size: 14px;
 		color: var(--color-quiet);
 		margin: 0 0 8px 0;
 	}
 
-	.plant-quantity {
+	.listing-quantity {
 		text-transform: capitalize;
 	}
 
-	.plant-notes {
+	.listing-notes {
 		font-size: 14px;
 		color: oklch(from var(--color-quiet) calc(l + 0.1) calc(c * 0.8) h);
 		font-style: italic;

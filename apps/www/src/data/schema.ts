@@ -119,7 +119,7 @@ export const owners = sqliteTable('owners', {
 export type Owner = typeof owners.$inferSelect
 export type NewOwner = typeof owners.$inferInsert
 
-export const plants = sqliteTable('plants', {
+export const listings = sqliteTable('listings', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
 	name: text('name').notNull(),
 	type: text('type').notNull(), // e.g., 'apple', 'pear', 'plum', 'fig', 'lemon', 'orange', etc.
@@ -156,5 +156,5 @@ export const plants = sqliteTable('plants', {
 		.default(sql`(unixepoch())`),
 })
 
-export type Plant = typeof plants.$inferSelect
-export type NewPlant = typeof plants.$inferInsert
+export type Listing = typeof listings.$inferSelect
+export type NewListing = typeof listings.$inferInsert

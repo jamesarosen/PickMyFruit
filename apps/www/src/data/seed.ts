@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker'
 import { latLngToCell } from 'h3-js'
 import { db } from './db'
-import { plants, owners, type NewPlant, type NewOwner } from './schema'
+import { listings, owners, type NewListing, type NewOwner } from './schema'
 
 // Napa Valley approximate bounds
 const NAPA_BOUNDS = {
@@ -60,7 +60,7 @@ function generateOwner(): NewOwner {
 	}
 }
 
-function generatePlant(ownerId: number): NewPlant {
+function generateListing(ownerId: number): NewListing {
 	const fruitType = faker.helpers.arrayElement(FRUIT_TYPES)
 	const lat = faker.number.float({
 		min: NAPA_BOUNDS.latMin,
@@ -131,8 +131,8 @@ function generatePlant(ownerId: number): NewPlant {
 async function seed() {
 	console.log('🌱 Seeding database...')
 
-	// Clear existing data (plants first due to foreign key)
-	await db.delete(plants)
+	// Clear existing data (listings first due to foreign key)
+	await db.delete(listings)
 	await db.delete(owners)
 
 	// Generate 20 owners
@@ -140,23 +140,23 @@ async function seed() {
 	const insertedOwners = await db.insert(owners).values(ownersData).returning()
 	console.log(`✅ Seeded ${insertedOwners.length} owners`)
 
-	// Generate 50 plants with random owners
-	const plantsData: NewPlant[] = Array.from({ length: 50 }, () => {
+	// Generate 50 listings with random owners
+	const listingsData: NewListing[] = Array.from({ length: 50 }, () => {
 		const owner = faker.helpers.arrayElement(insertedOwners)
-		return generatePlant(owner.id)
+		return generateListing(owner.id)
 	})
 
-	// Insert plants
-	await db.insert(plants).values(plantsData)
+	// Insert listings
+	await db.insert(listings).values(listingsData)
 
-	console.log(`✅ Seeded ${plantsData.length} plants`)
+	console.log(`✅ Seeded ${listingsData.length} listings`)
 
 	// Show a few examples
-	const examples = await db.select().from(plants).limit(3)
-	console.log('\n📋 Sample plants:')
-	examples.forEach((plant, i) => {
+	const examples = await db.select().from(listings).limit(3)
+	console.log('\n📋 Sample listings:')
+	examples.forEach((listing, i) => {
 		console.log(
-			`${i + 1}. ${plant.name} - ${plant.type} (${plant.variety}) in ${plant.city}`
+			`${i + 1}. ${listing.name} - ${listing.type} (${listing.variety}) in ${listing.city}`
 		)
 	})
 
