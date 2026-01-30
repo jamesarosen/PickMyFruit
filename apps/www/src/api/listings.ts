@@ -5,8 +5,7 @@ export const getAvailableListings = createServerFn({ method: 'GET' })
 	.middleware([errorMiddleware])
 	.inputValidator((limit: number = 3) => limit)
 	.handler(async ({ data: limit }) => {
-		const { getAvailableListings: getAvailableListingsFromDb } = await import(
-			'@/data/queries'
-		)
+		const { getAvailableListings: getAvailableListingsFromDb } =
+			await import('@/data/queries')
 		return getAvailableListingsFromDb(limit)
 	})
