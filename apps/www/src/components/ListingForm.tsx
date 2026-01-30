@@ -1,5 +1,5 @@
 import { createSignal, Show, For, onMount } from 'solid-js'
-import { Link } from '@tanstack/solid-router'
+import { Link, useNavigate } from '@tanstack/solid-router'
 import { listingFormSchema, fruitTypes } from '@/lib/validation'
 import { useSession, authClient } from '@/lib/auth-client'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
@@ -13,6 +13,7 @@ interface FieldErrors {
 }
 
 export default function ListingForm() {
+	const navigate = useNavigate()
 	const session = useSession()
 	const [isSubmitting, setIsSubmitting] = createSignal(false)
 	const [submitError, setSubmitError] = createSignal<string | null>(null)
@@ -145,6 +146,9 @@ export default function ListingForm() {
 							setMagicLinkEmail(null)
 							sessionStorage.removeItem(PENDING_LISTING_KEY)
 						}}
+						onVerified={() =>
+							navigate({ to: '/garden/new', search: { complete: 'true' } })
+						}
 					/>
 				}
 			>

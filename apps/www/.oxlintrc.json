@@ -83,11 +83,20 @@
 				"tests/**/*.tsx"
 			],
 			"rules": {
-				"no-untyped-mock-factory": "error",
 				"eslint-plugin-import/first": "off", // support mock before import
 				"eslint-plugin-import/max-dependencies": "off",
 				"eslint-plugin-jest/no-hooks": "off",
-				"require-await": "off"
+				"require-await": "off",
+
+				/**
+				 * Jest and Vitest have different type signatures for mock factories.
+				 * This rule expects mock<T>('module', factory: () => T), but Vitest doesn't
+				 * have a <T> generic for that version.
+				 * @see https://oxc.rs/docs/guide/usage/linter/rules/jest/no-untyped-mock-factory.html
+				 * @see https://vitest.dev/guide/mocking/modules.html
+				 */
+				"no-untyped-mock-factory": "off",
+				"jest/no-untyped-mock-factory": "off"
 			}
 		}
 	]
