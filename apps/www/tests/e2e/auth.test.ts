@@ -26,12 +26,11 @@ test.describe('Authentication', () => {
 
 		// Submit the form and wait for network response
 		const submitButton = page.locator('button.submit-button')
-		await Promise.all([
-			page.waitForResponse((resp) =>
-				resp.url().includes('/api/auth/sign-in/magic-link')
-			),
-			submitButton.click(),
-		])
+		const responsePromise = page.waitForResponse((resp) =>
+			resp.url().includes('/api/auth/sign-in/magic-link')
+		)
+		await submitButton.click()
+		await responsePromise
 
 		// Wait for "Check your email" view
 		await expect(
@@ -71,12 +70,11 @@ test.describe('Authentication', () => {
 
 		// Submit the form (same as first test)
 		const submitButton = page.locator('button.submit-button')
-		await Promise.all([
-			page.waitForResponse((resp) =>
-				resp.url().includes('/api/auth/sign-in/magic-link')
-			),
-			submitButton.click(),
-		])
+		const responsePromise = page.waitForResponse((resp) =>
+			resp.url().includes('/api/auth/sign-in/magic-link')
+		)
+		await submitButton.click()
+		await responsePromise
 
 		// Wait for "Check your email" view (same as first test)
 		await expect(
@@ -88,12 +86,11 @@ test.describe('Authentication', () => {
 		await tokenInput.pressSequentially('invalid-token-12345', { delay: 20 })
 
 		// Click verify and wait for response
-		await Promise.all([
-			page.waitForResponse((resp) =>
-				resp.url().includes('/api/auth/magic-link/verify')
-			),
-			page.getByRole('button', { name: 'Verify' }).click(),
-		])
+		const verifyResponsePromise = page.waitForResponse((resp) =>
+			resp.url().includes('/api/auth/magic-link/verify')
+		)
+		await page.getByRole('button', { name: 'Verify' }).click()
+		await verifyResponsePromise
 
 		// Should show error
 		await expect(page.locator('.token-error')).toBeVisible({ timeout: 10000 })
