@@ -1,4 +1,9 @@
-import { createFileRoute, Link, redirect } from '@tanstack/solid-router'
+import {
+	createFileRoute,
+	Link,
+	redirect,
+	useNavigate,
+} from '@tanstack/solid-router'
 import { createSignal, Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
@@ -15,6 +20,7 @@ export const Route = createFileRoute('/login')({
 })
 
 function LoginPage() {
+	const navigate = useNavigate()
 	const [email, setEmail] = createSignal('')
 	const [isSubmitting, setIsSubmitting] = createSignal(false)
 	const [error, setError] = createSignal<string | null>(null)
@@ -65,6 +71,7 @@ function LoginPage() {
 									setEmailSent(false)
 									setEmail('')
 								}}
+								onVerified={() => navigate({ to: '/garden/mine' })}
 							/>
 						}
 					>
