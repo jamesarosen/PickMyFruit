@@ -1,12 +1,11 @@
-import { test, expect } from '@playwright/test'
-import { TEST_USER, getMagicLinkToken } from './helpers/test-db'
+import { test, expect } from './helpers/fixtures'
+import { getMagicLinkToken } from './helpers/test-db'
 
 test.describe('Authentication', () => {
-	test.beforeEach(async ({ context }) => {
-		await context.clearCookies()
-	})
+	// Run serially to avoid SQLite lock conflicts from parallel DB writes
+	test.describe.configure({ mode: 'serial' })
 
-	test('magic link sign-in flow', async ({ page }) => {
+	test('magic link sign-in flow', async ({ page, testUser }) => {
 		await page.goto('/login')
 
 		// Wait for login page to fully load
@@ -19,10 +18,10 @@ test.describe('Authentication', () => {
 		await expect(emailInput).toBeVisible()
 
 		// Type email using pressSequentially which properly triggers input events
-		await emailInput.pressSequentially(TEST_USER.email, { delay: 30 })
+		await emailInput.pressSequentially(testUser.email, { delay: 30 })
 
 		// Verify the email was entered correctly
-		await expect(emailInput).toHaveValue(TEST_USER.email)
+		await expect(emailInput).toHaveValue(testUser.email)
 
 		// Submit the form and wait for network response
 		const submitButton = page.locator('button.submit-button')
@@ -38,7 +37,7 @@ test.describe('Authentication', () => {
 		).toBeVisible({ timeout: 10000 })
 
 		// Get token from database and verify
-		const token = await getMagicLinkToken(TEST_USER.email)
+		const token = await getMagicLinkToken(testUser.email)
 		const tokenInput = page.locator('input#magic-link-token')
 		await tokenInput.pressSequentially(token, { delay: 20 })
 		await page.getByRole('button', { name: 'Verify' }).click()
@@ -52,7 +51,7 @@ test.describe('Authentication', () => {
 		await expect(page).toHaveURL('/login')
 	})
 
-	test('invalid token shows error', async ({ page }) => {
+	test('invalid token shows error', async ({ page, testUser }) => {
 		await page.goto('/login')
 
 		// Wait for login page to fully load (same as first test)
@@ -65,8 +64,8 @@ test.describe('Authentication', () => {
 		await expect(emailInput).toBeVisible()
 
 		// Type email using pressSequentially (same as first test)
-		await emailInput.pressSequentially(TEST_USER.email, { delay: 30 })
-		await expect(emailInput).toHaveValue(TEST_USER.email)
+		await emailInput.pressSequentially(testUser.email, { delay: 30 })
+		await expect(emailInput).toHaveValue(testUser.email)
 
 		// Submit the form (same as first test)
 		const submitButton = page.locator('button.submit-button')
