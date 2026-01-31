@@ -2,8 +2,9 @@ import { drizzle } from 'drizzle-orm/libsql'
 import { createClient } from '@libsql/client'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { user, verification } from '../../../src/data/schema'
+import { user, verification, listings } from '../../../src/data/schema'
 import { eq, desc, like } from 'drizzle-orm'
+import { faker } from '@faker-js/faker'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const wwwRoot = resolve(__dirname, '../../..')
@@ -11,24 +12,44 @@ const wwwRoot = resolve(__dirname, '../../..')
 // Uses same test.db as playwright webServer - absolute path for consistency
 const TEST_DB_URL = `file:${resolve(wwwRoot, 'test.db')}`
 
-const TEST_USER = {
-	id: 'e2e-test-user',
-	email: 'e2e@test.local',
-	name: 'E2E Test User',
-	emailVerified: true,
-	createdAt: new Date(),
-	updatedAt: new Date(),
+export interface TestUser {
+	id: string
+	email: string
+	name: string
+	emailVerified: boolean
+	createdAt: Date
+	updatedAt: Date
 }
 
 function getDb() {
 	return drizzle(createClient({ url: TEST_DB_URL }))
 }
 
-export async function seedTestUser() {
+export function generateTestUser(): TestUser {
+	const id = faker.string.uuid()
+	return {
+		id,
+		email: `e2e-${id}@test.local`,
+		name: faker.person.fullName(),
+		emailVerified: true,
+		createdAt: new Date(),
+		updatedAt: new Date(),
+	}
+}
+
+export async function createTestUser(testUser?: TestUser): Promise<TestUser> {
 	const db = getDb()
-	await db.delete(user).where(eq(user.id, TEST_USER.id))
-	await db.insert(user).values(TEST_USER)
-	return TEST_USER
+	const userToCreate = testUser ?? generateTestUser()
+	await db.insert(user).values(userToCreate)
+	return userToCreate
+}
+
+export async function cleanupTestUser(testUser: TestUser): Promise<void> {
+	const db = getDb()
+	const valuePattern = `%"email":"${testUser.email}"%`
+	await db.delete(verification).where(like(verification.value, valuePattern))
+	await db.delete(listings).where(eq(listings.userId, testUser.id))
+	await db.delete(user).where(eq(user.id, testUser.id))
 }
 
 export async function getMagicLinkToken(email: string): Promise<string> {
@@ -64,5 +85,3 @@ export async function getMagicLinkToken(email: string): Promise<string> {
 
 	return poll(50)
 }
-
-export { TEST_USER }

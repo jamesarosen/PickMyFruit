@@ -1,7 +1,6 @@
 import { execSync } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { seedTestUser } from './helpers/test-db'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const wwwRoot = resolve(__dirname, '../..')
@@ -14,5 +13,5 @@ export default async function globalSetup() {
 		env: { ...process.env, DATABASE_URL: `file:${testDbPath}` },
 		stdio: 'inherit',
 	})
-	await seedTestUser()
+	// Test users are now created per-test in beforeEach hooks
 }
