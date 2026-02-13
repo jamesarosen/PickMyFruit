@@ -47,14 +47,13 @@ test.describe('Listing Status', () => {
 
 		await loginViaUI(page, testUser)
 
-		// Find the card for the unavailable listing
-		const cards = page.locator('article.listing-card')
-		const unavailableCard = cards.filter({
-			has: page.locator('.status-badge', { hasText: 'unavailable' }),
+		// Locate card by its name (stable across status changes)
+		const card = page.locator('article.listing-card', {
+			hasText: listing.name,
 		})
-		await expect(unavailableCard).toBeVisible()
+		await expect(card.locator('.status-badge')).toHaveText('unavailable')
 
-		const toggleButton = unavailableCard.getByRole('button', {
+		const toggleButton = card.getByRole('button', {
 			name: 'Mark Available',
 		})
 
@@ -66,7 +65,7 @@ test.describe('Listing Status', () => {
 		await toggleButton.click()
 		await patchPromise
 
-		await expect(unavailableCard.locator('.status-badge')).toHaveText('available')
+		await expect(card.locator('.status-badge')).toHaveText('available')
 	})
 
 	test('unavailable listing shows unavailable message on detail page', async ({
