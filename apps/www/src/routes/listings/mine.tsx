@@ -80,18 +80,24 @@ function ListingCard(props: { listing: Listing }) {
 
 	return (
 		<article class="listing-card">
-			<div class="listing-header">
-				<h3>{props.listing.name}</h3>
-				<span class={`status-badge ${statusClass()}`}>{currentStatus()}</span>
-			</div>
-			<div class="listing-details">
-				<p class="listing-location">
-					{props.listing.city}, {props.listing.state}
-				</p>
-				<Show when={props.listing.harvestWindow}>
-					<p class="listing-harvest">Harvest: {props.listing.harvestWindow}</p>
-				</Show>
-			</div>
+			<Link
+				to="/listings/$id"
+				params={{ id: String(props.listing.id) }}
+				class="listing-card-link"
+			>
+				<div class="listing-header">
+					<h3>{props.listing.name}</h3>
+					<span class={`status-badge ${statusClass()}`}>{currentStatus()}</span>
+				</div>
+				<div class="listing-details">
+					<p class="listing-location">
+						{props.listing.city}, {props.listing.state}
+					</p>
+					<Show when={props.listing.harvestWindow}>
+						<p class="listing-harvest">Harvest: {props.listing.harvestWindow}</p>
+					</Show>
+				</div>
+			</Link>
 			<Show when={error()}>
 				<p class="listing-error">{error()}</p>
 			</Show>
