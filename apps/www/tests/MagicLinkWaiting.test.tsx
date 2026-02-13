@@ -18,7 +18,7 @@ describe('MagicLinkWaiting', () => {
 			const { getByText } = render(() => (
 				<MagicLinkWaiting
 					email="gardener@example.com"
-					callbackURL="/garden/mine"
+					callbackURL="/listings/mine"
 					onCancel={() => {}}
 					onVerified={() => {}}
 				/>
@@ -31,7 +31,7 @@ describe('MagicLinkWaiting', () => {
 			const { getByLabelText, getByRole } = render(() => (
 				<MagicLinkWaiting
 					email="test@example.com"
-					callbackURL="/garden/mine"
+					callbackURL="/listings/mine"
 					onCancel={() => {}}
 					onVerified={() => {}}
 				/>
@@ -45,7 +45,7 @@ describe('MagicLinkWaiting', () => {
 			const { getByRole } = render(() => (
 				<MagicLinkWaiting
 					email="test@example.com"
-					callbackURL="/garden/mine"
+					callbackURL="/listings/mine"
 					onCancel={() => {}}
 					onVerified={() => {}}
 				/>
@@ -61,7 +61,7 @@ describe('MagicLinkWaiting', () => {
 			const { getByRole } = render(() => (
 				<MagicLinkWaiting
 					email="test@example.com"
-					callbackURL="/garden/mine"
+					callbackURL="/listings/mine"
 					onCancel={onCancel}
 					onVerified={() => {}}
 				/>
@@ -79,7 +79,7 @@ describe('MagicLinkWaiting', () => {
 			const { getByRole } = render(() => (
 				<MagicLinkWaiting
 					email="gardener@example.com"
-					callbackURL="/garden/mine"
+					callbackURL="/listings/mine"
 					onCancel={() => {}}
 					onVerified={() => {}}
 				/>
@@ -90,7 +90,7 @@ describe('MagicLinkWaiting', () => {
 			await waitFor(() => {
 				expect(mockSendMagicLink).toHaveBeenCalledWith({
 					email: 'gardener@example.com',
-					callbackURL: '/garden/mine',
+					callbackURL: '/listings/mine',
 				})
 			})
 		})

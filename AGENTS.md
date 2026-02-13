@@ -94,7 +94,7 @@ We use a monorepo structure
 - Server config: `src/lib/auth.ts`
 - Client: `src/lib/auth-client.ts` - use `useSession()` hook for session state
 - API routes at `/api/auth/*` handled by catch-all route
-- Protected routes `/garden/mine` and `/garden/new` require authentication
+- Protected routes `/listings/mine` and `/listings/new` require authentication
 - Magic links: set `RESEND_API_KEY` for email delivery, otherwise logs to console
 
 ## Known Issues

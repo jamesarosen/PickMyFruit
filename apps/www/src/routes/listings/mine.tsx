@@ -5,7 +5,7 @@ import Layout from '@/components/Layout'
 import { useSession } from '@/lib/auth-client'
 import { authMiddleware } from '@/middleware/auth'
 import type { Listing } from '@/data/schema'
-import '@/routes/garden/mine.css'
+import '@/routes/listings/mine.css'
 import { getRequest } from '@tanstack/solid-start/server'
 
 const getMyListings = createIsomorphicFn()
@@ -22,7 +22,7 @@ const getMyListings = createIsomorphicFn()
 	})
 	.client(() => undefined)
 
-export const Route = createFileRoute('/garden/mine')({
+export const Route = createFileRoute('/listings/mine')({
 	loader: getMyListings,
 	pendingComponent: () => (
 		<Layout title="My Garden - Pick My Fruit">
@@ -79,7 +79,7 @@ function EmptyState() {
 		<div class="empty-state">
 			<h2>No listings yet</h2>
 			<p>Share your first fruit tree with the community!</p>
-			<Link to="/garden/new" class="add-button">
+			<Link to="/listings/new" class="add-button">
 				List My Fruit Tree
 			</Link>
 		</div>
@@ -108,7 +108,7 @@ function MyGardenPage() {
 					</div>
 
 					<div class="page-actions">
-						<Link to="/garden/new" class="add-button">
+						<Link to="/listings/new" class="add-button">
 							Add Another Tree
 						</Link>
 					</div>

@@ -7,7 +7,7 @@ This document records the domain terminology choices for Pick My Fruit, includin
 | Concept                              | Model Name    | URL Pattern       | Reasoning                                                                                                                                                                      |
 | ------------------------------------ | ------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Canonical category of shareable item | `ProduceType` | `/produce/{slug}` | "Produce" is accurate, broadly understood, and covers fruits, vegetables, herbs, eggs, and honey. URL reads naturally. Model name explicitly includes "Type" for code clarity. |
-| A specific shareable source          | `Listing`     | `/garden/{slug}`  | Standard marketplace term; unambiguous in code. URL uses "garden" for warmth and user-centric framing. "Stand" reserved for future multi-produce farm stand concept.           |
+| A specific shareable source          | `Listing`     | `/listings/{slug}` | Standard marketplace term; unambiguous in code. URL uses "listings" for clarity and consistency with model name. "Stand" reserved for future multi-produce farm stand concept. |
 | A completed transfer                 | `Gathering`   | (TBD)             | Echoes French _cueillette_ (picking/gathering). Works for all fulfillment modes (pickup, delivery, porch drop). Community-oriented without implying transaction.               |
 
 ## Data Model Overview

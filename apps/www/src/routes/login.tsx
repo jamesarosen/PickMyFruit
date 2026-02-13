@@ -25,7 +25,7 @@ export const Route = createFileRoute('/login')({
 	validateSearch: loginSearchSchema,
 	beforeLoad: ({ context, search }) => {
 		if (context.session?.user) {
-			throw redirect({ to: search.returnTo || '/garden/mine' })
+			throw redirect({ to: search.returnTo || '/listings/mine' })
 		}
 	},
 	component: LoginPage,
@@ -34,7 +34,7 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
 	const navigate = useNavigate()
 	const search = useSearch({ from: '/login' })
-	const returnTo = () => search().returnTo || '/garden/mine'
+	const returnTo = () => search().returnTo || '/listings/mine'
 	const [email, setEmail] = createSignal('')
 	const [isSubmitting, setIsSubmitting] = createSignal(false)
 	const [error, setError] = createSignal<string | null>(null)
