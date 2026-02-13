@@ -2,9 +2,15 @@ import { drizzle } from 'drizzle-orm/libsql'
 import { createClient } from '@libsql/client'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { user, verification, listings } from '../../../src/data/schema'
+import {
+	user,
+	verification,
+	listings,
+	type NewListing,
+} from '../../../src/data/schema'
 import { eq, desc, like } from 'drizzle-orm'
 import { faker } from '@faker-js/faker'
+import { latLngToCell } from 'h3-js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const wwwRoot = resolve(__dirname, '../../..')
@@ -84,4 +90,48 @@ export async function getMagicLinkToken(email: string): Promise<string> {
 	}
 
 	return poll(50)
+}
+
+export interface TestListing {
+	id: number
+	name: string
+	type: string
+	variety: string | null
+	status: string
+	city: string
+	state: string
+	userId: string
+}
+
+/** Inserts a listing into the test DB and returns it. */
+export async function createTestListing(
+	userId: string,
+	overrides: Partial<NewListing> = {}
+): Promise<TestListing> {
+	const db = getDb()
+	const lat = 38.3
+	const lng = -122.3
+	const data: NewListing = {
+		name: `${faker.person.firstName()}'s fig tree`,
+		type: 'fig',
+		variety: 'Black Mission',
+		status: 'available',
+		quantity: 'abundant',
+		harvestWindow: 'June-September',
+		address: faker.location.streetAddress(),
+		city: 'Napa',
+		state: 'CA',
+		zip: '94558',
+		lat,
+		lng,
+		h3Index: latLngToCell(lat, lng, 9),
+		userId,
+		notes: null,
+		accessInstructions: null,
+		createdAt: new Date(),
+		updatedAt: new Date(),
+		...overrides,
+	}
+	const result = await db.insert(listings).values(data).returning()
+	return result[0]
 }

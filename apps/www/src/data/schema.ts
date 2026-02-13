@@ -110,7 +110,7 @@ export const listings = sqliteTable(
 		name: text('name').notNull(),
 		type: text('type').notNull(), // e.g., 'apple', 'pear', 'plum', 'fig', 'lemon', 'orange', etc.
 		variety: text('variety'), // e.g., 'Granny Smith', 'Honeycrisp', etc.
-		status: text('status').notNull().default('available'), // 'available', 'claimed', 'harvested'
+		status: text('status').notNull().default('available'), // 'available', 'unavailable', 'private'
 		quantity: text('quantity'), // e.g., 'abundant', 'moderate', 'few'
 		harvestWindow: text('harvest_window'), // e.g., 'September-October'
 
