@@ -129,6 +129,10 @@ function EmptyState() {
 function MyGardenPage() {
 	const listings = Route.useLoaderData()
 	const session = useSession()
+	const search = Route.useSearch()
+	const [showMarkedMessage, setShowMarkedMessage] = createSignal(
+		() => (search as () => { marked?: string })()?.marked === 'unavailable'
+	)
 
 	return (
 		<Layout title="My Garden - Pick My Fruit">
@@ -139,6 +143,20 @@ function MyGardenPage() {
 						<p>Welcome back, {session().data?.user?.name || 'friend'}!</p>
 					</Show>
 				</header>
+
+				<Show when={showMarkedMessage()()}>
+					<div class="success-message">
+						Listing marked as unavailable. Gleaners won't be able to contact you about
+						this listing.
+						<button
+							type="button"
+							class="dismiss-button"
+							onClick={() => setShowMarkedMessage(() => () => false)}
+						>
+							Dismiss
+						</button>
+					</div>
+				</Show>
 
 				<Show when={(listings() ?? []).length > 0} fallback={<EmptyState />}>
 					<div class="listings-grid">

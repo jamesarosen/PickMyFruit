@@ -29,6 +29,13 @@
 			"when": 1739379200000,
 			"tag": "0003_remove_owners",
 			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "6",
+			"when": 1739465600000,
+			"tag": "0004_add_inquiries",
+			"breakpoints": true
 		}
 	]
 }

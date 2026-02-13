@@ -13,19 +13,24 @@
 
 # Now
 
-## PR #7: Add Simple Contact/Claim Flow (Gatherings)
+## PR #7: Inquiries Feature (branch: `inquiries`)
+
+- [x] Run migration: `pnpm db:migrate`
+- [x] Set up `HMAC_SECRET` in `.env`
+- [ ] Manual testing per verification checklist in `docs/0002-inquiry-system.md:526-589`
+- [ ] Add E2E tests for inquiry flow
 
 **Size**: Medium (~150 lines)
 **Impact**: HIGH - enables gatherings
 
 **Changes**:
 
-- Add "Contact Owner" button on listing cards
-- Create contact form that sends email to owner
-- Add status update: available → pending → gathered
-- Owner receives email with gleaner contact info
-- Simple email templates (text-based, no fancy HTML)
-- Log all contact attempts as Gathering records
+- [x] Add "Contact Owner" button on listing cards
+- [x] Create contact form that sends email to owner
+- [x] Add status update: available → pending → gathered
+- [x] Owner receives email with gleaner contact info
+- [x] Email templates (HTML)
+- [x] Log all contact attempts as Inquiry records
 
 **Why Now**: Completes the core loop. Users can now create listings AND be contacted by gleaners. This enables our first successful gatherings.
 
@@ -137,6 +142,24 @@
 
 ---
 
+## Inquiry System Hardening (from PR #7 review)
+
+- **HMAC signature expiration**: Include a timestamp in the HMAC message and reject signatures older than 30 days. Currently signed "mark unavailable" URLs are replayable forever. Also consider nonce tracking for single-use links.
+- **HMAC secret fail-fast**: Throw on startup if `HMAC_SECRET` is not set in production instead of falling back to a predictable dev value.
+- **Sentry error handling in new routes**: Replace `console.error` in `email-templates.ts` with `Sentry.captureException`. Add try/catch or `errorMiddleware` to the three new API route handlers (`api/inquiries.ts`, `api/listings.$id.ts`, `api/listings.$id.unavailable.ts`).
+- **Soft delete in `getListingById`**: Add `isNull(listings.deletedAt)` filter so deleted listings aren't visible via direct URL.
+- **Standardize API error format**: All endpoints should return `{ error: string, code?: string }`. Return structured codes (e.g., `code: 'RATE_LIMITED'`) so the client can match on codes instead of substring-matching error messages.
+- **Fix `showMarkedMessage` signal pattern**: Replace the function-in-a-signal double-invocation `showMarkedMessage()()` in `garden/mine.tsx` with a plain boolean signal.
+- **Inquiry rate limit race condition**: The `hasRecentInquiry` check and `createInquiry` insert are not atomic — concurrent requests can bypass the limit. Consider a unique partial index or wrapping in a transaction.
+- **Email failure UX**: The success message implies owners can "check their listings" to see inquiries, but no inbox exists. Either fail the inquiry if email fails (allowing retry) or add background retry for failed emails.
+- **Update ADR to match implementation**: ADR `0002-inquiry-system.md` says status values are `active | unavailable | private` but code uses `available`. Update the ADR. Also update the stale schema comment at `schema.ts:127`.
+- **Extract `getStatusClass` utility**: Duplicated in `mine.tsx` and `listings.$id.tsx` — extract to `src/lib/listing-status.ts`.
+- **Rename `plantId` to `listingId`**: In `InquiryEmailData` interface in `email-templates.ts` for naming consistency.
+- **Unit tests for security-critical modules**: Add tests for `hmac.ts` (sign/verify roundtrip, tamper rejection) and `email-templates.ts` (HTML escaping, subject line generation). AGENTS.md requires tests for non-trivial modules.
+- **Listing detail leaks full address**: `getListingById` returns `address`, `lat`, `lng` over the wire even though the UI only shows city/state. Create a public-facing projection omitting sensitive fields.
+- **Implement or remove `handleStatusChange` callback**: The no-op `handleStatusChange` in `garden/mine.tsx` should either use `router.invalidate()` to refresh data or be removed.
+- **SQLite foreign key enforcement**: Ensure `PRAGMA foreign_keys = ON` is set when creating the database connection in `db.ts`.
+
 ## Future Enhancements
 
 - **Address privacy preview**: Add interactive map preview to the listing form showing the H3 cell at resolution 9 (~174m). Users would see the hexagonal area that gleaners will see, reinforcing the privacy message. Requires adding a mapping library (Leaflet recommended - free, no API key).
@@ -214,13 +237,13 @@ Configured Better Auth with magic link authentication via Resend, linked listing
 
 # Risk Mitigation
 
-| Risk | Mitigation |
-|------|------------|
-| Geocoding API rate limits | Use free Nominatim (rate-limited but sufficient for MVP), cache results, add fallback to manual lat/lng entry |
-| Email deliverability issues | Start with transactional email service (Resend free tier), add SPF/DKIM records, monitor bounce rates |
-| SQLite write concurrency on Fly.io | SQLite handles this well for < 1000 users. Monitor, plan migration to Turso (LibSQL) if needed |
-| Spam submissions | Start with simple rate limiting, add Cloudflare Turnstile (free) if spam becomes an issue |
-| Poor mobile UX | Mobile-first CSS already in use. PWA (Later) further improves mobile experience |
+| Risk                               | Mitigation                                                                                                    |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Geocoding API rate limits          | Use free Nominatim (rate-limited but sufficient for MVP), cache results, add fallback to manual lat/lng entry |
+| Email deliverability issues        | Start with transactional email service (Resend free tier), add SPF/DKIM records, monitor bounce rates         |
+| SQLite write concurrency on Fly.io | SQLite handles this well for < 1000 users. Monitor, plan migration to Turso (LibSQL) if needed                |
+| Spam submissions                   | Start with simple rate limiting, add Cloudflare Turnstile (free) if spam becomes an issue                     |
+| Poor mobile UX                     | Mobile-first CSS already in use. PWA (Later) further improves mobile experience                               |
 
 ---
 
@@ -260,4 +283,4 @@ After completing Now and Next:
 
 - Bastow, [Why I Invented the Now-Next-Later Roadmap](https://www.prodpad.com/blog/invented-now-next-later-roadmap/)
 - Gonzalez de Villaumbrosia, [Curves Ahead: Navigating Change with Now-Next-Later Roadmap](https://productschool.com/blog/product-strategy/now-next-later-roadmap)
-- Mee, [Why “Now” “Next” “Later” is one of the best frameworks for roadmapping](https://medium.com/the-product-innovator/why-now-next-later-is-one-of-the-best-frameworks-for-roadmapping-4d547a2f2692)
+- Mee, [Why "Now" "Next" "Later" is one of the best frameworks for roadmapping](https://medium.com/the-product-innovator/why-now-next-later-is-one-of-the-best-frameworks-for-roadmapping-4d547a2f2692)

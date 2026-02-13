@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/solid-router'
 import { Show } from 'solid-js'
 import Layout from '@/components/Layout'
+import InquiryForm from '@/components/InquiryForm'
 import { useSession } from '@/lib/auth-client'
 import { getStatusClass } from '@/lib/listing-status'
 import { ListingStatus } from '@/lib/validation'
@@ -16,9 +17,14 @@ export const Route = createFileRoute('/listings/$id')({
 function ListingDetailPage() {
 	const data = Route.useLoaderData()
 	const session = useSession()
+	const params = Route.useParams()
 
 	const listing = () => data() as PublicListing | undefined
 	const isOwner = () => session().data?.user?.id === listing()?.userId
+	const canInquire = () => {
+		const l = listing()
+		return l && l.status === ListingStatus.available && !isOwner()
+	}
 
 	return (
 		<Show
@@ -110,6 +116,13 @@ function ListingDetailPage() {
 										Manage My Listings
 									</Link>
 								</div>
+							</Show>
+
+							<Show when={canInquire()}>
+								<InquiryForm
+									listingId={l().id}
+									callbackURL={`/listings/${params().id}`}
+								/>
 							</Show>
 						</article>
 					</main>

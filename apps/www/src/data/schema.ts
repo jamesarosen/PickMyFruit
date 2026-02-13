@@ -131,6 +131,7 @@ export const listings = sqliteTable(
 		// Metadata
 		notes: text('notes'),
 		accessInstructions: text('access_instructions'), // e.g., 'Ring doorbell', 'Gate code 1234'
+		deletedAt: integer('deleted_at', { mode: 'timestamp' }), // soft delete
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),
@@ -143,3 +144,32 @@ export const listings = sqliteTable(
 
 export type Listing = typeof listings.$inferSelect
 export type NewListing = typeof listings.$inferInsert
+
+// ============================================================================
+// Inquiries Table
+// ============================================================================
+
+export const inquiries = sqliteTable(
+	'inquiries',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		listingId: integer('listing_id')
+			.notNull()
+			.references(() => listings.id),
+		gleanerId: text('gleaner_id')
+			.notNull()
+			.references(() => user.id),
+		note: text('note'), // max 500 chars, validated at API layer
+		emailSentAt: integer('email_sent_at', { mode: 'timestamp' }),
+	},
+	(table) => [
+		index('inquiry_listing_id_idx').on(table.listingId),
+		index('inquiry_gleaner_id_idx').on(table.gleanerId),
+	]
+)
+
+export type Inquiry = typeof inquiries.$inferSelect
+export type NewInquiry = typeof inquiries.$inferInsert
