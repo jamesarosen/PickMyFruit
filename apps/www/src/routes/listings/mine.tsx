@@ -85,10 +85,8 @@ function ListingCard(props: { listing: Listing }) {
 				params={{ id: String(props.listing.id) }}
 				class="listing-card-link"
 			>
-				<div class="listing-header">
-					<h3>{props.listing.name}</h3>
-					<span class={`status-badge ${statusClass()}`}>{currentStatus()}</span>
-				</div>
+				<h3>{props.listing.name}</h3>
+				<span class={`status-badge ${statusClass()}`}>{currentStatus()}</span>
 				<div class="listing-details">
 					<p class="listing-location">
 						{props.listing.city}, {props.listing.state}
