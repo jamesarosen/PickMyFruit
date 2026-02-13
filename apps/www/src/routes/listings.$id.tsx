@@ -3,6 +3,7 @@ import { Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import { useSession } from '@/lib/auth-client'
 import { getStatusClass } from '@/lib/listing-status'
+import { ListingStatus } from '@/lib/validation'
 import { getPublicListingById } from '@/api/listings'
 import type { PublicListing } from '@/data/queries'
 import '@/routes/listings.css'
@@ -91,6 +92,16 @@ function ListingDetailPage() {
 									</div>
 								</Show>
 							</div>
+
+							<Show when={l().status === ListingStatus.unavailable}>
+								<div class="listing-unavailable">
+									<h3>This listing is currently unavailable</h3>
+									<p>Check back later or browse other available listings.</p>
+									<Link to="/" class="back-link">
+										Browse Available Listings
+									</Link>
+								</div>
+							</Show>
 
 							<Show when={isOwner()}>
 								<div class="listing-owner-notice">

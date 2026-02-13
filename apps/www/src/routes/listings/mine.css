@@ -45,14 +45,14 @@
 		color: var(--color-secondary);
 	}
 
-	.status-badge.status-claimed {
-		background: oklch(from var(--color-accent) l c h / 0.15);
-		color: var(--color-accent);
-	}
-
-	.status-badge.status-harvested {
+	.status-badge.status-unavailable {
 		background: oklch(from var(--color-quiet) l c h / 0.15);
 		color: var(--color-quiet);
+	}
+
+	.status-badge.status-private {
+		background: oklch(from var(--color-accent) l c h / 0.15);
+		color: var(--color-accent);
 	}
 
 	.listing-details {
@@ -69,9 +69,39 @@
 		font-weight: 500;
 	}
 
+	.listing-error {
+		font-size: 13px;
+		color: var(--color-primary);
+		margin: 0 0 12px 0;
+		padding: 8px 12px;
+		background: oklch(from var(--color-primary) l c h / 0.1);
+		border-radius: 6px;
+	}
+
 	.listing-actions {
 		display: flex;
 		gap: 12px;
+	}
+
+	.listing-actions .status-toggle-button {
+		font-size: 14px;
+		color: var(--color-background);
+		background: var(--color-secondary);
+		border: none;
+		padding: 8px 14px;
+		border-radius: 6px;
+		cursor: pointer;
+		font-weight: 500;
+		transition: background-color 0.2s;
+	}
+
+	.listing-actions .status-toggle-button:hover:not(:disabled) {
+		background: oklch(from var(--color-secondary) calc(l - 0.08) c h);
+	}
+
+	.listing-actions .status-toggle-button:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
 	}
 
 	.listing-actions .edit-button {

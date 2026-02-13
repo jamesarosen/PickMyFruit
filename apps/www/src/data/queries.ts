@@ -1,7 +1,7 @@
 import { db } from './db'
 import { listings, type Listing, type NewListing } from './schema'
-import { eq, desc, and } from 'drizzle-orm'
-import { ListingStatus } from '@/lib/validation'
+import { eq, desc, and, ne } from 'drizzle-orm'
+import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 
 export async function getAvailableListings(
 	limit: number = 10
@@ -39,7 +39,7 @@ export async function getListingById(id: number): Promise<Listing | undefined> {
 /** Public listing fields safe to expose to any visitor. */
 export type PublicListing = Omit<Listing, 'address' | 'accessInstructions'>
 
-/** Fetches a listing by ID, returning only public-safe fields. */
+/** Fetches a listing by ID, returning only public-safe fields. Excludes private listings. */
 export async function getPublicListingById(
 	id: number
 ): Promise<PublicListing | undefined> {
@@ -64,7 +64,7 @@ export async function getPublicListingById(
 			updatedAt: listings.updatedAt,
 		})
 		.from(listings)
-		.where(and(eq(listings.id, id), eq(listings.status, ListingStatus.available)))
+		.where(and(eq(listings.id, id), ne(listings.status, ListingStatus.private)))
 		.limit(1)
 	return result[0]
 }
@@ -78,5 +78,19 @@ export async function deleteListingById(
 		.where(and(eq(listings.id, id), eq(listings.userId, userId)))
 		.returning({ id: listings.id })
 
+	return result.length > 0
+}
+
+/** Updates a listing's status, scoped to the owning user. */
+export async function updateListingStatus(
+	id: number,
+	userId: string,
+	status: ListingStatusValue
+): Promise<boolean> {
+	const result = await db
+		.update(listings)
+		.set({ status, updatedAt: new Date() })
+		.where(and(eq(listings.id, id), eq(listings.userId, userId)))
+		.returning({ id: listings.id })
 	return result.length > 0
 }

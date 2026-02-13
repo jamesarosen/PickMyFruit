@@ -75,3 +75,14 @@ export const ListingStatus = {
 
 export type ListingStatusValue =
 	(typeof ListingStatus)[keyof typeof ListingStatus]
+
+const listingStatusValues = Object.values(ListingStatus) as [
+	ListingStatusValue,
+	...ListingStatusValue[],
+]
+
+// Accepts all statuses including 'private' for future API use; the UI only
+// exposes the available ↔ unavailable toggle.
+export const updateListingStatusSchema = z.object({
+	status: z.enum(listingStatusValues, { message: 'Invalid status' }),
+})
