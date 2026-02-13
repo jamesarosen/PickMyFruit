@@ -6,7 +6,7 @@
 > **Terminology**: See [terminology.md](terminology.md) for domain model naming decisions.
 >
 > - **ProduceType** (`/produce/*`): Canonical category (e.g., "Rangpur Lime")
-> - **Listing** (`/garden/*`): A specific shareable source (e.g., "James's lime tree in Napa")
+> - **Listing** (`/listings/*`): A specific shareable source (e.g., "James's lime tree in Napa")
 > - **Gathering**: A completed transfer
 
 ---
@@ -88,7 +88,7 @@
 **Changes**:
 
 - Add "View My Listings" link to the listing creation success message
-- Show contextual message on login page when redirected from a protected route (e.g., "Sign in to list your fruit tree" when `returnTo=/garden/new`)
+- Show contextual message on login page when redirected from a protected route (e.g., "Sign in to list your fruit tree" when `returnTo=/listings/new`)
 - Normalize timestamp columns: align `listings.created_at`/`updated_at` to `timestamp_ms` (milliseconds) to match Better Auth tables
 
 **Reasoning**: Small UX gaps identified during the owners-table removal refactor. None are blockers but they improve the feel of the auth-first listing flow.
@@ -199,7 +199,7 @@ Expanded GitHub Actions workflow with deployment step to Fly.io on main branch p
 
 **Size**: Medium (~200 lines) | **Impact**: CRITICAL - enables user-generated content
 
-Created `/garden/new` route, built form with Zod validation, added geocoding via Nominatim API, generates H3 index from coordinates.
+Created `/listings/new` route, built form with Zod validation, added geocoding via Nominatim API, generates H3 index from coordinates.
 
 ---
 
