@@ -4,6 +4,7 @@ import { For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import { useSession } from '@/lib/auth-client'
 import { authMiddleware } from '@/middleware/auth'
+import { getStatusClass } from '@/lib/listing-status'
 import type { Listing } from '@/data/schema'
 import '@/routes/listings/mine.css'
 import { getRequest } from '@tanstack/solid-start/server'
@@ -36,16 +37,6 @@ export const Route = createFileRoute('/listings/mine')({
 		middleware: [authMiddleware],
 	},
 })
-
-function getStatusClass(status: string): string {
-	if (status === 'available') {
-		return 'status-available'
-	}
-	if (status === 'claimed') {
-		return 'status-claimed'
-	}
-	return 'status-harvested'
-}
 
 function ListingCard(props: { listing: Listing }) {
 	const { listing } = props

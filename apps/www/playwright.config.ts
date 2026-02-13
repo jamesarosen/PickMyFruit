@@ -7,10 +7,10 @@ const testDbPath = resolve(__dirname, 'test.db')
 
 export default defineConfig({
 	testDir: './tests/e2e',
-	fullyParallel: true,
+	fullyParallel: false,
 	forbidOnly: Boolean(process.env.CI),
 	retries: process.env.CI ? 2 : 0,
-	workers: process.env.CI ? 1 : undefined,
+	workers: 1, // SQLite doesn't support concurrent writes across test files
 	reporter: [
 		['html', { open: 'never' }],
 		...(process.env.CI ? [['github'] as const] : []),

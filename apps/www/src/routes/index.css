@@ -254,9 +254,12 @@
 	}
 
 	.listing-card {
+		display: block;
 		border-radius: 12px;
 		padding: 24px;
 		box-shadow: 0 2px 8px oklch(from var(--color-foreground) l c h / 0.1);
+		text-decoration: none;
+		color: inherit;
 		transition:
 			transform 0.2s,
 			box-shadow 0.2s;
