@@ -2,6 +2,7 @@ import { faker } from '@faker-js/faker'
 import { latLngToCell } from 'h3-js'
 import { db } from './db'
 import { listings, user, type NewListing, type NewUser } from './schema'
+import { ListingStatus } from '@/lib/validation'
 
 // Napa Valley approximate bounds
 const NAPA_BOUNDS = {
@@ -46,7 +47,12 @@ const FRUIT_TYPES = [
 ]
 
 const QUANTITIES = ['abundant', 'moderate', 'few']
-const STATUSES = ['available', 'available', 'available', 'claimed'] // More weight to available
+const STATUSES = [
+	ListingStatus.available,
+	ListingStatus.available,
+	ListingStatus.available,
+	ListingStatus.unavailable,
+] // More weight to available
 
 function generateUser(): NewUser {
 	return {
