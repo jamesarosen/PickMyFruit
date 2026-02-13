@@ -1,54 +1,24 @@
 #!/bin/bash
 
-# After-turn hook: runs tsc, oxlint, vitest, and prettier
-# Exits with status 2 if any check fails (ignoring warnings)
+# Stop-hook safety net: runs quality gate, auto-fixing formatting if needed.
+# This wraps bin/quality-gate.sh with an auto-fix retry for formatting,
+# since the Stop hook has no retry loop (unlike /deliver).
 
 set -o pipefail
 
 cd "$(dirname "$0")/.." || exit 2
 
-echo "[after-turn] Running typecheck..."
-errors=$(pnpm typecheck 2>&1)
+bin/quality-gate.sh
 exit_code=$?
-if [ $exit_code -ne 0 ]; then
-	echo "[after-turn] typecheck failed" >&2
-	echo "$errors" >&2
-	echo "" >&2
-	echo "Review and fix these errors before proceeding." >&2
-	exit 2  # Block
-fi
 
-echo "[after-turn] Running lint..."
-errors=$(pnpm lint 2>&1)
-exit_code=$?
 if [ $exit_code -ne 0 ]; then
-	echo "[after-turn] lint failed" >&2
-	echo "$errors" >&2
-	echo "" >&2
-	echo "Review and fix these errors before proceeding." >&2
-	exit 2
+	# Only retry if formatting might be the issue
+	if ! pnpm format:check >/dev/null 2>&1; then
+		echo "[code-quality] Formatting issues detected. Auto-fixing and retrying..."
+		pnpm format:write >/dev/null 2>&1
+		bin/quality-gate.sh
+		exit $?
+	fi
+	# Non-formatting failure — don't waste time retrying
+	exit $exit_code
 fi
-
-echo "Running tests..."
-errors=$(pnpm test:run 2>&1)
-exit_code=$?
-if [ $exit_code -ne 0 ]; then
-	echo "[after-turn] tests failed" >&2
-	echo "$errors" >&2
-	echo "" >&2
-	echo "Review and fix these errors before proceeding." >&2
-	exit 2
-fi
-
-echo "Formatting..."
-errors=$(pnpm format:write 2>&1)
-exit_code=$?
-if [ $exit_code -ne 0 ]; then
-	echo "[after-turn] format:write failed" >&2
-	echo "$errors" >&2
-	echo "" >&2
-	echo "Review and fix these errors before proceeding." >&2
-	exit 2
-fi
-
-echo "All checks passed"
