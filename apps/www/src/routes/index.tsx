@@ -31,7 +31,7 @@ function HomePage() {
 								</Link>
 							}
 						>
-							<Link to="/garden/mine" class="nav-link">
+							<Link to="/listings/mine" class="nav-link">
 								My Garden
 							</Link>
 							<button
@@ -54,7 +54,7 @@ function HomePage() {
 							Turn your backyard abundance into community food. We connect you with
 							local gleaners. Serving all of Napa.
 						</p>
-						<Link to="/garden/new" class="cta-button">
+						<Link to="/listings/new" class="cta-button">
 							List My Fruit Tree
 						</Link>
 					</div>
@@ -80,7 +80,7 @@ function HomePage() {
 								<p>Surplus feeds families</p>
 							</div>
 						</div>
-						<Link to="/garden/new" class="cta-button">
+						<Link to="/listings/new" class="cta-button">
 							List My Fruit Tree
 						</Link>
 					</div>

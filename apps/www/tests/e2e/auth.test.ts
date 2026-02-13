@@ -42,13 +42,13 @@ test.describe('Authentication', () => {
 		await tokenInput.pressSequentially(token, { delay: 20 })
 		await page.getByRole('button', { name: 'Verify' }).click()
 
-		// Should redirect to garden
-		await expect(page).toHaveURL('/garden/mine')
+		// Should redirect to listings
+		await expect(page).toHaveURL('/listings/mine')
 	})
 
 	test('protected route redirects to login', async ({ page }) => {
-		await page.goto('/garden/mine')
-		await expect(page).toHaveURL('/login?returnTo=%2Fgarden%2Fmine')
+		await page.goto('/listings/mine')
+		await expect(page).toHaveURL('/login?returnTo=%2Flistings%2Fmine')
 	})
 
 	test('invalid token shows error', async ({ page, testUser }) => {
