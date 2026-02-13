@@ -1,30 +1,17 @@
 import { createFileRoute, Link } from '@tanstack/solid-router'
-import { createIsomorphicFn } from '@tanstack/solid-start'
-import { For, Show } from 'solid-js'
+import { createSignal, For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import { useSession } from '@/lib/auth-client'
 import { authMiddleware } from '@/middleware/auth'
 import { getStatusClass } from '@/lib/listing-status'
+import { ListingStatus } from '@/lib/validation'
+import { Sentry } from '@/lib/sentry'
 import type { Listing } from '@/data/schema'
+import { getMyListings } from '@/api/listings'
 import '@/routes/listings/mine.css'
-import { getRequest } from '@tanstack/solid-start/server'
-
-const getMyListings = createIsomorphicFn()
-	.server(async () => {
-		const { headers } = await getRequest()
-		const { auth } = await import('@/lib/auth')
-		const session = await auth.api.getSession({ headers })
-		if (!session?.user) {
-			return [] as Listing[]
-		}
-
-		const { getUserListings } = await import('@/data/queries')
-		return getUserListings(session.user.id)
-	})
-	.client(() => undefined)
 
 export const Route = createFileRoute('/listings/mine')({
-	loader: getMyListings,
+	loader: () => getMyListings(),
 	pendingComponent: () => (
 		<Layout title="My Garden - Pick My Fruit">
 			<main class="page-container">
@@ -38,25 +25,87 @@ export const Route = createFileRoute('/listings/mine')({
 	},
 })
 
+function getToggleButtonText(isToggling: boolean, status: string): string {
+	if (isToggling) {
+		return 'Updating...'
+	}
+	if (status === ListingStatus.available) {
+		return 'Mark Unavailable'
+	}
+	return 'Mark Available'
+}
+
 function ListingCard(props: { listing: Listing }) {
-	const { listing } = props
-	const statusClass = getStatusClass(listing.status)
+	const [isToggling, setIsToggling] = createSignal(false)
+	const [currentStatus, setCurrentStatus] = createSignal(props.listing.status)
+	const [error, setError] = createSignal<string | null>(null)
+
+	const statusClass = () => getStatusClass(currentStatus())
+	const isToggleable = () => currentStatus() !== ListingStatus.private
+
+	async function toggleStatus() {
+		const newStatus =
+			currentStatus() === ListingStatus.available
+				? ListingStatus.unavailable
+				: ListingStatus.available
+		setIsToggling(true)
+		setError(null)
+
+		try {
+			const response = await fetch(`/api/listings/${props.listing.id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ status: newStatus }),
+			})
+
+			if (!response.ok) {
+				let message = 'Failed to update status'
+				try {
+					const data = await response.json()
+					message = typeof data.error === 'string' ? data.error : message
+				} catch {
+					// Response wasn't JSON
+				}
+				throw new Error(message)
+			}
+
+			setCurrentStatus(newStatus)
+		} catch (err) {
+			Sentry.captureException(err)
+			setError(err instanceof Error ? err.message : 'Failed to update')
+		} finally {
+			setIsToggling(false)
+		}
+	}
 
 	return (
 		<article class="listing-card">
 			<div class="listing-header">
-				<h3>{listing.name}</h3>
-				<span class={`status-badge ${statusClass}`}>{listing.status}</span>
+				<h3>{props.listing.name}</h3>
+				<span class={`status-badge ${statusClass()}`}>{currentStatus()}</span>
 			</div>
 			<div class="listing-details">
 				<p class="listing-location">
-					{listing.city}, {listing.state}
+					{props.listing.city}, {props.listing.state}
 				</p>
-				<Show when={listing.harvestWindow}>
-					<p class="listing-harvest">Harvest: {listing.harvestWindow}</p>
+				<Show when={props.listing.harvestWindow}>
+					<p class="listing-harvest">Harvest: {props.listing.harvestWindow}</p>
 				</Show>
 			</div>
+			<Show when={error()}>
+				<p class="listing-error">{error()}</p>
+			</Show>
 			<div class="listing-actions">
+				<Show when={isToggleable()}>
+					<button
+						type="button"
+						class="status-toggle-button"
+						onClick={toggleStatus}
+						disabled={isToggling()}
+					>
+						{getToggleButtonText(isToggling(), currentStatus())}
+					</button>
+				</Show>
 				<button type="button" class="edit-button" disabled>
 					Edit
 				</button>
