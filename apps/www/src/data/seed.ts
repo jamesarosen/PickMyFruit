@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker'
 import { latLngToCell } from 'h3-js'
 import { db } from './db'
-import { listings, owners, type NewListing, type NewOwner } from './schema'
+import { listings, user, type NewListing, type NewUser } from './schema'
 
 // Napa Valley approximate bounds
 const NAPA_BOUNDS = {
@@ -48,10 +48,12 @@ const FRUIT_TYPES = [
 const QUANTITIES = ['abundant', 'moderate', 'few']
 const STATUSES = ['available', 'available', 'available', 'claimed'] // More weight to available
 
-function generateOwner(): NewOwner {
+function generateUser(): NewUser {
 	return {
+		id: faker.string.uuid(),
 		name: faker.person.fullName(),
 		email: faker.internet.email(),
+		emailVerified: true,
 		phone: faker.helpers.maybe(() => faker.phone.number({ style: 'national' }), {
 			probability: 0.7,
 		}),
@@ -60,7 +62,7 @@ function generateOwner(): NewOwner {
 	}
 }
 
-function generateListing(ownerId: number): NewListing {
+function generateListing(userId: string): NewListing {
 	const fruitType = faker.helpers.arrayElement(FRUIT_TYPES)
 	const lat = faker.number.float({
 		min: NAPA_BOUNDS.latMin,
@@ -108,7 +110,7 @@ function generateListing(ownerId: number): NewListing {
 		lat,
 		lng,
 		h3Index,
-		ownerId,
+		userId,
 		notes: faker.helpers.maybe(() => faker.lorem.sentence(), {
 			probability: 0.3,
 		}),
@@ -131,19 +133,27 @@ function generateListing(ownerId: number): NewListing {
 async function seed() {
 	console.log('🌱 Seeding database...')
 
-	// Clear existing data (listings first due to foreign key)
+	// Clear listings only — preserve existing auth users
 	await db.delete(listings)
-	await db.delete(owners)
 
-	// Generate 20 owners
-	const ownersData: NewOwner[] = Array.from({ length: 20 }, generateOwner)
-	const insertedOwners = await db.insert(owners).values(ownersData).returning()
-	console.log(`✅ Seeded ${insertedOwners.length} owners`)
+	// Insert seed users (skip any that conflict with existing emails)
+	const usersData: NewUser[] = Array.from({ length: 20 }, generateUser)
+	const inserted = await db
+		.insert(user)
+		.values(usersData)
+		.onConflictDoNothing()
+		.returning()
 
-	// Generate 50 listings with random owners
+	// Use all users (seed + existing) for listing assignment
+	const allUsers = await db.select().from(user)
+	console.log(
+		`✅ ${allUsers.length} users available (${inserted.length} new, ${allUsers.length - inserted.length} existing)`
+	)
+
+	// Generate 50 listings with random users
 	const listingsData: NewListing[] = Array.from({ length: 50 }, () => {
-		const owner = faker.helpers.arrayElement(insertedOwners)
-		return generateListing(owner.id)
+		const u = faker.helpers.arrayElement(allUsers)
+		return generateListing(u.id)
 	})
 
 	// Insert listings

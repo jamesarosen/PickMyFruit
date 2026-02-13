@@ -103,58 +103,43 @@ export const verification = sqliteTable(
 // Application Tables
 // ============================================================================
 
-export const owners = sqliteTable('owners', {
-	id: integer('id').primaryKey({ autoIncrement: true }),
-	name: text('name').notNull(),
-	email: text('email').notNull().unique(),
-	phone: text('phone'),
-	createdAt: integer('created_at', { mode: 'timestamp' })
-		.notNull()
-		.default(sql`(unixepoch())`),
-	updatedAt: integer('updated_at', { mode: 'timestamp' })
-		.notNull()
-		.default(sql`(unixepoch())`),
-})
+export const listings = sqliteTable(
+	'listings',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		name: text('name').notNull(),
+		type: text('type').notNull(), // e.g., 'apple', 'pear', 'plum', 'fig', 'lemon', 'orange', etc.
+		variety: text('variety'), // e.g., 'Granny Smith', 'Honeycrisp', etc.
+		status: text('status').notNull().default('available'), // 'available', 'claimed', 'harvested'
+		quantity: text('quantity'), // e.g., 'abundant', 'moderate', 'few'
+		harvestWindow: text('harvest_window'), // e.g., 'September-October'
 
-export type Owner = typeof owners.$inferSelect
-export type NewOwner = typeof owners.$inferInsert
+		// Location fields
+		address: text('address').notNull(),
+		city: text('city').notNull().default('Napa'),
+		state: text('state').notNull().default('CA'),
+		zip: text('zip'),
+		lat: real('lat').notNull(),
+		lng: real('lng').notNull(),
+		h3Index: text('h3_index').notNull(), // H3 index at resolution 9
 
-export const listings = sqliteTable('listings', {
-	id: integer('id').primaryKey({ autoIncrement: true }),
-	name: text('name').notNull(),
-	type: text('type').notNull(), // e.g., 'apple', 'pear', 'plum', 'fig', 'lemon', 'orange', etc.
-	variety: text('variety'), // e.g., 'Granny Smith', 'Honeycrisp', etc.
-	status: text('status').notNull().default('available'), // 'available', 'claimed', 'harvested'
-	quantity: text('quantity'), // e.g., 'abundant', 'moderate', 'few'
-	harvestWindow: text('harvest_window'), // e.g., 'September-October'
+		// Owner — Better Auth user reference
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
 
-	// Location fields
-	address: text('address').notNull(),
-	city: text('city').notNull().default('Napa'),
-	state: text('state').notNull().default('CA'),
-	zip: text('zip'),
-	lat: real('lat').notNull(),
-	lng: real('lng').notNull(),
-	h3Index: text('h3_index').notNull(), // H3 index at resolution 9
-
-	// Owner reference (legacy - will be migrated to userId in future PR)
-	ownerId: integer('owner_id')
-		.notNull()
-		.references(() => owners.id),
-
-	// User reference (Better Auth - for authenticated users)
-	userId: text('user_id').references(() => user.id),
-
-	// Metadata
-	notes: text('notes'),
-	accessInstructions: text('access_instructions'), // e.g., 'Ring doorbell', 'Gate code 1234'
-	createdAt: integer('created_at', { mode: 'timestamp' })
-		.notNull()
-		.default(sql`(unixepoch())`),
-	updatedAt: integer('updated_at', { mode: 'timestamp' })
-		.notNull()
-		.default(sql`(unixepoch())`),
-})
+		// Metadata
+		notes: text('notes'),
+		accessInstructions: text('access_instructions'), // e.g., 'Ring doorbell', 'Gate code 1234'
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+	},
+	(table) => [index('listings_user_id_idx').on(table.userId)]
+)
 
 export type Listing = typeof listings.$inferSelect
 export type NewListing = typeof listings.$inferInsert
