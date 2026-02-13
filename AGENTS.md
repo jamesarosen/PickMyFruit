@@ -87,6 +87,7 @@ We use a monorepo structure
 - Do not mix: a DB created with `push` can't switch to `migrate` (and vice versa)
 - Use Solid JS for reactive UI components
 - Routes are defined using TanStack Router's file-based routing
+- Route loaders that fetch data must use `createServerFn` (not `createIsomorphicFn` with `.client(() => undefined)`) so client-side navigation triggers an RPC call
 
 ### Authentication
 
