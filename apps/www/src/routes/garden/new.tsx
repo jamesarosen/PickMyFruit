@@ -1,10 +1,14 @@
 import { createFileRoute } from '@tanstack/solid-router'
 import Layout from '@/components/Layout'
 import ListingForm from '@/components/ListingForm'
+import { authMiddleware } from '@/middleware/auth'
 import '@/routes/garden/new.css'
 
 export const Route = createFileRoute('/garden/new')({
 	component: NewListingPage,
+	server: {
+		middleware: [authMiddleware],
+	},
 })
 
 function NewListingPage() {

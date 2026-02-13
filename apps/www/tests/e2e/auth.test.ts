@@ -48,7 +48,7 @@ test.describe('Authentication', () => {
 
 	test('protected route redirects to login', async ({ page }) => {
 		await page.goto('/garden/mine')
-		await expect(page).toHaveURL('/login')
+		await expect(page).toHaveURL('/login?returnTo=%2Fgarden%2Fmine')
 	})
 
 	test('invalid token shows error', async ({ page, testUser }) => {

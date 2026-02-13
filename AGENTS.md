@@ -82,6 +82,9 @@ We use a monorepo structure
 - HTML: write semantically-meaningful and accessible markup
 - Use SQLite for the data layer
 - Use the ORM for simple operations; use SQL and prepared statements for complex ones
+- `db:push` for local dev — diffs `schema.ts` against the live DB
+- `db:migrate` for E2E tests and production — runs migration files tracked by a journal
+- Do not mix: a DB created with `push` can't switch to `migrate` (and vice versa)
 - Use Solid JS for reactive UI components
 - Routes are defined using TanStack Router's file-based routing
 
@@ -91,7 +94,7 @@ We use a monorepo structure
 - Server config: `src/lib/auth.ts`
 - Client: `src/lib/auth-client.ts` - use `useSession()` hook for session state
 - API routes at `/api/auth/*` handled by catch-all route
-- Protected route `/garden/mine` requires authentication
+- Protected routes `/garden/mine` and `/garden/new` require authentication
 - Magic links: set `RESEND_API_KEY` for email delivery, otherwise logs to console
 
 ## Known Issues

@@ -1,12 +1,5 @@
 import { db } from './db'
-import {
-	listings,
-	owners,
-	type Listing,
-	type NewListing,
-	type Owner,
-	type NewOwner,
-} from './schema'
+import { listings, type Listing, type NewListing } from './schema'
 import { eq, desc, and } from 'drizzle-orm'
 
 export async function getAvailableListings(
@@ -18,23 +11,6 @@ export async function getAvailableListings(
 		.where(eq(listings.status, 'available'))
 		.orderBy(desc(listings.createdAt))
 		.limit(limit)
-}
-
-export async function findOrCreateOwner(
-	data: Omit<NewOwner, 'id' | 'createdAt' | 'updatedAt'>
-): Promise<Owner> {
-	const existing = await db
-		.select()
-		.from(owners)
-		.where(eq(owners.email, data.email))
-		.limit(1)
-
-	if (existing.length > 0) {
-		return existing[0]
-	}
-
-	const result = await db.insert(owners).values(data).returning()
-	return result[0]
 }
 
 export async function createListing(data: NewListing): Promise<Listing> {

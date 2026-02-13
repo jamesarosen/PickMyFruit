@@ -24,12 +24,6 @@ export const fruitTypes = [
 ] as const
 export type FruitType = (typeof fruitTypes)[number]
 
-// Coerce null to empty string for required email (triggers email error)
-const requiredEmail = z.preprocess(
-	(val) => (val === null ? '' : val),
-	z.string().min(1, 'Email is required').email('Invalid email address')
-)
-
 const optionalZip = z.preprocess(
 	(val) => (val === '' || val === null ? undefined : val),
 	z
@@ -56,8 +50,6 @@ export const listingFormSchema = z.object({
 		z.string().length(2, 'State must be 2 characters')
 	),
 	zip: optionalZip,
-	ownerName: requiredString('Your name is required', 100),
-	ownerEmail: requiredEmail,
 	notes: z.preprocess(
 		(val) => (val === '' || val === null ? undefined : val),
 		z.string().max(1000).optional()

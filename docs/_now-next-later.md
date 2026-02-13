@@ -80,6 +80,21 @@
 
 ---
 
+## UX Polish: Listing Form & Login Flow
+
+**Size**: Small (~50 lines)
+**Impact**: LOW - improves user experience
+
+**Changes**:
+
+- Add "View My Listings" link to the listing creation success message
+- Show contextual message on login page when redirected from a protected route (e.g., "Sign in to list your fruit tree" when `returnTo=/garden/new`)
+- Normalize timestamp columns: align `listings.created_at`/`updated_at` to `timestamp_ms` (milliseconds) to match Better Auth tables
+
+**Reasoning**: Small UX gaps identified during the owners-table removal refactor. None are blockers but they improve the feel of the auth-first listing flow.
+
+---
+
 # Later
 
 ## PR #10: Add Local Development Seed Data & Documentation
