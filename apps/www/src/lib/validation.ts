@@ -67,6 +67,20 @@ export const createListingSchema = listingFormSchema.extend({
 
 export type CreateListingData = z.infer<typeof createListingSchema>
 
+// ============================================================================
+// Inquiry Schemas
+// ============================================================================
+
+export const inquiryFormSchema = z.object({
+	listingId: z.number().int().positive('Invalid listing'),
+	note: z.preprocess(
+		(val) => (val === '' || val === null ? undefined : val),
+		z.string().max(500, 'Note must be 500 characters or less').optional()
+	),
+})
+
+export type InquiryFormData = z.infer<typeof inquiryFormSchema>
+
 export const ListingStatus = {
 	available: 'available',
 	unavailable: 'unavailable',

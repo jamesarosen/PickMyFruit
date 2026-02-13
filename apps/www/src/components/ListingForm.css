@@ -164,42 +164,6 @@
 		border: 1px solid oklch(from var(--color-secondary) l c h / 0.3);
 	}
 
-	.success-content {
-		text-align: center;
-		padding: 40px 20px;
-	}
-
-	.success-content h2 {
-		font-size: 28px;
-		font-weight: 700;
-		color: var(--color-secondary);
-		margin: 0 0 16px 0;
-	}
-
-	.success-content p {
-		font-size: 16px;
-		color: var(--color-quiet);
-		margin: 0 0 24px 0;
-	}
-
-	.success-content .back-button {
-		display: inline-block;
-		background: var(--color-secondary);
-		color: var(--color-background);
-		padding: 14px 28px;
-		border-radius: 8px;
-		border: none;
-		font-weight: 600;
-		font-size: 16px;
-		text-decoration: none;
-		cursor: pointer;
-		transition: background-color 0.2s;
-	}
-
-	.success-content .back-button:hover {
-		background: oklch(from var(--color-secondary) calc(l - 0.08) c h);
-	}
-
 	/* Readonly input styling */
 	.form-group input[readonly] {
 		background: oklch(from var(--color-quiet) l c h / 0.1);
