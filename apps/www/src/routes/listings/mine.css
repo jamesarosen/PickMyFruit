@@ -124,6 +124,63 @@
 		cursor: not-allowed;
 	}
 
+	.listing-actions .status-toggle-button {
+		font-size: 14px;
+		color: var(--color-background);
+		background: var(--color-secondary);
+		border: none;
+		padding: 8px 14px;
+		border-radius: 6px;
+		cursor: pointer;
+		font-weight: 500;
+		transition: background-color 0.2s;
+	}
+
+	.listing-actions .status-toggle-button:hover:not(:disabled) {
+		background: oklch(from var(--color-secondary) calc(l - 0.08) c h);
+	}
+
+	.listing-actions .status-toggle-button:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.listing-error {
+		font-size: 13px;
+		color: var(--color-primary);
+		margin: 0 0 12px 0;
+		padding: 8px 12px;
+		background: oklch(from var(--color-primary) l c h / 0.1);
+		border-radius: 6px;
+	}
+
+	.success-message {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		padding: 16px 20px;
+		background: oklch(from var(--color-secondary) l c h / 0.1);
+		color: var(--color-secondary);
+		border-radius: 8px;
+		margin-bottom: 24px;
+		font-size: 14px;
+	}
+
+	.success-message .dismiss-button {
+		background: none;
+		border: none;
+		color: var(--color-secondary);
+		text-decoration: underline;
+		cursor: pointer;
+		font-size: 14px;
+		padding: 0;
+	}
+
+	.success-message .dismiss-button:hover {
+		text-decoration: none;
+	}
+
 	.empty-state {
 		text-align: center;
 		padding: 60px 20px;
