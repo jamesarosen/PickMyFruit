@@ -22,6 +22,13 @@
 			"when": 1736524800000,
 			"tag": "0002_add_auth",
 			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "6",
+			"when": 1739379200000,
+			"tag": "0003_remove_owners",
+			"breakpoints": true
 		}
 	]
 }

@@ -3,17 +3,29 @@ import {
 	Link,
 	redirect,
 	useNavigate,
+	useSearch,
 } from '@tanstack/solid-router'
 import { createSignal, Show } from 'solid-js'
+import { z } from 'zod'
 import Layout from '@/components/Layout'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import { authClient } from '@/lib/auth-client'
 import './login.css'
 
+const loginSearchSchema = z.object({
+	returnTo: z
+		.string()
+		.refine((val) => val.startsWith('/') && !val.startsWith('//'), {
+			message: 'returnTo must be a relative path',
+		})
+		.optional(),
+})
+
 export const Route = createFileRoute('/login')({
-	beforeLoad: ({ context }) => {
+	validateSearch: loginSearchSchema,
+	beforeLoad: ({ context, search }) => {
 		if (context.session?.user) {
-			throw redirect({ to: '/garden/mine' })
+			throw redirect({ to: search.returnTo || '/garden/mine' })
 		}
 	},
 	component: LoginPage,
@@ -21,6 +33,8 @@ export const Route = createFileRoute('/login')({
 
 function LoginPage() {
 	const navigate = useNavigate()
+	const search = useSearch({ from: '/login' })
+	const returnTo = () => search().returnTo || '/garden/mine'
 	const [email, setEmail] = createSignal('')
 	const [isSubmitting, setIsSubmitting] = createSignal(false)
 	const [error, setError] = createSignal<string | null>(null)
@@ -40,7 +54,7 @@ function LoginPage() {
 		try {
 			await authClient.signIn.magicLink({
 				email: emailValue,
-				callbackURL: '/garden/mine',
+				callbackURL: returnTo(),
 			})
 			setEmailSent(true)
 		} catch (err) {
@@ -66,12 +80,12 @@ function LoginPage() {
 						fallback={
 							<MagicLinkWaiting
 								email={email()}
-								callbackURL="/garden/mine"
+								callbackURL={returnTo()}
 								onCancel={() => {
 									setEmailSent(false)
 									setEmail('')
 								}}
-								onVerified={() => navigate({ to: '/garden/mine' })}
+								onVerified={() => navigate({ to: returnTo() })}
 							/>
 						}
 					>
@@ -104,8 +118,7 @@ function LoginPage() {
 							</form>
 
 							<p class="login-footer">
-								Don't have fruit to share yet?{' '}
-								<Link to="/garden/new">List your first tree</Link>
+								Once signed in, you can list your fruit trees with the community.
 							</p>
 						</div>
 					</Show>

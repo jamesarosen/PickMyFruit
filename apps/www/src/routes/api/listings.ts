@@ -35,7 +35,7 @@ export const Route = createFileRoute('/api/listings')({
 			async POST({ request }) {
 				// Dynamic imports to avoid bundling server-only code for browser
 				const { auth } = await import('@/lib/auth')
-				const { createListing, findOrCreateOwner } = await import('@/data/queries')
+				const { createListing } = await import('@/data/queries')
 
 				// Require authentication
 				const session = await auth.api.getSession({
@@ -75,13 +75,8 @@ export const Route = createFileRoute('/api/listings')({
 					return Response.json({ error: message }, { status: 400 })
 				}
 
-				// Find or create owner (for backward compatibility), then create the listing
+				// Create the listing
 				try {
-					const owner = await findOrCreateOwner({
-						name: formData.ownerName,
-						email: formData.ownerEmail,
-					})
-
 					const listing = await createListing({
 						name: formData.type, // Use fruit type as name for now
 						type: formData.type,
@@ -93,8 +88,7 @@ export const Route = createFileRoute('/api/listings')({
 						lat: geocodeResult.lat,
 						lng: geocodeResult.lng,
 						h3Index: geocodeResult.h3Index,
-						ownerId: owner.id,
-						userId: session.user.id, // Link to authenticated user
+						userId: session.user.id,
 						notes: formData.notes || null,
 						status: 'available',
 					})
