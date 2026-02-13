@@ -66,3 +66,12 @@ export const createListingSchema = listingFormSchema.extend({
 })
 
 export type CreateListingData = z.infer<typeof createListingSchema>
+
+export const ListingStatus = {
+	available: 'available',
+	unavailable: 'unavailable',
+	private: 'private',
+} as const
+
+export type ListingStatusValue =
+	(typeof ListingStatus)[keyof typeof ListingStatus]

@@ -14,6 +14,7 @@ import { Route as CssTestRouteImport } from './routes/css-test'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ListingsNewRouteImport } from './routes/listings/new'
 import { Route as ListingsMineRouteImport } from './routes/listings/mine'
+import { Route as ListingsIdRouteImport } from './routes/listings.$id'
 import { Route as ApiListingsRouteImport } from './routes/api/listings'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -43,6 +44,11 @@ const ListingsMineRoute = ListingsMineRouteImport.update({
   path: '/listings/mine',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ListingsIdRoute = ListingsIdRouteImport.update({
+  id: '/listings/$id',
+  path: '/listings/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiListingsRoute = ApiListingsRouteImport.update({
   id: '/api/listings',
   path: '/api/listings',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRoute
+  '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRoute
+  '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRoute
+  '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/api/health'
     | '/api/listings'
+    | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
     | '/api/auth/$'
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/api/health'
     | '/api/listings'
+    | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
     | '/api/auth/$'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/api/health'
     | '/api/listings'
+    | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
     | '/api/auth/$'
@@ -129,6 +141,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiListingsRoute: typeof ApiListingsRoute
+  ListingsIdRoute: typeof ListingsIdRoute
   ListingsMineRoute: typeof ListingsMineRoute
   ListingsNewRoute: typeof ListingsNewRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -171,6 +184,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ListingsMineRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/listings/$id': {
+      id: '/listings/$id'
+      path: '/listings/$id'
+      fullPath: '/listings/$id'
+      preLoaderRoute: typeof ListingsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/listings': {
       id: '/api/listings'
       path: '/api/listings'
@@ -201,6 +221,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiListingsRoute: ApiListingsRoute,
+  ListingsIdRoute: ListingsIdRoute,
   ListingsMineRoute: ListingsMineRoute,
   ListingsNewRoute: ListingsNewRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

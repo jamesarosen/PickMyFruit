@@ -96,7 +96,11 @@ function HomePage() {
 							<div class="listings-grid">
 								<For each={listings()}>
 									{(listing) => (
-										<div class="listing-card surface-subtle">
+										<Link
+											to="/listings/$id"
+											params={{ id: String(listing.id) }}
+											class="listing-card surface-subtle"
+										>
 											<h3>{listing.name}</h3>
 											<p class="listing-variety">
 												{listing.type} - {listing.variety}
@@ -107,7 +111,7 @@ function HomePage() {
 												{listing.city}, {listing.state}
 											</p>
 											{listing.notes && <p class="listing-notes">{listing.notes}</p>}
-										</div>
+										</Link>
 									)}
 								</For>
 							</div>
