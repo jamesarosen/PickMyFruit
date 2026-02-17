@@ -172,6 +172,68 @@
 		margin: 0 0 24px 0;
 	}
 
+	.visibility-fieldset {
+		border: none;
+		padding: 0;
+		margin: 0;
+	}
+
+	.visibility-fieldset[aria-busy='true'] {
+		opacity: 0.6;
+		cursor: wait;
+	}
+
+	.visibility-legend {
+		font-size: 11px;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--color-quiet);
+		margin-bottom: 8px;
+	}
+
+	.visibility-option {
+		display: flex;
+		align-items: flex-start;
+		gap: 8px;
+		cursor: pointer;
+		padding: 4px 0;
+	}
+
+	.visibility-option input[type='radio'] {
+		margin: 3px 0 0;
+		cursor: pointer;
+		accent-color: var(--visibility-color);
+	}
+
+	.visibility-option-text {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.visibility-option-label {
+		font-size: 14px;
+		font-weight: 500;
+	}
+
+	.visibility-option-description {
+		font-size: 12px;
+		color: var(--color-quiet);
+	}
+
+	.visibility-option--selected .visibility-option-label {
+		color: var(--visibility-color);
+	}
+
+	.visibility-error {
+		font-size: 13px;
+		color: var(--color-primary);
+		margin: 8px 0 0;
+		padding: 8px 12px;
+		background: oklch(from var(--color-primary) l c h / 0.1);
+		border-radius: 6px;
+	}
+
 	@media (max-width: 600px) {
 		.listing-detail {
 			padding: 24px;

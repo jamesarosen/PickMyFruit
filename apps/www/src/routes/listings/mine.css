@@ -10,53 +10,36 @@
 		background: var(--color-background);
 		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.2) h);
 		border-radius: 12px;
-		padding: 20px;
 		transition: box-shadow 0.2s;
 	}
 
-	.listing-card:hover {
+	.listing-card:has(.listing-card-link:hover, .listing-card-link:focus-visible) {
 		box-shadow: 0 4px 12px oklch(from var(--color-foreground) l c h / 0.1);
 	}
 
-	.listing-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-bottom: 12px;
+	.listing-card-link {
+		display: block;
+		padding: 20px;
+		color: inherit;
+		text-decoration: none;
+		border-radius: 12px;
+		cursor: pointer;
 	}
 
-	.listing-header h3 {
+	.listing-card-link:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: -2px;
+	}
+
+	.listing-card-link h3 {
 		font-size: 18px;
 		font-weight: 600;
 		color: var(--color-foreground);
-		margin: 0;
-	}
-
-	.status-badge {
-		font-size: 12px;
-		font-weight: 600;
-		padding: 4px 10px;
-		border-radius: 12px;
-		text-transform: capitalize;
-	}
-
-	.status-badge.status-available {
-		background: oklch(from var(--color-secondary) l c h / 0.15);
-		color: var(--color-secondary);
-	}
-
-	.status-badge.status-unavailable {
-		background: oklch(from var(--color-quiet) l c h / 0.15);
-		color: var(--color-quiet);
-	}
-
-	.status-badge.status-private {
-		background: oklch(from var(--color-accent) l c h / 0.15);
-		color: var(--color-accent);
+		margin: 0 0 6px;
 	}
 
 	.listing-details {
-		margin-bottom: 16px;
+		margin-bottom: 0;
 	}
 
 	.listing-details p {
@@ -69,89 +52,24 @@
 		font-weight: 500;
 	}
 
-	.listing-error {
-		font-size: 13px;
-		color: var(--color-primary);
-		margin: 0 0 12px 0;
-		padding: 8px 12px;
-		background: oklch(from var(--color-primary) l c h / 0.1);
-		border-radius: 6px;
+	.status-label {
+		display: inline-block;
+		font-size: 12px;
+		font-weight: 600;
+		text-transform: capitalize;
+		margin-bottom: 8px;
 	}
 
-	.listing-actions {
-		display: flex;
-		gap: 12px;
+	.status-label.status-available {
+		color: var(--color-secondary);
 	}
 
-	.listing-actions .status-toggle-button {
-		font-size: 14px;
-		color: var(--color-background);
-		background: var(--color-secondary);
-		border: none;
-		padding: 8px 14px;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
-
-	.listing-actions .status-toggle-button:hover:not(:disabled) {
-		background: oklch(from var(--color-secondary) calc(l - 0.08) c h);
-	}
-
-	.listing-actions .status-toggle-button:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-
-	.listing-actions .edit-button {
-		font-size: 14px;
-		color: var(--color-accent);
-		text-decoration: none;
-		font-weight: 500;
-		background: none;
-		border: none;
-		padding: 0;
-		cursor: pointer;
-	}
-
-	.listing-actions .edit-button:hover:not(:disabled) {
-		text-decoration: underline;
-	}
-
-	.listing-actions .edit-button:disabled {
+	.status-label.status-unavailable {
 		color: var(--color-quiet);
-		cursor: not-allowed;
 	}
 
-	.listing-actions .status-toggle-button {
-		font-size: 14px;
-		color: var(--color-background);
-		background: var(--color-secondary);
-		border: none;
-		padding: 8px 14px;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
-
-	.listing-actions .status-toggle-button:hover:not(:disabled) {
-		background: oklch(from var(--color-secondary) calc(l - 0.08) c h);
-	}
-
-	.listing-actions .status-toggle-button:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-
-	.listing-error {
-		font-size: 13px;
-		color: var(--color-primary);
-		margin: 0 0 12px 0;
-		padding: 8px 12px;
-		background: oklch(from var(--color-primary) l c h / 0.1);
-		border-radius: 6px;
+	.status-label.status-private {
+		color: var(--color-accent);
 	}
 
 	.success-message {
