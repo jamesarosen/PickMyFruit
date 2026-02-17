@@ -1,18 +1,118 @@
 import { createFileRoute, Link } from '@tanstack/solid-router'
-import { Show } from 'solid-js'
+import { createSignal, For, onCleanup, Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import InquiryForm from '@/components/InquiryForm'
 import { useSession } from '@/lib/auth-client'
-import { getStatusClass } from '@/lib/listing-status'
-import { ListingStatus } from '@/lib/validation'
-import { getPublicListingById } from '@/api/listings'
+import {
+	getStatusClass,
+	VISIBILITY_OPTIONS,
+	statusSemanticColor,
+} from '@/lib/listing-status'
+import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
+import { Sentry } from '@/lib/sentry'
+import { getListingForViewer } from '@/api/listings'
 import type { PublicListing } from '@/data/queries'
 import '@/routes/listings.css'
 
 export const Route = createFileRoute('/listings/$id')({
-	loader: ({ params }) => getPublicListingById({ data: Number(params.id) }),
+	loader: ({ params }) => getListingForViewer({ data: Number(params.id) }),
 	component: ListingDetailPage,
 })
+
+const STATUS_DEBOUNCE_MS = 300
+
+function OwnerControls(props: {
+	listingId: number
+	initialStatus: ListingStatusValue
+}) {
+	const [isUpdating, setIsUpdating] = createSignal(false)
+	const [savedStatus, setSavedStatus] = createSignal(props.initialStatus)
+	const [displayStatus, setDisplayStatus] = createSignal(props.initialStatus)
+	const [error, setError] = createSignal<string | null>(null)
+	let debounceTimer: ReturnType<typeof setTimeout> | undefined
+
+	onCleanup(() => clearTimeout(debounceTimer))
+
+	function selectStatus(newStatus: ListingStatusValue) {
+		if (newStatus === displayStatus()) {
+			return
+		}
+		setDisplayStatus(newStatus)
+		setError(null)
+		clearTimeout(debounceTimer)
+		debounceTimer = setTimeout(() => commitStatus(newStatus), STATUS_DEBOUNCE_MS)
+	}
+
+	async function commitStatus(newStatus: ListingStatusValue) {
+		if (newStatus === savedStatus()) {
+			return
+		}
+		setIsUpdating(true)
+
+		try {
+			const response = await fetch(`/api/listings/${props.listingId}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ status: newStatus }),
+			})
+
+			if (!response.ok) {
+				let message = 'Failed to update status'
+				try {
+					const data = await response.json()
+					message = typeof data.error === 'string' ? data.error : message
+				} catch {
+					// Response wasn't JSON
+				}
+				throw new Error(message)
+			}
+
+			setSavedStatus(newStatus)
+		} catch (err) {
+			Sentry.captureException(err)
+			setError(err instanceof Error ? err.message : 'Failed to update')
+			setDisplayStatus(savedStatus())
+		} finally {
+			setIsUpdating(false)
+		}
+	}
+
+	return (
+		<>
+			<fieldset class="visibility-fieldset" aria-busy={isUpdating()}>
+				<legend class="visibility-legend">Visibility</legend>
+				<For each={VISIBILITY_OPTIONS}>
+					{(option) => (
+						<label
+							class="visibility-option"
+							classList={{
+								'visibility-option--selected': displayStatus() === option.value,
+							}}
+							style={{
+								'--visibility-color': statusSemanticColor[option.value],
+							}}
+						>
+							<input
+								type="radio"
+								name="visibility"
+								value={option.value}
+								checked={displayStatus() === option.value}
+								onChange={() => selectStatus(option.value)}
+							/>
+							<span class="visibility-option-text">
+								<span class="visibility-option-label">{option.label}</span>
+								<span class="visibility-option-description">{option.description}</span>
+							</span>
+						</label>
+					)}
+				</For>
+			</fieldset>
+			<Show when={error()}>
+				<p class="visibility-error">{error()}</p>
+			</Show>
+		</>
+	)
+}
 
 function ListingDetailPage() {
 	const data = Route.useLoaderData()
@@ -57,9 +157,19 @@ function ListingDetailPage() {
 						<article class="listing-detail">
 							<header class="listing-detail-header">
 								<h1>{l().type}</h1>
-								<span class={`status-badge ${getStatusClass(l().status)}`}>
-									{l().status}
-								</span>
+								<Show
+									when={isOwner()}
+									fallback={
+										<span class={`status-badge ${getStatusClass(l().status)}`}>
+											{l().status}
+										</span>
+									}
+								>
+									<OwnerControls
+										listingId={l().id}
+										initialStatus={l().status as ListingStatusValue}
+									/>
+								</Show>
 							</header>
 
 							<div class="listing-info">

@@ -5,67 +5,80 @@ import { loginViaUI } from './helpers/login'
 test.describe('Listing Status', () => {
 	test.describe.configure({ mode: 'serial' })
 
-	test('owner can toggle listing status from available to unavailable', async ({
+	test('owner can change listing status from available to unavailable', async ({
 		page,
 		testUser,
 		testListing,
 	}) => {
 		await loginViaUI(page, testUser)
+		await page.goto(`/listings/${testListing.id}`)
 
-		// Verify listing card shows available status
-		const card = page.locator('article.listing-card')
-		await expect(card.locator('.status-badge')).toHaveText('available')
+		const availableRadio = page.getByRole('radio', { name: /^Available / })
+		const unavailableRadio = page.getByRole('radio', { name: /^Unavailable / })
 
-		// Click toggle button
-		const toggleButton = card.getByRole('button', { name: 'Mark Unavailable' })
-		await expect(toggleButton).toBeVisible()
+		await expect(availableRadio).toBeChecked()
+		await expect(unavailableRadio).not.toBeChecked()
 
 		const patchPromise = page.waitForResponse(
 			(resp) =>
 				resp.url().includes(`/api/listings/${testListing.id}`) &&
 				resp.request().method() === 'PATCH'
 		)
-		await toggleButton.click()
+		await unavailableRadio.click()
 		await patchPromise
 
-		// Status badge should now say unavailable
-		await expect(card.locator('.status-badge')).toHaveText('unavailable')
-		// Button should now say Mark Available
-		await expect(
-			card.getByRole('button', { name: 'Mark Available' })
-		).toBeVisible()
+		await expect(unavailableRadio).toBeChecked()
+		await expect(availableRadio).not.toBeChecked()
 	})
 
-	test('owner can toggle listing status back to available', async ({
+	test('owner can change listing status back to available', async ({
 		page,
 		testUser,
 	}) => {
-		// Create a listing that starts as unavailable
 		const listing = await createTestListing(testUser.id, {
 			status: 'unavailable',
 		})
 
 		await loginViaUI(page, testUser)
+		await page.goto(`/listings/${listing.id}`)
 
-		// Locate card by its name (stable across status changes)
-		const card = page.locator('article.listing-card', {
-			hasText: listing.name,
-		})
-		await expect(card.locator('.status-badge')).toHaveText('unavailable')
+		const availableRadio = page.getByRole('radio', { name: /^Available / })
+		const unavailableRadio = page.getByRole('radio', { name: /^Unavailable / })
 
-		const toggleButton = card.getByRole('button', {
-			name: 'Mark Available',
-		})
+		await expect(unavailableRadio).toBeChecked()
 
 		const patchPromise = page.waitForResponse(
 			(resp) =>
 				resp.url().includes(`/api/listings/${listing.id}`) &&
 				resp.request().method() === 'PATCH'
 		)
-		await toggleButton.click()
+		await availableRadio.click()
 		await patchPromise
 
-		await expect(card.locator('.status-badge')).toHaveText('available')
+		await expect(availableRadio).toBeChecked()
+	})
+
+	test('owner can set listing status to private', async ({ page, testUser }) => {
+		const listing = await createTestListing(testUser.id, {
+			status: 'available',
+		})
+
+		await loginViaUI(page, testUser)
+		await page.goto(`/listings/${listing.id}`)
+
+		const privateRadio = page.getByRole('radio', { name: /^Private / })
+
+		await expect(privateRadio).not.toBeChecked()
+
+		const patchPromise = page.waitForResponse(
+			(resp) =>
+				resp.url().includes(`/api/listings/${listing.id}`) &&
+				resp.request().method() === 'PATCH'
+		)
+		await privateRadio.click()
+		await patchPromise
+
+		await expect(privateRadio).toBeChecked()
 	})
 
 	test('unavailable listing shows unavailable message on detail page', async ({

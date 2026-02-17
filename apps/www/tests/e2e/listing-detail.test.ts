@@ -1,5 +1,6 @@
 import { test, expect } from './helpers/fixtures'
 import { createTestListing } from './helpers/test-db'
+import { loginViaUI } from './helpers/login'
 
 test.describe('Listing Detail Page', () => {
 	// Run serially to avoid SQLite lock conflicts from parallel DB writes
@@ -67,5 +68,19 @@ test.describe('Listing Detail Page', () => {
 		await expect(homeLink).toBeVisible()
 		await homeLink.click()
 		await expect(page).toHaveURL('/')
+	})
+
+	test('owner can see their own private listing', async ({ page, testUser }) => {
+		const privateListing = await createTestListing(testUser.id, {
+			status: 'private',
+		})
+
+		await loginViaUI(page, testUser)
+		await page.goto(`/listings/${privateListing.id}`)
+
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			privateListing.type
+		)
+		await expect(page.getByRole('radio', { name: /^Private / })).toBeChecked()
 	})
 })
