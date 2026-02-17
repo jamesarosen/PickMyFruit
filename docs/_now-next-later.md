@@ -167,6 +167,7 @@
 - **Rate-limit magic link resend buttons**: Add debounce/cooldown to "Resend email" buttons on login page and listing form to prevent abuse and avoid hitting Resend API rate limits.
 - **Server-side pending listings**: Store unconfirmed listings and user state in the database instead of sessionStorage. This preserves form data if user opens magic link in a different browser/tab. Add `status: 'pending_verification' | 'active'` to listings and clean up unverified listings after 24 hours.
 - **Owner view of private listings**: Allow owners to view their own private listings on the detail page. Pass session context through the loader so `getPublicListingById` can include private listings owned by the requesting user. (flagged during listing-status review)
+- **Post-sign-out navigation**: After calling `signOut()`, navigate to home page. Pre-existing in both home page and SiteHeader component. Relevant files: `SiteHeader.tsx`, `index.tsx`.
 
 ---
 

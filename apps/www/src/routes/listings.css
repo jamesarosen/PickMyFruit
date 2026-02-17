@@ -5,28 +5,6 @@
 		padding: 40px 20px;
 	}
 
-	.breadcrumb {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-size: 14px;
-		color: var(--color-quiet);
-		margin-bottom: 24px;
-	}
-
-	.breadcrumb a {
-		color: var(--color-primary);
-		text-decoration: none;
-	}
-
-	.breadcrumb a:hover {
-		text-decoration: underline;
-	}
-
-	.breadcrumb .separator {
-		color: oklch(from var(--color-quiet) l calc(c * 0.5) h);
-	}
-
 	.listing-detail {
 		background: var(--color-background);
 		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.2) h);
