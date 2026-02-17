@@ -95,8 +95,7 @@ const listingStatusValues = Object.values(ListingStatus) as [
 	...ListingStatusValue[],
 ]
 
-// Accepts all statuses including 'private' for future API use; the UI only
-// exposes the available ↔ unavailable toggle.
+// Accepts all three statuses; the UI exposes them as a radio group.
 export const updateListingStatusSchema = z.object({
 	status: z.enum(listingStatusValues, { message: 'Invalid status' }),
 })

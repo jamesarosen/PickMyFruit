@@ -39,3 +39,30 @@ export const getPublicListingById = createServerFn({ method: 'GET' })
 		const { getPublicListingById: query } = await import('@/data/queries')
 		return query(id)
 	})
+
+/** Fetches a listing for the current viewer — owners always see their own listings. */
+export const getListingForViewer = createServerFn({ method: 'GET' })
+	.middleware([errorMiddleware])
+	.inputValidator((id: number) => getListingByIdValidator.parse(id))
+	.handler(async ({ data: id }) => {
+		const headers = getRequestHeaders()
+		const { auth } = await import('@/lib/auth')
+		const session = await auth.api.getSession({ headers })
+		const { getPublicListingById: getPublic, getListingById } = await import(
+			'@/data/queries'
+		)
+
+		if (session?.user) {
+			const listing = await getListingById(id)
+			if (listing && listing.userId === session.user.id) {
+				const {
+					address: _a,
+					accessInstructions: _ai,
+					deletedAt: _d,
+					...pub
+				} = listing
+				return pub as import('@/data/queries').PublicListing
+			}
+		}
+		return getPublic(id)
+	})
