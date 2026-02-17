@@ -1,6 +1,5 @@
 import {
 	createFileRoute,
-	Link,
 	redirect,
 	useNavigate,
 	useSearch,
@@ -8,6 +7,7 @@ import {
 import { createSignal, Show } from 'solid-js'
 import { z } from 'zod'
 import Layout from '@/components/Layout'
+import SiteHeader from '@/components/SiteHeader'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import { authClient } from '@/lib/auth-client'
 import './login.css'
@@ -66,15 +66,9 @@ function LoginPage() {
 
 	return (
 		<Layout title="Sign In - Pick My Fruit">
+			<SiteHeader breadcrumbs={[{ label: 'Sign In' }]} />
 			<main class="login-page">
 				<div class="login-container">
-					<header class="login-header">
-						<Link to="/" class="logo">
-							<span class="logo-icon">🍑</span>
-							<span class="logo-text">Pick My Fruit</span>
-						</Link>
-					</header>
-
 					<Show
 						when={!emailSent()}
 						fallback={
