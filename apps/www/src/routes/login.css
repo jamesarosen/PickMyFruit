@@ -1,6 +1,6 @@
 @layer page {
 	.login-page {
-		min-height: 100vh;
+		flex: 1;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -11,25 +11,6 @@
 	.login-container {
 		width: 100%;
 		max-width: 400px;
-	}
-
-	.login-header {
-		text-align: center;
-		margin-bottom: 40px;
-	}
-
-	.login-header .logo {
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		font-size: 20px;
-		font-weight: 600;
-		color: var(--color-foreground);
-		text-decoration: none;
-	}
-
-	.login-header .logo-icon {
-		font-size: 28px;
 	}
 
 	.login-content {

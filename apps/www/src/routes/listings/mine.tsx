@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/solid-router'
 import { createSignal, For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
+import SiteHeader from '@/components/SiteHeader'
 import { useSession } from '@/lib/auth-client'
 import { authMiddleware } from '@/middleware/auth'
 import { getStatusClass } from '@/lib/listing-status'
@@ -12,6 +13,7 @@ export const Route = createFileRoute('/listings/mine')({
 	loader: () => getMyListings(),
 	pendingComponent: () => (
 		<Layout title="My Garden - Pick My Fruit">
+			<SiteHeader breadcrumbs={[{ label: 'My Garden' }]} />
 			<main class="page-container">
 				<p>Loading…</p>
 			</main>
@@ -70,6 +72,7 @@ function MyGardenPage() {
 
 	return (
 		<Layout title="My Garden - Pick My Fruit">
+			<SiteHeader breadcrumbs={[{ label: 'My Garden' }]} />
 			<main class="page-container">
 				<header class="page-header">
 					<h1>My Garden</h1>

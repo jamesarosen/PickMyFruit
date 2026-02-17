@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/solid-router'
 import { createSignal, For, onCleanup, Show } from 'solid-js'
 import Layout from '@/components/Layout'
+import SiteHeader from '@/components/SiteHeader'
 import InquiryForm from '@/components/InquiryForm'
 import { useSession } from '@/lib/auth-client'
 import {
@@ -131,6 +132,7 @@ function ListingDetailPage() {
 			when={listing()}
 			fallback={
 				<Layout title="Listing Not Found - Pick My Fruit">
+					<SiteHeader breadcrumbs={[{ label: 'Listing' }]} />
 					<main class="listing-page">
 						<div class="listing-not-found">
 							<h1>Listing Not Found</h1>
@@ -145,15 +147,8 @@ function ListingDetailPage() {
 		>
 			{(l) => (
 				<Layout title={`${l().name} - Pick My Fruit`}>
+					<SiteHeader breadcrumbs={[{ label: l().name }]} />
 					<main class="listing-page">
-						<nav class="breadcrumb" aria-label="Breadcrumb">
-							<Link to="/">Home</Link>
-							<span class="separator" aria-hidden="true">
-								/
-							</span>
-							<span aria-current="page">Listing</span>
-						</nav>
-
 						<article class="listing-detail">
 							<header class="listing-detail-header">
 								<h1>{l().type}</h1>
