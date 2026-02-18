@@ -10,16 +10,28 @@ import {
 } from './schema'
 import { eq, desc, and, ne, isNull, gt } from 'drizzle-orm'
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
+import { Sentry } from '@/lib/sentry'
+import { toPublicListing, type PublicListing } from './public-listing'
+export { type PublicListing } from './public-listing'
 
+function reportH3Error(listingId: number, error: unknown) {
+	Sentry.captureException(error, { extra: { listingId } })
+}
+
+/** Fetches available listings with sensitive fields stripped. */
 export async function getAvailableListings(
 	limit: number = 10
-): Promise<Listing[]> {
-	return await db
+): Promise<PublicListing[]> {
+	const rows = await db
 		.select()
 		.from(listings)
 		.where(eq(listings.status, ListingStatus.available))
 		.orderBy(desc(listings.createdAt))
 		.limit(limit)
+	return rows.flatMap((row) => {
+		const pub = toPublicListing(row, reportH3Error)
+		return pub ? [pub] : []
+	})
 }
 
 export async function createListing(data: NewListing): Promise<Listing> {
@@ -44,40 +56,18 @@ export async function getListingById(id: number): Promise<Listing | undefined> {
 	return result[0]
 }
 
-/** Public listing fields safe to expose to any visitor. */
-export type PublicListing = Omit<
-	Listing,
-	'address' | 'accessInstructions' | 'deletedAt'
->
-
 /** Fetches a listing by ID, returning only public-safe fields. Excludes private listings. */
 export async function getPublicListingById(
 	id: number
 ): Promise<PublicListing | undefined> {
 	const result = await db
-		.select({
-			id: listings.id,
-			name: listings.name,
-			type: listings.type,
-			variety: listings.variety,
-			status: listings.status,
-			quantity: listings.quantity,
-			harvestWindow: listings.harvestWindow,
-			city: listings.city,
-			state: listings.state,
-			zip: listings.zip,
-			lat: listings.lat,
-			lng: listings.lng,
-			h3Index: listings.h3Index,
-			userId: listings.userId,
-			notes: listings.notes,
-			createdAt: listings.createdAt,
-			updatedAt: listings.updatedAt,
-		})
+		.select()
 		.from(listings)
 		.where(and(eq(listings.id, id), ne(listings.status, ListingStatus.private)))
 		.limit(1)
 	return result[0]
+		? (toPublicListing(result[0], reportH3Error) ?? undefined)
+		: undefined
 }
 
 export async function deleteListingById(

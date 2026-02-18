@@ -124,7 +124,7 @@ export async function createTestListing(
 		zip: '94558',
 		lat,
 		lng,
-		h3Index: latLngToCell(lat, lng, 9),
+		h3Index: latLngToCell(lat, lng, 13),
 		userId,
 		notes: null,
 		accessInstructions: null,
