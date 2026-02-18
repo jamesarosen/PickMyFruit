@@ -12,6 +12,7 @@ test.describe('Listing Status', () => {
 	}) => {
 		await loginViaUI(page, testUser)
 		await page.goto(`/listings/${testListing.id}`)
+		await page.waitForLoadState('networkidle')
 
 		const availableRadio = page.getByRole('radio', { name: /^Available / })
 		const unavailableRadio = page.getByRole('radio', { name: /^Unavailable / })
@@ -41,6 +42,7 @@ test.describe('Listing Status', () => {
 
 		await loginViaUI(page, testUser)
 		await page.goto(`/listings/${listing.id}`)
+		await page.waitForLoadState('networkidle')
 
 		const availableRadio = page.getByRole('radio', { name: /^Available / })
 		const unavailableRadio = page.getByRole('radio', { name: /^Unavailable / })
@@ -65,6 +67,7 @@ test.describe('Listing Status', () => {
 
 		await loginViaUI(page, testUser)
 		await page.goto(`/listings/${listing.id}`)
+		await page.waitForLoadState('networkidle')
 
 		const privateRadio = page.getByRole('radio', { name: /^Private / })
 
