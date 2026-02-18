@@ -80,7 +80,7 @@ function generateListing(userId: string): NewListing {
 		max: NAPA_BOUNDS.lngMax,
 		fractionDigits: 6,
 	})
-	const h3Index = latLngToCell(lat, lng, 9)
+	const h3Index = latLngToCell(lat, lng, 13)
 
 	// Generate harvest window based on fruit type
 	const harvestMonths = {

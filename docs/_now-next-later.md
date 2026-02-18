@@ -42,26 +42,32 @@
 
 ---
 
+## HMAC Replay Protection
+
+Add timestamp expiration to HMAC-signed "mark unavailable" URLs. Currently these URLs are replayable forever. Include a timestamp in the HMAC message and reject signatures older than 30 days.
+
+---
+
+## Resolve Dead-End After Creating Listing
+
+After creating a listing, the user has no clear next step. Add navigation (e.g., "View My Listings" link or redirect) so users aren't left on a dead-end page.
+
+---
+
 # Next
 
-## PR #8: Add Developer Tools - Testing Infrastructure
+## Unit Tests for Security-Critical Modules
 
-**Size**: Medium (~200 lines)
-**Impact**: MEDIUM - improves iteration speed
+- Unit tests for `hmac.ts` (sign/verify roundtrip, tamper rejection)
+- Unit tests for `email-templates.ts` (HTML escaping, subject line generation)
+- Unit tests for `toPublicListing` (field stripping, h3 coarsening, key snapshot)
+- E2E tests for inquiry flow
 
-**Changes**:
+---
 
-- Add Vitest configuration (already in tech stack)
-- Write tests for database queries
-- Write tests for form validation
-- Write tests for API endpoints
-- Add test:watch script
-- Add code coverage reporting
-- Update CI to run tests
+## Inquiry Rate-Limit Race Condition
 
-**Reasoning**: The tech stack specifies Vitest (CLAUDE.md:8) but no tests exist yet. Testing after building core features (rather than TDD) is pragmatic for rapid MVP development, but we need tests before adding complexity.
-
-**Review Focus**: Test coverage of critical paths, test performance
+The `hasRecentInquiry` check and `createInquiry` insert are not atomic — concurrent requests can bypass the limit. Use a unique partial index or wrap in a transaction.
 
 ---
 
@@ -143,22 +149,18 @@
 
 ## Inquiry System Hardening (from PR #7 review)
 
-- **HMAC signature expiration**: Include a timestamp in the HMAC message and reject signatures older than 30 days. Currently signed "mark unavailable" URLs are replayable forever. Also consider nonce tracking for single-use links.
 - **HMAC secret fail-fast**: Throw on startup if `HMAC_SECRET` is not set in production instead of falling back to a predictable dev value.
 - **Sentry error handling in new routes**: Replace `console.error` in `email-templates.ts` with `Sentry.captureException`. Add try/catch or `errorMiddleware` to the three new API route handlers (`api/inquiries.ts`, `api/listings.$id.ts`, `api/listings.$id.unavailable.ts`).
 - **Soft delete in `getListingById`**: Add `isNull(listings.deletedAt)` filter so deleted listings aren't visible via direct URL.
 - **Standardize API error format**: All endpoints should return `{ error: string, code?: string }`. Return structured codes (e.g., `code: 'RATE_LIMITED'`) so the client can match on codes instead of substring-matching error messages.
-- **Inquiry rate limit race condition**: The `hasRecentInquiry` check and `createInquiry` insert are not atomic — concurrent requests can bypass the limit. Consider a unique partial index or wrapping in a transaction.
 - **Email failure UX**: The success message implies owners can "check their listings" to see inquiries, but no inbox exists. Either fail the inquiry if email fails (allowing retry) or add background retry for failed emails.
 - **Update ADR to match implementation**: ADR `0002-inquiry-system.md` says status values are `active | unavailable | private` but code uses `available`. Update the ADR. Also update the stale schema comment at `schema.ts:127`.
 - **Rename `plantId` to `listingId`**: In `InquiryEmailData` interface in `email-templates.ts` for naming consistency.
-- **Unit tests for security-critical modules**: Add tests for `hmac.ts` (sign/verify roundtrip, tamper rejection) and `email-templates.ts` (HTML escaping, subject line generation). AGENTS.md requires tests for non-trivial modules.
-- **Listing detail leaks full address**: `getListingById` returns `address`, `lat`, `lng` over the wire even though the UI only shows city/state. Create a public-facing projection omitting sensitive fields.
 - **SQLite foreign key enforcement**: Ensure `PRAGMA foreign_keys = ON` is set when creating the database connection in `db.ts`.
 
 ## Future Enhancements
 
-- **Address privacy preview**: Add interactive map preview to the listing form showing the H3 cell at resolution 9 (~174m). Users would see the hexagonal area that gleaners will see, reinforcing the privacy message. Requires adding a mapping library (Leaflet recommended - free, no API key).
+- **Address privacy preview**: Add interactive map preview to the listing form showing the H3 cell at resolution 7 (~1.2km). Users would see the hexagonal area that gleaners will see, reinforcing the privacy message. Requires adding a mapping library (Leaflet recommended - free, no API key).
 - **Fruit type autocomplete with varieties**: Replace the fruit type dropdown with an autocomplete search that includes varieties (e.g., "Apple - Honeycrisp", "Lemon - Meyer"). This provides better categorization without adding a separate variety field.
 - **Rate-limit magic link resend buttons**: Add debounce/cooldown to "Resend email" buttons on login page and listing form to prevent abuse and avoid hitting Resend API rate limits.
 - **Server-side pending listings**: Store unconfirmed listings and user state in the database instead of sessionStorage. This preserves form data if user opens magic link in a different browser/tab. Add `status: 'pending_verification' | 'active'` to listings and clean up unverified listings after 24 hours.
