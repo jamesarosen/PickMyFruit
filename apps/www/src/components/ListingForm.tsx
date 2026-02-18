@@ -2,13 +2,14 @@ import { createSignal, Show, For } from 'solid-js'
 import { Link, useRouteContext } from '@tanstack/solid-router'
 import { listingFormSchema, fruitTypes } from '@/lib/validation'
 import FormField, { capitalize } from '@/components/FormField'
+import type { AddressFields } from '@/data/queries'
 import '@/components/ListingForm.css'
 
 interface FieldErrors {
 	[key: string]: string[] | undefined
 }
 
-export default function ListingForm() {
+export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 	const context = useRouteContext({ from: '__root__' })
 	const [isSubmitting, setIsSubmitting] = createSignal(false)
 	const [submitError, setSubmitError] = createSignal<string | null>(null)
@@ -133,6 +134,11 @@ export default function ListingForm() {
 
 				<fieldset>
 					<legend>Where is it?</legend>
+					<Show when={props.defaultAddress?.address}>
+						<p class="form-prefill-notice" id="address-prefill-notice">
+							Pre-filled from {props.defaultAddress!.address}. Edit if different.
+						</p>
+					</Show>
 					<FormField
 						id="address"
 						label="Street Address"
@@ -145,7 +151,11 @@ export default function ListingForm() {
 							id="address"
 							name="address"
 							placeholder="123 Main Street"
+							value={props.defaultAddress?.address ?? ''}
 							class={fieldErrors().address ? 'error' : ''}
+							aria-describedby={
+								props.defaultAddress?.address ? 'address-prefill-notice' : undefined
+							}
 							required
 						/>
 					</FormField>
@@ -155,7 +165,7 @@ export default function ListingForm() {
 								type="text"
 								id="city"
 								name="city"
-								value="Napa"
+								value={props.defaultAddress?.city ?? 'Napa'}
 								class={fieldErrors().city ? 'error' : ''}
 								required
 							/>
@@ -165,14 +175,20 @@ export default function ListingForm() {
 								type="text"
 								id="state"
 								name="state"
-								value="CA"
+								value={props.defaultAddress?.state ?? 'CA'}
 								maxlength="2"
 								class={fieldErrors().state ? 'error' : ''}
 								required
 							/>
 						</FormField>
 						<FormField id="zip" label="ZIP" error={fieldErrors().zip}>
-							<input type="text" id="zip" name="zip" placeholder="94558" />
+							<input
+								type="text"
+								id="zip"
+								name="zip"
+								value={props.defaultAddress?.zip ?? ''}
+								placeholder="94558"
+							/>
 						</FormField>
 					</div>
 				</fieldset>

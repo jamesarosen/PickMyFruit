@@ -3,9 +3,11 @@ import Layout from '@/components/Layout'
 import SiteHeader from '@/components/SiteHeader'
 import ListingForm from '@/components/ListingForm'
 import { authMiddleware } from '@/middleware/auth'
+import { getMyLastAddress } from '@/api/listings'
 import '@/routes/listings/new.css'
 
 export const Route = createFileRoute('/listings/new')({
+	loader: () => getMyLastAddress(),
 	component: NewListingPage,
 	server: {
 		middleware: [authMiddleware],
@@ -13,6 +15,8 @@ export const Route = createFileRoute('/listings/new')({
 })
 
 function NewListingPage() {
+	const lastAddress = Route.useLoaderData()
+
 	return (
 		<Layout title="List My Fruit Tree - Pick My Fruit">
 			<SiteHeader
@@ -26,7 +30,7 @@ function NewListingPage() {
 					<h1>List Your Fruit Tree</h1>
 					<p>Share your surplus with the community. Takes about 30 seconds.</p>
 				</header>
-				<ListingForm />
+				<ListingForm defaultAddress={lastAddress()} />
 			</main>
 		</Layout>
 	)
