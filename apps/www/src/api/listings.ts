@@ -62,9 +62,8 @@ export const getListingForViewer = createServerFn({ method: 'GET' })
 		const headers = getRequestHeaders()
 		const { auth } = await import('@/lib/auth')
 		const session = await auth.api.getSession({ headers })
-		const { getPublicListingById: getPublic, getListingById } = await import(
-			'@/data/queries'
-		)
+		const { getPublicListingById: getPublic, getListingById } =
+			await import('@/data/queries')
 
 		if (session?.user) {
 			const listing = await getListingById(id)
