@@ -1,5 +1,6 @@
 import { createEffect, createSignal, on, Show } from 'solid-js'
-import { authClient, useSession } from '@/lib/auth-client'
+import { useRouteContext } from '@tanstack/solid-router'
+import { authClient } from '@/lib/auth-client'
 import { submitInquiry as submitInquiryFn } from '@/api/inquiries'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import '@/components/InquiryForm.css'
@@ -20,14 +21,14 @@ type FormState =
 const PENDING_INQUIRY_KEY = 'pendingInquiry'
 
 export default function InquiryForm(props: InquiryFormProps) {
-	const session = useSession()
+	const context = useRouteContext({ from: '__root__' })
 	const [formState, setFormState] = createSignal<FormState>('initial')
 	const [email, setEmail] = createSignal('')
 	const [note, setNote] = createSignal('')
 	const [error, setError] = createSignal<string | null>(null)
 	const [emailSent, setEmailSent] = createSignal(true)
 
-	const isAuthenticated = () => Boolean(session().data?.user)
+	const isAuthenticated = () => Boolean(context().session?.user)
 
 	async function submitInquiry() {
 		setFormState('submitting')
@@ -100,7 +101,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 	let hasAutoSubmitted = false
 	createEffect(
 		on(
-			() => session().data?.user,
+			() => context().session?.user,
 			(user) => {
 				if (!user || hasAutoSubmitted || typeof window === 'undefined') return
 

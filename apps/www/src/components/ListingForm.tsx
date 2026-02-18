@@ -1,7 +1,6 @@
 import { createSignal, Show, For } from 'solid-js'
-import { Link } from '@tanstack/solid-router'
+import { Link, useRouteContext } from '@tanstack/solid-router'
 import { listingFormSchema, fruitTypes } from '@/lib/validation'
-import { useSession } from '@/lib/auth-client'
 import FormField, { capitalize } from '@/components/FormField'
 import '@/components/ListingForm.css'
 
@@ -10,7 +9,7 @@ interface FieldErrors {
 }
 
 export default function ListingForm() {
-	const session = useSession()
+	const context = useRouteContext({ from: '__root__' })
 	const [isSubmitting, setIsSubmitting] = createSignal(false)
 	const [submitError, setSubmitError] = createSignal<string | null>(null)
 	const [isSuccess, setIsSuccess] = createSignal(false)
@@ -85,7 +84,7 @@ export default function ListingForm() {
 					<div class="form-message error">{submitError()}</div>
 				</Show>
 
-				<Show when={session().data?.user}>
+				<Show when={context().session?.user}>
 					{(user) => (
 						<p class="form-identity">
 							Posting as {user().name} ({user().email})
