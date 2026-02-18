@@ -7,7 +7,13 @@ import { getMyLastAddress } from '@/api/listings'
 import '@/routes/listings/new.css'
 
 export const Route = createFileRoute('/listings/new')({
-	loader: () => getMyLastAddress(),
+	loader: async () => {
+		try {
+			return await getMyLastAddress()
+		} catch {
+			return undefined
+		}
+	},
 	component: NewListingPage,
 	server: {
 		middleware: [authMiddleware],

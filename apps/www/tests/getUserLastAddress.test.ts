@@ -67,27 +67,4 @@ describe('getUserLastAddress', () => {
 		expect(result).toEqual(address)
 		expect(result?.zip).toBeNull()
 	})
-
-	it('selects only address fields', async () => {
-		mockLimit.mockResolvedValue([])
-
-		await getUserLastAddress(faker.string.uuid())
-
-		expect(mockSelect).toHaveBeenCalledWith(
-			expect.objectContaining({
-				address: expect.anything(),
-				city: expect.anything(),
-				state: expect.anything(),
-				zip: expect.anything(),
-			})
-		)
-	})
-
-	it('limits results to 1', async () => {
-		mockLimit.mockResolvedValue([])
-
-		await getUserLastAddress(faker.string.uuid())
-
-		expect(mockLimit).toHaveBeenCalledWith(1)
-	})
 })

@@ -2,7 +2,7 @@ import { createSignal, Show, For } from 'solid-js'
 import { Link, useRouteContext } from '@tanstack/solid-router'
 import { listingFormSchema, fruitTypes } from '@/lib/validation'
 import FormField, { capitalize } from '@/components/FormField'
-import type { AddressFields } from '@/data/queries'
+import type { AddressFields } from '@/data/schema'
 import '@/components/ListingForm.css'
 
 interface FieldErrors {
@@ -136,7 +136,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 					<legend>Where is it?</legend>
 					<Show when={props.defaultAddress?.address}>
 						<p class="form-prefill-notice" id="address-prefill-notice">
-							Pre-filled from {props.defaultAddress!.address}. Edit if different.
+							Pre-filled from your last listing. Edit if different.
 						</p>
 					</Show>
 					<FormField

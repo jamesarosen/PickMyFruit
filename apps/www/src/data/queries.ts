@@ -7,6 +7,7 @@ import {
 	type NewListing,
 	type Inquiry,
 	type NewInquiry,
+	type AddressFields,
 } from './schema'
 import { eq, desc, and, ne, isNull, gt } from 'drizzle-orm'
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
@@ -14,12 +15,7 @@ import { Sentry } from '@/lib/sentry'
 import { toPublicListing, type PublicListing } from './public-listing'
 export { type PublicListing } from './public-listing'
 
-export type AddressFields = {
-	address: string
-	city: string
-	state: string
-	zip: string | null
-}
+export type { AddressFields } from './schema'
 
 function reportH3Error(listingId: number, error: unknown) {
 	Sentry.captureException(error, { extra: { listingId } })
