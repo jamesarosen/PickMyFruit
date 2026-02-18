@@ -1,9 +1,8 @@
-import { createFileRoute, Link } from '@tanstack/solid-router'
+import { createFileRoute, Link, useRouteContext } from '@tanstack/solid-router'
 import { createSignal, For, onCleanup, Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import SiteHeader from '@/components/SiteHeader'
 import InquiryForm from '@/components/InquiryForm'
-import { useSession } from '@/lib/auth-client'
 import {
 	getStatusClass,
 	VISIBILITY_OPTIONS,
@@ -117,11 +116,11 @@ function OwnerControls(props: {
 
 function ListingDetailPage() {
 	const data = Route.useLoaderData()
-	const session = useSession()
+	const context = useRouteContext({ from: '__root__' })
 	const params = Route.useParams()
 
 	const listing = () => data() as PublicListing | undefined
-	const isOwner = () => session().data?.user?.id === listing()?.userId
+	const isOwner = () => context().session?.user?.id === listing()?.userId
 	const canInquire = () => {
 		const l = listing()
 		return l && l.status === ListingStatus.available && !isOwner()

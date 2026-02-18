@@ -1,43 +1,25 @@
-import { type BeforeLoadContextOptions } from '@tanstack/solid-router'
-import { createIsomorphicFn } from '@tanstack/solid-start'
+import { createServerFn } from '@tanstack/solid-start'
+import { getRequestHeaders } from '@tanstack/solid-start/server'
 import type { Session } from './auth'
-
-type Context = BeforeLoadContextOptions<
-	any,
-	any,
-	any,
-	any,
-	any,
-	any,
-	any,
-	any
->['context']
+import { Sentry } from './sentry'
 
 /**
- * Isomorphic session loader.
+ * Fetches the current session from Better Auth via request headers.
  *
- * - Server: extracts session from request headers via Better Auth server API
- * - Client: fetches session from Better Auth client API
- *
- * Use in beforeLoad to populate context.session for child routes:
- * ```ts
- * beforeLoad: async ({ context }) => {
- *   const session = await getSession(context)
- *   return { session }
- * }
- * ```
+ * Always runs server-side: directly during SSR, via RPC during
+ * client-side navigation. Returns null if not authenticated or on error.
  */
-export const getSession = createIsomorphicFn()
-	.server(async (context: Context): Promise<Session | null> => {
-		const headers = context?.context?.request?.headers
-		if (!headers) {
+export const getSession = createServerFn({ method: 'GET' }).handler(
+	async (): Promise<Session | null> => {
+		try {
+			const headers = getRequestHeaders()
+			const { auth } = await import('./auth')
+			return await auth.api.getSession({ headers })
+		} catch (error) {
+			// Treat auth failures as unauthenticated so pages degrade gracefully
+			// rather than showing error boundaries for transient auth issues.
+			Sentry.captureException(error)
 			return null
 		}
-		const { auth } = await import('./auth')
-		return auth.api.getSession({ headers })
-	})
-	.client(async (_context: Context): Promise<Session | null> => {
-		const { authClient } = await import('./auth-client')
-		const result = await authClient.getSession()
-		return result.data ?? null
-	})
+	}
+)

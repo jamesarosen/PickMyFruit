@@ -1,13 +1,25 @@
-import { Link } from '@tanstack/solid-router'
+import {
+	Link,
+	useNavigate,
+	useRouteContext,
+	useRouter,
+} from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
-import { useSession, signOut } from '@/lib/auth-client'
+import { performSignOut } from '@/lib/auth-client'
 import './SiteHeader.css'
 
 export type Breadcrumb = { label: string; to?: string }
 
 /** Shared page header with breadcrumbs and auth navigation. */
 export default function SiteHeader(props: { breadcrumbs?: Breadcrumb[] }) {
-	const session = useSession()
+	const router = useRouter()
+	const navigate = useNavigate()
+	const context = useRouteContext({ from: '__root__' })
+
+	async function handleSignOut() {
+		await performSignOut(router)
+		navigate({ to: '/', replace: true })
+	}
 
 	return (
 		<header class="site-header">
@@ -32,7 +44,7 @@ export default function SiteHeader(props: { breadcrumbs?: Breadcrumb[] }) {
 			</nav>
 			<nav class="header-nav" aria-label="Account">
 				<Show
-					when={session().data?.user}
+					when={context().session?.user}
 					fallback={
 						<Link to="/login" class="nav-link">
 							Sign In
@@ -42,7 +54,7 @@ export default function SiteHeader(props: { breadcrumbs?: Breadcrumb[] }) {
 					<Link to="/listings/mine" class="nav-link">
 						My Garden
 					</Link>
-					<button type="button" class="nav-link sign-out" onClick={() => signOut()}>
+					<button type="button" class="nav-link sign-out" onClick={handleSignOut}>
 						Sign Out
 					</button>
 				</Show>

@@ -17,8 +17,8 @@ import '../styles/focus.css'
 import '../styles/surfaces.css'
 
 export const Route = createRootRoute({
-	beforeLoad: async ({ context }) => {
-		const session = await getSession(context)
+	beforeLoad: async () => {
+		const session = await getSession()
 		return { session }
 	},
 	head: () => ({

@@ -2,6 +2,7 @@ import {
 	createFileRoute,
 	redirect,
 	useNavigate,
+	useRouter,
 	useSearch,
 } from '@tanstack/solid-router'
 import { createSignal, Show } from 'solid-js'
@@ -32,6 +33,7 @@ export const Route = createFileRoute('/login')({
 })
 
 function LoginPage() {
+	const router = useRouter()
 	const navigate = useNavigate()
 	const search = useSearch({ from: '/login' })
 	const returnTo = () => search().returnTo || '/listings/mine'
@@ -79,13 +81,29 @@ function LoginPage() {
 									setEmailSent(false)
 									setEmail('')
 								}}
-								onVerified={() => navigate({ to: returnTo() })}
+								onVerified={async () => {
+									await router.invalidate()
+									navigate({ to: returnTo() })
+								}}
 							/>
 						}
 					>
 						<div class="login-content">
 							<h1>Sign in to Pick My Fruit</h1>
-							<p>Enter your email and we'll send you a sign-in link.</p>
+							<Show
+								when={search().returnTo}
+								fallback={<p>Enter your email and we'll send you a sign-in link.</p>}
+							>
+								<p>
+									Sign in to continue to{' '}
+									{returnTo() === '/listings/new'
+										? 'list your fruit tree'
+										: returnTo() === '/listings/mine'
+											? 'your garden'
+											: 'your destination'}
+									.
+								</p>
+							</Show>
 
 							<form class="login-form" onSubmit={handleSubmit}>
 								<Show when={error()}>

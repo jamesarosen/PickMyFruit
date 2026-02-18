@@ -1,8 +1,7 @@
-import { createFileRoute, Link } from '@tanstack/solid-router'
+import { createFileRoute, Link, useRouteContext } from '@tanstack/solid-router'
 import { createSignal, For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import SiteHeader from '@/components/SiteHeader'
-import { useSession } from '@/lib/auth-client'
 import { authMiddleware } from '@/middleware/auth'
 import { getStatusClass } from '@/lib/listing-status'
 import type { Listing } from '@/data/schema'
@@ -64,10 +63,10 @@ function EmptyState() {
 
 function MyGardenPage() {
 	const listings = Route.useLoaderData()
-	const session = useSession()
+	const context = useRouteContext({ from: '__root__' })
 	const search = Route.useSearch()
 	const [showMarkedMessage, setShowMarkedMessage] = createSignal(
-		() => (search as () => { marked?: string })()?.marked === 'unavailable'
+		(search as () => { marked?: string })()?.marked === 'unavailable'
 	)
 
 	return (
@@ -76,19 +75,19 @@ function MyGardenPage() {
 			<main class="page-container">
 				<header class="page-header">
 					<h1>My Garden</h1>
-					<Show when={session().data?.user}>
-						<p>Welcome back, {session().data?.user?.name || 'friend'}!</p>
+					<Show when={context().session?.user}>
+						{(user) => <p>Welcome back, {user().name || 'friend'}!</p>}
 					</Show>
 				</header>
 
-				<Show when={showMarkedMessage()()}>
+				<Show when={showMarkedMessage()}>
 					<div class="success-message">
 						Listing marked as unavailable. Gleaners won't be able to contact you about
 						this listing.
 						<button
 							type="button"
 							class="dismiss-button"
-							onClick={() => setShowMarkedMessage(() => () => false)}
+							onClick={() => setShowMarkedMessage(false)}
 						>
 							Dismiss
 						</button>
