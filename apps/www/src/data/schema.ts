@@ -145,6 +145,9 @@ export const listings = sqliteTable(
 export type Listing = typeof listings.$inferSelect
 export type NewListing = typeof listings.$inferInsert
 
+/** Subset of listing fields used for address pre-fill. */
+export type AddressFields = Pick<Listing, 'address' | 'city' | 'state' | 'zip'>
+
 // ============================================================================
 // Inquiries Table
 // ============================================================================

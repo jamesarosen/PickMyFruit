@@ -7,12 +7,15 @@ import {
 	type NewListing,
 	type Inquiry,
 	type NewInquiry,
+	type AddressFields,
 } from './schema'
 import { eq, desc, and, ne, isNull, gt } from 'drizzle-orm'
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 import { Sentry } from '@/lib/sentry'
 import { toPublicListing, type PublicListing } from './public-listing'
 export { type PublicListing } from './public-listing'
+
+export type { AddressFields } from './schema'
 
 function reportH3Error(listingId: number, error: unknown) {
 	Sentry.captureException(error, { extra: { listingId } })
@@ -179,6 +182,24 @@ export async function getUserById(
 		.select({ name: user.name, email: user.email })
 		.from(user)
 		.where(eq(user.id, id))
+		.limit(1)
+	return result[0]
+}
+
+/** Returns address fields from the user's most recent non-deleted listing. */
+export async function getUserLastAddress(
+	userId: string
+): Promise<AddressFields | undefined> {
+	const result = await db
+		.select({
+			address: listings.address,
+			city: listings.city,
+			state: listings.state,
+			zip: listings.zip,
+		})
+		.from(listings)
+		.where(and(eq(listings.userId, userId), isNull(listings.deletedAt)))
+		.orderBy(desc(listings.createdAt))
 		.limit(1)
 	return result[0]
 }
