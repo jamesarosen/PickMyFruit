@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/solid-router'
 import { z } from 'zod'
 import { listingFormSchema } from '@/lib/validation'
 import { geocodeAddress } from '@/lib/geocoding'
+import { Sentry } from '@/lib/sentry'
 
 const querySchema = z.object({
 	limit: z.coerce.number().int().positive().max(100).default(10),
@@ -25,7 +26,7 @@ export const Route = createFileRoute('/api/listings')({
 					const listings = await getAvailableListings(parsed.data.limit)
 					return Response.json(listings)
 				} catch (error) {
-					console.error('Failed to fetch listings:', error)
+					Sentry.captureException(error)
 					return Response.json(
 						{ error: 'Failed to fetch listings' },
 						{ status: 500 }
@@ -95,7 +96,7 @@ export const Route = createFileRoute('/api/listings')({
 
 					return Response.json(listing, { status: 201 })
 				} catch (error) {
-					console.error('Failed to create listing:', error)
+					Sentry.captureException(error)
 					return Response.json(
 						{ error: 'Failed to create listing' },
 						{ status: 500 }

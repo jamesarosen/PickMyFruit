@@ -11,6 +11,7 @@ import {
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 import { Sentry } from '@/lib/sentry'
 import { getListingForViewer } from '@/api/listings'
+import type { Listing } from '@/data/schema'
 import type { PublicListing } from '@/data/queries'
 import '@/routes/listings.css'
 
@@ -119,7 +120,7 @@ function ListingDetailPage() {
 	const context = useRouteContext({ from: '__root__' })
 	const params = Route.useParams()
 
-	const listing = () => data() as PublicListing | undefined
+	const listing = () => data() as Listing | PublicListing | undefined
 	const isOwner = () => context().session?.user?.id === listing()?.userId
 	const canInquire = () => {
 		const l = listing()

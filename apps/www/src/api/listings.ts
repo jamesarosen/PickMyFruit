@@ -23,10 +23,8 @@ export const getAvailableListings = createServerFn({ method: 'GET' })
 	.middleware([errorMiddleware])
 	.inputValidator((limit: number = 3) => limit)
 	.handler(async ({ data: limit }) => {
-		const { getAvailableListings: getAvailableListingsFromDb } = await import(
-			'@/data/queries'
-		)
-		return getAvailableListingsFromDb(limit)
+		const { getAvailableListings: query } = await import('@/data/queries')
+		return query(limit)
 	})
 
 const getListingByIdValidator = z.coerce.number().int().positive()
@@ -40,7 +38,7 @@ export const getPublicListingById = createServerFn({ method: 'GET' })
 		return query(id)
 	})
 
-/** Fetches a listing for the current viewer — owners always see their own listings. */
+/** Fetches a listing for the current viewer — owners see full data, others see public fields. */
 export const getListingForViewer = createServerFn({ method: 'GET' })
 	.middleware([errorMiddleware])
 	.inputValidator((id: number) => getListingByIdValidator.parse(id))
@@ -55,13 +53,7 @@ export const getListingForViewer = createServerFn({ method: 'GET' })
 		if (session?.user) {
 			const listing = await getListingById(id)
 			if (listing && listing.userId === session.user.id) {
-				const {
-					address: _a,
-					accessInstructions: _ai,
-					deletedAt: _d,
-					...pub
-				} = listing
-				return pub as import('@/data/queries').PublicListing
+				return listing
 			}
 		}
 		return getPublic(id)
