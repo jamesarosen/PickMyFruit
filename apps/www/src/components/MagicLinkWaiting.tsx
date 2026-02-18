@@ -6,7 +6,7 @@ interface MagicLinkWaitingProps {
 	email: string
 	callbackURL: string
 	onCancel: () => void
-	onVerified: () => void
+	onVerified: () => void | Promise<void>
 }
 
 // Refactoring signal: if this component gains 5+ state signals, retry logic,
@@ -43,7 +43,7 @@ export default function MagicLinkWaiting(props: MagicLinkWaitingProps) {
 			}
 
 			// Verification successful
-			props.onVerified()
+			await props.onVerified()
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Failed to verify token')
 		} finally {

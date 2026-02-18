@@ -1,8 +1,13 @@
-import { createFileRoute, Link } from '@tanstack/solid-router'
+import {
+	createFileRoute,
+	Link,
+	useRouteContext,
+	useRouter,
+} from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import { getAvailableListings } from '@/api/listings'
-import { useSession, signOut } from '@/lib/auth-client'
+import { performSignOut } from '@/lib/auth-client'
 import '@/routes/index.css'
 
 export const Route = createFileRoute('/')({
@@ -12,7 +17,12 @@ export const Route = createFileRoute('/')({
 
 function HomePage() {
 	const listings = Route.useLoaderData()
-	const session = useSession()
+	const router = useRouter()
+	const context = useRouteContext({ from: '__root__' })
+
+	async function handleSignOut() {
+		await performSignOut(router)
+	}
 
 	return (
 		<Layout title="Pick My Fruit - Turn your backyard abundance into community food">
@@ -24,7 +34,7 @@ function HomePage() {
 					</div>
 					<nav class="header-nav">
 						<Show
-							when={session().data?.user}
+							when={context().session?.user}
 							fallback={
 								<Link to="/login" class="nav-link">
 									Sign In
@@ -34,11 +44,7 @@ function HomePage() {
 							<Link to="/listings/mine" class="nav-link">
 								My Garden
 							</Link>
-							<button
-								type="button"
-								class="nav-link sign-out"
-								onClick={() => signOut()}
-							>
+							<button type="button" class="nav-link sign-out" onClick={handleSignOut}>
 								Sign Out
 							</button>
 						</Show>

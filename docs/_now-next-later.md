@@ -93,7 +93,6 @@
 **Changes**:
 
 - Add "View My Listings" link to the listing creation success message
-- Show contextual message on login page when redirected from a protected route (e.g., "Sign in to list your fruit tree" when `returnTo=/listings/new`)
 - Normalize timestamp columns: align `listings.created_at`/`updated_at` to `timestamp_ms` (milliseconds) to match Better Auth tables
 
 **Reasoning**: Small UX gaps identified during the owners-table removal refactor. None are blockers but they improve the feel of the auth-first listing flow.
@@ -149,15 +148,12 @@
 - **Sentry error handling in new routes**: Replace `console.error` in `email-templates.ts` with `Sentry.captureException`. Add try/catch or `errorMiddleware` to the three new API route handlers (`api/inquiries.ts`, `api/listings.$id.ts`, `api/listings.$id.unavailable.ts`).
 - **Soft delete in `getListingById`**: Add `isNull(listings.deletedAt)` filter so deleted listings aren't visible via direct URL.
 - **Standardize API error format**: All endpoints should return `{ error: string, code?: string }`. Return structured codes (e.g., `code: 'RATE_LIMITED'`) so the client can match on codes instead of substring-matching error messages.
-- **Fix `showMarkedMessage` signal pattern**: Replace the function-in-a-signal double-invocation `showMarkedMessage()()` in `garden/mine.tsx` with a plain boolean signal.
 - **Inquiry rate limit race condition**: The `hasRecentInquiry` check and `createInquiry` insert are not atomic — concurrent requests can bypass the limit. Consider a unique partial index or wrapping in a transaction.
 - **Email failure UX**: The success message implies owners can "check their listings" to see inquiries, but no inbox exists. Either fail the inquiry if email fails (allowing retry) or add background retry for failed emails.
 - **Update ADR to match implementation**: ADR `0002-inquiry-system.md` says status values are `active | unavailable | private` but code uses `available`. Update the ADR. Also update the stale schema comment at `schema.ts:127`.
-- **Extract `getStatusClass` utility**: Duplicated in `mine.tsx` and `listings.$id.tsx` — extract to `src/lib/listing-status.ts`.
 - **Rename `plantId` to `listingId`**: In `InquiryEmailData` interface in `email-templates.ts` for naming consistency.
 - **Unit tests for security-critical modules**: Add tests for `hmac.ts` (sign/verify roundtrip, tamper rejection) and `email-templates.ts` (HTML escaping, subject line generation). AGENTS.md requires tests for non-trivial modules.
 - **Listing detail leaks full address**: `getListingById` returns `address`, `lat`, `lng` over the wire even though the UI only shows city/state. Create a public-facing projection omitting sensitive fields.
-- **Implement or remove `handleStatusChange` callback**: The no-op `handleStatusChange` in `garden/mine.tsx` should either use `router.invalidate()` to refresh data or be removed.
 - **SQLite foreign key enforcement**: Ensure `PRAGMA foreign_keys = ON` is set when creating the database connection in `db.ts`.
 
 ## Future Enhancements
@@ -167,7 +163,10 @@
 - **Rate-limit magic link resend buttons**: Add debounce/cooldown to "Resend email" buttons on login page and listing form to prevent abuse and avoid hitting Resend API rate limits.
 - **Server-side pending listings**: Store unconfirmed listings and user state in the database instead of sessionStorage. This preserves form data if user opens magic link in a different browser/tab. Add `status: 'pending_verification' | 'active'` to listings and clean up unverified listings after 24 hours.
 - **Owner view of private listings**: Allow owners to view their own private listings on the detail page. Pass session context through the loader so `getPublicListingById` can include private listings owned by the requesting user. (flagged during listing-status review)
-- **Post-sign-out navigation**: After calling `signOut()`, navigate to home page. Pre-existing in both home page and SiteHeader component. Relevant files: `SiteHeader.tsx`, `index.tsx`.
+- **Sign-out loading state**: Add loading indicator and double-click guard to sign-out buttons in `SiteHeader.tsx` and `index.tsx`. Currently the async operation has no visual feedback.
+- **Extract shared handleSignOut**: Sign-out logic is duplicated between `SiteHeader.tsx` and `index.tsx` with slight differences. Extract to a shared utility.
+- **Deduplicate auth nav**: Home page (`index.tsx`) has its own header with auth nav duplicating `SiteHeader` functionality. Consider unifying.
+- **E2E tests for sign-out flow**: No E2E coverage for sign-out behavior — add tests verifying redirect, UI state update, and protected-route rejection after sign-out.
 
 ---
 
