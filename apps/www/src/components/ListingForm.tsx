@@ -1,6 +1,7 @@
 import { createSignal, Show, For } from 'solid-js'
-import { Link, useRouteContext } from '@tanstack/solid-router'
+import { Link, useNavigate, useRouteContext } from '@tanstack/solid-router'
 import { listingFormSchema, fruitTypes } from '@/lib/validation'
+import { Sentry } from '@/lib/sentry'
 import FormField, { capitalize } from '@/components/FormField'
 import type { AddressFields } from '@/data/schema'
 import '@/components/ListingForm.css'
@@ -11,9 +12,9 @@ interface FieldErrors {
 
 export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 	const context = useRouteContext({ from: '__root__' })
+	const navigate = useNavigate()
 	const [isSubmitting, setIsSubmitting] = createSignal(false)
 	const [submitError, setSubmitError] = createSignal<string | null>(null)
-	const [isSuccess, setIsSuccess] = createSignal(false)
 	const [fieldErrors, setFieldErrors] = createSignal<FieldErrors>({})
 
 	async function submitListing(data: Record<string, unknown>) {
@@ -24,12 +25,26 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(data),
 			})
-			if (!response.ok) {
-				const errorData = await response.json()
-				throw new Error(errorData.error || 'Failed to create listing')
+			let responseData: Record<string, unknown>
+			try {
+				responseData = await response.json()
+			} catch {
+				throw new Error('Failed to create listing')
 			}
-			setIsSuccess(true)
+			if (!response.ok) {
+				throw new Error(
+					typeof responseData.error === 'string'
+						? responseData.error
+						: 'Failed to create listing'
+				)
+			}
+			navigate({
+				to: '/listings/$id',
+				params: { id: String(responseData.id) },
+				search: { created: true },
+			})
 		} catch (error) {
+			Sentry.captureException(error)
 			setSubmitError(error instanceof Error ? error.message : 'An error occurred')
 		} finally {
 			setIsSubmitting(false)
@@ -65,159 +80,143 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 	}
 
 	return (
-		<Show
-			when={!isSuccess()}
-			fallback={
-				<div class="success-content">
-					<h2>Your fruit is listed!</h2>
-					<p>
-						Thanks for sharing with the community. We'll be in touch when a gleaner
-						wants to pick.
+		<form class="listing-form" onSubmit={handleSubmit}>
+			<Show when={submitError()}>
+				<div class="form-message error">{submitError()}</div>
+			</Show>
+
+			<Show when={context().session?.user}>
+				{(user) => (
+					<p class="form-identity">
+						Posting as {user().name} ({user().email})
 					</p>
-					<Link to="/" class="back-button">
-						Back to Home
-					</Link>
-				</div>
-			}
-		>
-			<form class="listing-form" onSubmit={handleSubmit}>
-				<Show when={submitError()}>
-					<div class="form-message error">{submitError()}</div>
-				</Show>
+				)}
+			</Show>
 
-				<Show when={context().session?.user}>
-					{(user) => (
-						<p class="form-identity">
-							Posting as {user().name} ({user().email})
-						</p>
-					)}
-				</Show>
-
-				<fieldset>
-					<legend>What are you sharing?</legend>
-					<div class="form-row">
-						<FormField
-							id="type"
-							label="Fruit Type"
-							required
-							error={fieldErrors().type}
-						>
-							<select
-								id="type"
-								name="type"
-								class={fieldErrors().type ? 'error' : ''}
-								required
-							>
-								<option value="">Select fruit type</option>
-								<For each={fruitTypes}>
-									{(type) => <option value={type}>{capitalize(type)}</option>}
-								</For>
-							</select>
-						</FormField>
-						<FormField
-							id="harvestWindow"
-							label="When to Pick"
-							required
-							error={fieldErrors().harvestWindow}
-						>
-							<input
-								type="text"
-								id="harvestWindow"
-								name="harvestWindow"
-								placeholder="e.g., Now through February"
-								class={fieldErrors().harvestWindow ? 'error' : ''}
-								required
-							/>
-						</FormField>
-					</div>
-				</fieldset>
-
-				<fieldset>
-					<legend>Where is it?</legend>
-					<Show when={props.defaultAddress?.address}>
-						<p class="form-prefill-notice" id="address-prefill-notice">
-							Pre-filled from your last listing. Edit if different.
-						</p>
-					</Show>
+			<fieldset>
+				<legend>What are you sharing?</legend>
+				<div class="form-row">
 					<FormField
-						id="address"
-						label="Street Address"
+						id="type"
+						label="Fruit Type"
 						required
-						error={fieldErrors().address}
-						hint="Others will see your neighborhood, but not your exact address."
+						error={fieldErrors().type}
+					>
+						<select
+							id="type"
+							name="type"
+							class={fieldErrors().type ? 'error' : ''}
+							required
+						>
+							<option value="">Select fruit type</option>
+							<For each={fruitTypes}>
+								{(type) => <option value={type}>{capitalize(type)}</option>}
+							</For>
+						</select>
+					</FormField>
+					<FormField
+						id="harvestWindow"
+						label="When to Pick"
+						required
+						error={fieldErrors().harvestWindow}
 					>
 						<input
 							type="text"
-							id="address"
-							name="address"
-							placeholder="123 Main Street"
-							value={props.defaultAddress?.address ?? ''}
-							class={fieldErrors().address ? 'error' : ''}
-							aria-describedby={
-								props.defaultAddress?.address ? 'address-prefill-notice' : undefined
-							}
+							id="harvestWindow"
+							name="harvestWindow"
+							placeholder="e.g., Now through February"
+							class={fieldErrors().harvestWindow ? 'error' : ''}
 							required
 						/>
 					</FormField>
-					<div class="form-row-3">
-						<FormField id="city" label="City" required error={fieldErrors().city}>
-							<input
-								type="text"
-								id="city"
-								name="city"
-								value={props.defaultAddress?.city ?? 'Napa'}
-								class={fieldErrors().city ? 'error' : ''}
-								required
-							/>
-						</FormField>
-						<FormField id="state" label="State" required error={fieldErrors().state}>
-							<input
-								type="text"
-								id="state"
-								name="state"
-								value={props.defaultAddress?.state ?? 'CA'}
-								maxlength="2"
-								class={fieldErrors().state ? 'error' : ''}
-								required
-							/>
-						</FormField>
-						<FormField id="zip" label="ZIP" error={fieldErrors().zip}>
-							<input
-								type="text"
-								id="zip"
-								name="zip"
-								value={props.defaultAddress?.zip ?? ''}
-								placeholder="94558"
-							/>
-						</FormField>
-					</div>
-				</fieldset>
+				</div>
+			</fieldset>
 
-				<fieldset>
-					<legend>Notes</legend>
-					<FormField
-						id="notes"
-						label="Additional Details"
-						error={fieldErrors().notes}
-					>
-						<textarea
-							id="notes"
-							name="notes"
-							placeholder="e.g., Ring doorbell first. Take a few. Take 'em all! Gate code is 1234."
-							rows="3"
+			<fieldset>
+				<legend>Where is it?</legend>
+				<Show when={props.defaultAddress?.address}>
+					<p class="form-prefill-notice" id="address-prefill-notice">
+						Pre-filled from your last listing. Edit if different.
+					</p>
+				</Show>
+				<FormField
+					id="address"
+					label="Street Address"
+					required
+					error={fieldErrors().address}
+					hint="Others will see your neighborhood, but not your exact address."
+				>
+					<input
+						type="text"
+						id="address"
+						name="address"
+						placeholder="123 Main Street"
+						value={props.defaultAddress?.address ?? ''}
+						class={fieldErrors().address ? 'error' : ''}
+						aria-describedby={
+							props.defaultAddress?.address ? 'address-prefill-notice' : undefined
+						}
+						required
+					/>
+				</FormField>
+				<div class="form-row-3">
+					<FormField id="city" label="City" required error={fieldErrors().city}>
+						<input
+							type="text"
+							id="city"
+							name="city"
+							value={props.defaultAddress?.city ?? 'Napa'}
+							class={fieldErrors().city ? 'error' : ''}
+							required
 						/>
 					</FormField>
-				</fieldset>
-
-				<div class="form-actions">
-					<button type="submit" class="submit-button" disabled={isSubmitting()}>
-						{isSubmitting() ? 'Submitting…' : 'List My Fruit'}
-					</button>
-					<Link to="/" class="cancel-button">
-						Cancel
-					</Link>
+					<FormField id="state" label="State" required error={fieldErrors().state}>
+						<input
+							type="text"
+							id="state"
+							name="state"
+							value={props.defaultAddress?.state ?? 'CA'}
+							maxlength="2"
+							class={fieldErrors().state ? 'error' : ''}
+							required
+						/>
+					</FormField>
+					<FormField id="zip" label="ZIP" error={fieldErrors().zip}>
+						<input
+							type="text"
+							id="zip"
+							name="zip"
+							value={props.defaultAddress?.zip ?? ''}
+							placeholder="94558"
+						/>
+					</FormField>
 				</div>
-			</form>
-		</Show>
+			</fieldset>
+
+			<fieldset>
+				<legend>Notes</legend>
+				<FormField
+					id="notes"
+					label="Additional Details"
+					error={fieldErrors().notes}
+				>
+					<textarea
+						id="notes"
+						name="notes"
+						placeholder="e.g., Ring doorbell first. Take a few. Take 'em all! Gate code is 1234."
+						rows="3"
+					/>
+				</FormField>
+			</fieldset>
+
+			<div class="form-actions">
+				<button type="submit" class="submit-button" disabled={isSubmitting()}>
+					{isSubmitting() ? 'Submitting…' : 'List My Fruit'}
+				</button>
+				<Link to="/" class="cancel-button">
+					Cancel
+				</Link>
+			</div>
+		</form>
 	)
 }

@@ -72,33 +72,6 @@
 		color: var(--color-accent);
 	}
 
-	.success-message {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 16px;
-		padding: 16px 20px;
-		background: oklch(from var(--color-secondary) l c h / 0.1);
-		color: var(--color-secondary);
-		border-radius: 8px;
-		margin-bottom: 24px;
-		font-size: 14px;
-	}
-
-	.success-message .dismiss-button {
-		background: none;
-		border: none;
-		color: var(--color-secondary);
-		text-decoration: underline;
-		cursor: pointer;
-		font-size: 14px;
-		padding: 0;
-	}
-
-	.success-message .dismiss-button:hover {
-		text-decoration: none;
-	}
-
 	.empty-state {
 		text-align: center;
 		padding: 60px 20px;

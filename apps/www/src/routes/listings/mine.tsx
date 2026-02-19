@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useRouteContext } from '@tanstack/solid-router'
-import { createSignal, For, Show } from 'solid-js'
+import { For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import SiteHeader from '@/components/SiteHeader'
 import { authMiddleware } from '@/middleware/auth'
@@ -64,10 +64,6 @@ function EmptyState() {
 function MyGardenPage() {
 	const listings = Route.useLoaderData()
 	const context = useRouteContext({ from: '__root__' })
-	const search = Route.useSearch()
-	const [showMarkedMessage, setShowMarkedMessage] = createSignal(
-		(search as () => { marked?: string })()?.marked === 'unavailable'
-	)
 
 	return (
 		<Layout title="My Garden - Pick My Fruit">
@@ -79,20 +75,6 @@ function MyGardenPage() {
 						{(user) => <p>Welcome back, {user().name || 'friend'}!</p>}
 					</Show>
 				</header>
-
-				<Show when={showMarkedMessage()}>
-					<div class="success-message">
-						Listing marked as unavailable. Gleaners won't be able to contact you about
-						this listing.
-						<button
-							type="button"
-							class="dismiss-button"
-							onClick={() => setShowMarkedMessage(false)}
-						>
-							Dismiss
-						</button>
-					</div>
-				</Show>
 
 				<Show when={(listings() ?? []).length > 0} fallback={<EmptyState />}>
 					<div class="listings-grid">

@@ -165,12 +165,6 @@
 		border: 1px solid oklch(from var(--color-primary) l c h / 0.3);
 	}
 
-	.form-message.success {
-		background: oklch(from var(--color-secondary) l c h / 0.1);
-		color: var(--color-secondary);
-		border: 1px solid oklch(from var(--color-secondary) l c h / 0.3);
-	}
-
 	/* Readonly input styling */
 	.form-group input[readonly] {
 		background: oklch(from var(--color-quiet) l c h / 0.1);
