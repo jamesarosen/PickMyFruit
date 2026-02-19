@@ -42,12 +42,6 @@
 
 ---
 
-## HMAC Replay Protection
-
-Add timestamp expiration to HMAC-signed "mark unavailable" URLs. Currently these URLs are replayable forever. Include a timestamp in the HMAC message and reject signatures older than 30 days.
-
----
-
 ## Resolve Dead-End After Creating Listing
 
 After creating a listing, the user has no clear next step. Add navigation (e.g., "View My Listings" link or redirect) so users aren't left on a dead-end page.
@@ -149,8 +143,7 @@ The `hasRecentInquiry` check and `createInquiry` insert are not atomic — concu
 
 ## Inquiry System Hardening (from PR #7 review)
 
-- **HMAC secret fail-fast**: Throw on startup if `HMAC_SECRET` is not set in production instead of falling back to a predictable dev value.
-- **Sentry error handling in new routes**: Replace `console.error` in `email-templates.ts` with `Sentry.captureException`. Add try/catch or `errorMiddleware` to the three new API route handlers (`api/inquiries.ts`, `api/listings.$id.ts`, `api/listings.$id.unavailable.ts`).
+- **Sentry error handling in new routes**: Replace `console.error` in `email-templates.ts` with `Sentry.captureException`. Add try/catch or `errorMiddleware` to the two remaining API route handlers (`api/inquiries.ts`, `api/listings.$id.ts`).
 - **Soft delete in `getListingById`**: Add `isNull(listings.deletedAt)` filter so deleted listings aren't visible via direct URL.
 - **Standardize API error format**: All endpoints should return `{ error: string, code?: string }`. Return structured codes (e.g., `code: 'RATE_LIMITED'`) so the client can match on codes instead of substring-matching error messages.
 - **Email failure UX**: The success message implies owners can "check their listings" to see inquiries, but no inbox exists. Either fail the inquiry if email fails (allowing retry) or add background retry for failed emails.

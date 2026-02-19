@@ -66,6 +66,7 @@ export function buildInquiryEmailHtml(data: InquiryEmailData): string {
   <p style="color: #666; font-size: 14px;">
     All done with this listing?
     <a href="${unavailableUrl}" style="color: #4a7c23;">Mark as unavailable</a>
+    (link expires in 7 days)
   </p>
 </body>
 </html>`
