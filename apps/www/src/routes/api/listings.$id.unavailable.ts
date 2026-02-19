@@ -72,7 +72,8 @@ export const Route = createFileRoute('/api/listings/$id/unavailable')({
 					}
 
 					throw redirect({
-						to: '/listings/mine',
+						to: '/listings/$id',
+						params: { id: String(id) },
 						search: { marked: 'unavailable' },
 					})
 				} catch (error) {
