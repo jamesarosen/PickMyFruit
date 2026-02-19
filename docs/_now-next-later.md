@@ -133,6 +133,7 @@ The `hasRecentInquiry` check and `createInquiry` insert are not atomic — concu
 - **Extract shared handleSignOut**: Sign-out logic is duplicated between `SiteHeader.tsx` and `index.tsx` with slight differences. Extract to a shared utility.
 - **Deduplicate auth nav**: Home page (`index.tsx`) has its own header with auth nav duplicating `SiteHeader` functionality. Consider unifying.
 - **E2E tests for sign-out flow**: No E2E coverage for sign-out behavior — add tests verifying redirect, UI state update, and protected-route rejection after sign-out.
+- **Extract shared banner message strings**: Deduplicate "Listing marked as unavailable…" text shared between `listings.$id.tsx` and `listings/mine.tsx` into a constants module.
 
 ---
 

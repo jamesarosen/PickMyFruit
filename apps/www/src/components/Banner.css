@@ -1,0 +1,41 @@
+@layer components {
+	.banner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		padding: 16px 20px;
+		border-radius: 8px;
+		font-size: 14px;
+	}
+
+	.banner-success {
+		background: oklch(from var(--color-secondary) l c h / 0.1);
+		color: var(--color-secondary);
+	}
+
+	.banner-error {
+		background: oklch(from var(--color-primary) l c h / 0.1);
+		color: var(--color-primary);
+	}
+
+	.banner-warning {
+		background: oklch(from var(--color-accent) l c h / 0.1);
+		color: var(--color-accent);
+	}
+
+	.banner-dismiss {
+		background: none;
+		border: none;
+		color: inherit;
+		text-decoration: underline;
+		cursor: pointer;
+		font-size: 14px;
+		padding: 0;
+		flex-shrink: 0;
+	}
+
+	.banner-dismiss:hover {
+		text-decoration: none;
+	}
+}

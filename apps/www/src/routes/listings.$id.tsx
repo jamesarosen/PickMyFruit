@@ -1,7 +1,9 @@
 import { createFileRoute, Link, useRouteContext } from '@tanstack/solid-router'
 import { createSignal, For, onCleanup, Show } from 'solid-js'
+import { z } from 'zod'
 import Layout from '@/components/Layout'
 import SiteHeader from '@/components/SiteHeader'
+import Banner from '@/components/Banner'
 import InquiryForm from '@/components/InquiryForm'
 import {
 	getStatusClass,
@@ -15,7 +17,13 @@ import type { Listing } from '@/data/schema'
 import type { PublicListing } from '@/data/queries'
 import '@/routes/listings.css'
 
+const listingSearchSchema = z.object({
+	created: z.boolean().optional(),
+	marked: z.enum(['unavailable']).optional(),
+})
+
 export const Route = createFileRoute('/listings/$id')({
+	validateSearch: listingSearchSchema,
 	loader: ({ params }) => getListingForViewer({ data: Number(params.id) }),
 	component: ListingDetailPage,
 })
@@ -119,9 +127,12 @@ function ListingDetailPage() {
 	const data = Route.useLoaderData()
 	const context = useRouteContext({ from: '__root__' })
 	const params = Route.useParams()
+	const search = Route.useSearch()
 
 	const listing = () => data() as Listing | PublicListing | undefined
 	const isOwner = () => context().session?.user?.id === listing()?.userId
+	const justCreated = () => search().created === true
+	const justMarkedUnavailable = () => search().marked === 'unavailable'
 	const canInquire = () => {
 		const l = listing()
 		return l && l.status === ListingStatus.available && !isOwner()
@@ -149,6 +160,17 @@ function ListingDetailPage() {
 				<Layout title={`${l().name} - Pick My Fruit`}>
 					<SiteHeader breadcrumbs={[{ label: l().name }]} />
 					<main class="listing-page">
+						<Show when={justCreated() && isOwner()}>
+							<Banner variant="success" dismissible>
+								Your fruit is listed! Share it with your neighbors.
+							</Banner>
+						</Show>
+						<Show when={justMarkedUnavailable() && isOwner()}>
+							<Banner variant="success" dismissible>
+								Listing marked as unavailable. Gleaners won't be able to contact you
+								about this listing.
+							</Banner>
+						</Show>
 						<article class="listing-detail">
 							<header class="listing-detail-header">
 								<h1>{l().type}</h1>

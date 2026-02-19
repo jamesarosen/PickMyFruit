@@ -5,6 +5,10 @@
 		padding: 40px 20px;
 	}
 
+	.listing-page > .banner {
+		margin-bottom: 20px;
+	}
+
 	.listing-detail {
 		background: var(--color-background);
 		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.2) h);
