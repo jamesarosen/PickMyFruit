@@ -6,9 +6,10 @@ import {
 	user,
 	verification,
 	listings,
+	inquiries,
 	type NewListing,
 } from '../../../src/data/schema'
-import { eq, desc, like } from 'drizzle-orm'
+import { eq, desc, like, inArray } from 'drizzle-orm'
 import { faker } from '@faker-js/faker'
 import { latLngToCell } from 'h3-js'
 
@@ -54,6 +55,13 @@ export async function cleanupTestUser(testUser: TestUser): Promise<void> {
 	const db = getDb()
 	const valuePattern = `%"email":"${testUser.email}"%`
 	await db.delete(verification).where(like(verification.value, valuePattern))
+	// Delete inquiries the user made AND inquiries on the user's listings
+	await db.delete(inquiries).where(eq(inquiries.gleanerId, testUser.id))
+	const ownedListingIds = db
+		.select({ id: listings.id })
+		.from(listings)
+		.where(eq(listings.userId, testUser.id))
+	await db.delete(inquiries).where(inArray(inquiries.listingId, ownedListingIds))
 	await db.delete(listings).where(eq(listings.userId, testUser.id))
 	await db.delete(user).where(eq(user.id, testUser.id))
 }
@@ -134,4 +142,25 @@ export async function createTestListing(
 	}
 	const result = await db.insert(listings).values(data).returning()
 	return result[0]
+}
+
+/** Queries inquiries for a given listing from the test DB. */
+export async function getInquiriesForListing(listingId: number): Promise<
+	Array<{
+		id: number
+		gleanerId: string
+		note: string | null
+		emailSentAt: Date | null
+	}>
+> {
+	const db = getDb()
+	return db
+		.select({
+			id: inquiries.id,
+			gleanerId: inquiries.gleanerId,
+			note: inquiries.note,
+			emailSentAt: inquiries.emailSentAt,
+		})
+		.from(inquiries)
+		.where(eq(inquiries.listingId, listingId))
 }
