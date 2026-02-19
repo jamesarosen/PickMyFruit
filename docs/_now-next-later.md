@@ -13,35 +13,6 @@
 
 # Now
 
-## PR #7: Inquiries Feature (branch: `inquiries`)
-
-- [x] Run migration: `pnpm db:migrate`
-- [x] Set up `HMAC_SECRET` in `.env`
-- [ ] Manual testing per verification checklist in `docs/0002-inquiry-system.md:526-589`
-- [ ] Add E2E tests for inquiry flow
-
-**Size**: Medium (~150 lines)
-**Impact**: HIGH - enables gatherings
-
-**Changes**:
-
-- [x] Add "Contact Owner" button on listing cards
-- [x] Create contact form that sends email to owner
-- [x] Add status update: available → pending → gathered
-- [x] Owner receives email with gleaner contact info
-- [x] Email templates (HTML)
-- [x] Log all contact attempts as Inquiry records
-
-**Why Now**: Completes the core loop. Users can now create listings AND be contacted by gleaners. This enables our first successful gatherings.
-
-**Reasoning**: Manual matching is fine for 10 users, but we need a way to track that someone is claiming produce. A simple "send email to owner" flow with status tracking is sufficient. Avoids complex authentication or messaging systems.
-
-**Alternative Considered**: SMS via Twilio. Email is simpler and doesn't require paid service initially.
-
-**Review Focus**: Email deliverability, privacy protection, spam prevention
-
----
-
 ## Resolve Dead-End After Creating Listing
 
 After creating a listing, the user has no clear next step. Add navigation (e.g., "View My Listings" link or redirect) so users aren't left on a dead-end page.
