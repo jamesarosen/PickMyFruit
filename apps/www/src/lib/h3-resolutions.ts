@@ -26,3 +26,29 @@ export const H3_RESOLUTIONS = {
 	/** Finest resolution allowed for owner-facing views. */
 	MAX_OWNER_AREA: 13,
 } as const
+
+/**
+ * ln(4) / ln(7) ≈ 0.7124 — the zoom-per-H3-resolution ratio.
+ *
+ * Each H3 resolution subdivides cell area by 7; each OSM zoom level
+ * subdivides visible area by 4. The ratio converts between the two scales.
+ */
+const ZOOM_PER_H3_RES = Math.log(4) / Math.log(7)
+
+/**
+ * Offset calibrated so OSM zoom 13 maps to H3 resolution 8, yielding
+ * ≈ 5 H3 cells in a typical map viewport (finer grouping).
+ */
+const ZOOM_OFFSET = 8 - ZOOM_PER_H3_RES * 13
+
+/**
+ * Maps an OSM zoom level to the H3 resolution that keeps roughly 3–20 cells
+ * visible on screen. Clamped to [MIN_AREA, MAX_PUBLIC_AREA].
+ */
+export function zoomToH3Resolution(zoom: number): number {
+	const raw = Math.round(ZOOM_PER_H3_RES * zoom + ZOOM_OFFSET)
+	return Math.max(
+		H3_RESOLUTIONS.MIN_AREA,
+		Math.min(H3_RESOLUTIONS.MAX_PUBLIC_AREA, raw)
+	)
+}

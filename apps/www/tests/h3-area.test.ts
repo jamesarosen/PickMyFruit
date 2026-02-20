@@ -41,21 +41,24 @@ describe('normalizeArea', () => {
 		expect(normalizeArea(res2Cell)).toBeNull()
 	})
 
-	it.each([
-		['resolution 8', res8Cell],
-		['resolution 9', res9Cell],
-		['resolution 13', res13Cell],
-	])('clamps %s to home-grouping resolution', (_label, fineCell) => {
-		const result = normalizeArea(fineCell)
-		expect(result).toBe(cellToParent(fineCell, H3_RESOLUTIONS.HOME_GROUPING))
+	it('passes through resolution-8 cells unchanged', () => {
+		expect(normalizeArea(res8Cell)).toBe(res8Cell)
 	})
 
-	it('never returns a cell finer than home-grouping resolution', () => {
-		for (let res = H3_RESOLUTIONS.HOME_GROUPING + 1; res <= 15; res++) {
+	it.each([
+		['resolution 9', res9Cell],
+		['resolution 13', res13Cell],
+	])('clamps %s to max public area resolution', (_label, fineCell) => {
+		const result = normalizeArea(fineCell)
+		expect(result).toBe(cellToParent(fineCell, H3_RESOLUTIONS.MAX_PUBLIC_AREA))
+	})
+
+	it('never returns a cell finer than max public area resolution', () => {
+		for (let res = H3_RESOLUTIONS.MAX_PUBLIC_AREA + 1; res <= 15; res++) {
 			const cell = latLngToCell(NAPA.lat, NAPA.lng, res)
 			const result = normalizeArea(cell)
 			expect(result).not.toBe(cell)
-			expect(result).toBe(cellToParent(cell, H3_RESOLUTIONS.HOME_GROUPING))
+			expect(result).toBe(cellToParent(cell, H3_RESOLUTIONS.MAX_PUBLIC_AREA))
 		}
 	})
 })

@@ -1,7 +1,7 @@
 import { onMount, onCleanup, createEffect, on } from 'solid-js'
 import type { PublicListing } from '@/data/queries'
 import { cellToLatLng, cellToBoundary, cellToParent } from 'h3-js'
-import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
+import { H3_RESOLUTIONS, zoomToH3Resolution } from '@/lib/h3-resolutions'
 import { Sentry } from '@/lib/sentry'
 import '@/components/ListingsMap.css'
 
@@ -19,14 +19,14 @@ const COLOR_LABEL = '#ffffff'
 const COLOR_REGION_FILL = '#10b981' // --color-fresh-green
 const COLOR_REGION_STROKE = '#10b981'
 
-/** Groups public listings by their home-grouping H3 parent cell. */
-export function groupByH3(listings: PublicListing[]): ListingGroup[] {
+/** Groups public listings by their H3 parent cell at the given resolution. */
+export function groupByH3(
+	listings: PublicListing[],
+	resolution: number = H3_RESOLUTIONS.HOME_GROUPING
+): ListingGroup[] {
 	const groups = new Map<string, PublicListing[]>()
 	for (const listing of listings) {
-		const key = cellToParent(
-			listing.approximateH3Index,
-			H3_RESOLUTIONS.HOME_GROUPING
-		)
+		const key = cellToParent(listing.approximateH3Index, resolution)
 		const arr = groups.get(key)
 		if (arr) {
 			arr.push(listing)
@@ -91,25 +91,44 @@ export default function ListingsMap(props: Props) {
 			)
 			map.addControl(new maplibregl.NavigationControl({ showCompass: false }))
 
+			let currentRes: number = H3_RESOLUTIONS.HOME_GROUPING
+
 			map.on('load', () => {
 				addGroupLayers(groups)
 				addRegionLayers()
 				layersReady = true
-				// Show region if selectedH3 was set before the map loaded
+
+				// Adjust resolution to match the map's initial zoom
+				if (!map) return
+				const initialRes = zoomToH3Resolution(map.getZoom())
+				if (initialRes !== currentRes) {
+					currentRes = initialRes
+					updateGroupSource(groupByH3(props.listings, currentRes))
+				}
+
 				if (props.selectedH3) {
 					updateRegion(props.selectedH3)
 					updateHighlight()
 				}
+			})
+
+			map.on('zoomend', () => {
+				if (!mounted || !layersReady || !map) return
+				const newRes = zoomToH3Resolution(map.getZoom())
+				if (newRes === currentRes) return
+				currentRes = newRes
+				updateGroupSource(groupByH3(props.listings, currentRes))
+				// Clear selection — the old cell may not exist at the new resolution
+				props.onGroupSelect?.(null)
 			})
 		} catch (err) {
 			Sentry.captureException(err)
 		}
 	})
 
-	function addGroupLayers(groups: ListingGroup[]) {
-		if (!map) return
-
-		const geojson: GeoJSON.FeatureCollection = {
+	/** Converts listing groups to a GeoJSON FeatureCollection for MapLibre. */
+	function groupsToGeoJSON(groups: ListingGroup[]): GeoJSON.FeatureCollection {
+		return {
 			type: 'FeatureCollection',
 			features: groups.map((g) => ({
 				type: 'Feature',
@@ -121,8 +140,25 @@ export default function ListingsMap(props: Props) {
 				},
 			})),
 		}
+	}
 
-		map.addSource('listing-groups', { type: 'geojson', data: geojson })
+	/** Replaces the listing-groups source data with new groups. */
+	function updateGroupSource(groups: ListingGroup[]) {
+		if (!map || !layersReady) return
+		const source = map.getSource('listing-groups') as
+			| import('maplibre-gl').GeoJSONSource
+			| undefined
+		if (!source) return
+		source.setData(groupsToGeoJSON(groups))
+	}
+
+	function addGroupLayers(groups: ListingGroup[]) {
+		if (!map) return
+
+		map.addSource('listing-groups', {
+			type: 'geojson',
+			data: groupsToGeoJSON(groups),
+		})
 
 		map.addLayer({
 			id: 'listing-groups-circle',
