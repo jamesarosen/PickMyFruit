@@ -18,8 +18,8 @@
 # Next
 
 - Upload cover image to listing. Show image on home page tiles.
-- Home page map: automatically adjust H3 grouping resolution as the user zooms.
 - silence email logging in E2E tests
+- E2E test for dynamic H3 zoom grouping: programmatically zoom the MapLibre map and verify that listing group markers update. Requires WebGL in headless Chromium and a strategy for map tile loading.
 
 ## Unit Tests for Security-Critical Modules
 
@@ -140,6 +140,8 @@ The `hasRecentInquiry` check and `createInquiry` insert are not atomic — concu
 - **Add map loading states**: Show a placeholder/skeleton while MapLibre initializes asynchronously in both map components.
 - **Map accessibility**: Add keyboard-accessible group filter (buttons alongside map), screen reader announcements for filter changes (`aria-live`), and non-color selection indicators (size/stroke) for color-blind users.
 - **Map interaction hints**: Add instructional text ("Click a marker to filter by area"), hover tooltips on markers, and descriptive filter status ("Showing 3 of 12 listings").
+- **Preserve area selection across zoom changes**: When the H3 grouping resolution changes on zoom, coarsen or refine the selected area to match the new resolution instead of clearing it. Use `cellToParent` when zooming out or descendant matching when zooming in.
+- **Lift map resolution state to route layer**: Move H3 resolution tracking out of `ListingsMap` into the route component so the map is a pure presentation component and the route coordinates filtering and grouping consistently.
 - **Server-side spatial filtering**: `listingMatchesArea` currently runs client-side on the 12 listings returned by `getNearbyListings`. This has two scaling limits: (1) `getNearbyListings` does a full table scan with `ORDER BY distance` — no spatial index, so it degrades at ~1K+ listings; (2) coarse area filters produce false negatives because matching listings may exist in the DB but fall outside the top-12 by distance. Fix: add a precomputed `h3_res7` column (or use `cellToParent` in a generated column), index it, and filter `WHERE h3_res7 = $area` (or `WHERE h3_parent(h3_res7, $areaRes) = $area` for coarser areas) server-side. **Trigger**: OTel shows `getNearbyListings` p95 > 200ms, or expansion beyond one city makes the distance-only ordering insufficient.
 
 ---

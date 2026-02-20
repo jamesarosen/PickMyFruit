@@ -23,11 +23,8 @@ test.describe('Home page area filter', () => {
 		await expect(card).toBeVisible()
 	})
 
-	test('fine resolution (> 7) is clamped and does not leak location data', async ({
-		page,
-		testListing,
-	}) => {
-		// 8828300531fffff is resolution 8 — should be clamped to resolution 7
+	test('resolution 8 area matches listings', async ({ page, testListing }) => {
+		// 8828300531fffff is resolution 8 (MAX_PUBLIC_AREA) — passes through unchanged
 		await page.goto('/?area=8828300531fffff')
 		const card = page.locator(`a[href="/listings/${testListing.id}"]`)
 		await expect(card).toBeVisible()

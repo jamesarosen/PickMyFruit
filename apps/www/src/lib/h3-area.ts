@@ -2,8 +2,8 @@ import { getResolution, cellToParent, isValidCell } from 'h3-js'
 import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
 
 /**
- * Normalizes an area H3 index: clamps finer resolutions to the home-page
- * grouping resolution and rejects cells coarser than the minimum area.
+ * Normalizes an area H3 index: clamps finer resolutions to the maximum public
+ * area resolution and rejects cells coarser than the minimum area.
  * Returns null for invalid indices.
  */
 export function normalizeArea(area: string | null): string | null {
@@ -11,8 +11,8 @@ export function normalizeArea(area: string | null): string | null {
 	if (!isValidCell(area)) return null
 	const res = getResolution(area)
 	if (res < H3_RESOLUTIONS.MIN_AREA) return null
-	if (res > H3_RESOLUTIONS.HOME_GROUPING) {
-		return cellToParent(area, H3_RESOLUTIONS.HOME_GROUPING)
+	if (res > H3_RESOLUTIONS.MAX_PUBLIC_AREA) {
+		return cellToParent(area, H3_RESOLUTIONS.MAX_PUBLIC_AREA)
 	}
 	return area
 }
