@@ -1,8 +1,6 @@
 import { cellToParent } from 'h3-js'
 import type { Listing } from './schema'
-
-// ~1.2km hexagons — neighborhood-level, prevents identifying the exact property
-const PUBLIC_H3_RESOLUTION = 7
+import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
 
 /** Public listing fields safe to expose to any visitor. */
 export type PublicListing = Omit<
@@ -17,7 +15,7 @@ export type PublicListing = Omit<
 > & { approximateH3Index: string }
 
 /**
- * Strips sensitive location fields and coarsens h3Index to ~1.2km precision.
+ * Strips sensitive location fields and coarsens h3Index to neighborhood precision.
  * Returns null if the h3Index is invalid so callers can skip bad rows.
  */
 export function toPublicListing(
@@ -36,7 +34,7 @@ export function toPublicListing(
 	} = listing
 	let approximateH3Index: string
 	try {
-		approximateH3Index = cellToParent(h3Index, PUBLIC_H3_RESOLUTION)
+		approximateH3Index = cellToParent(h3Index, H3_RESOLUTIONS.PUBLIC_DETAIL)
 	} catch (error) {
 		onError?.(listing.id, error)
 		return null

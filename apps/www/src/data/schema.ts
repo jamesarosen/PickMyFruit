@@ -121,7 +121,7 @@ export const listings = sqliteTable(
 		zip: text('zip'),
 		lat: real('lat').notNull(),
 		lng: real('lng').notNull(),
-		h3Index: text('h3_index').notNull(), // H3 index at resolution 13 (~3m precision)
+		h3Index: text('h3_index').notNull(), // H3 index at H3_RES_STORAGE (resolution 13)
 
 		// Owner — Better Auth user reference
 		userId: text('user_id')

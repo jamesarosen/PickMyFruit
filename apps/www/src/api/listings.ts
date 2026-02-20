@@ -43,6 +43,23 @@ export const getAvailableListings = createServerFn({ method: 'GET' })
 		return query(limit)
 	})
 
+const nearbyListingsSchema = z.object({
+	lat: z.number(),
+	lng: z.number(),
+	limit: z.number().int().positive().max(50).default(12),
+})
+
+/** Fetches available listings ordered by proximity to a point. */
+export const getNearbyListings = createServerFn({ method: 'GET' })
+	.middleware([errorMiddleware])
+	.inputValidator((input: { lat: number; lng: number; limit?: number }) =>
+		nearbyListingsSchema.parse(input)
+	)
+	.handler(async ({ data }) => {
+		const { getNearbyListings: query } = await import('@/data/queries')
+		return query(data.lat, data.lng, data.limit)
+	})
+
 const getListingByIdValidator = z.coerce.number().int().positive()
 
 /** Fetches a single listing by ID, omitting sensitive fields. Excludes private listings. */
