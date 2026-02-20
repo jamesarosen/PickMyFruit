@@ -7,6 +7,7 @@
 	"description": "Pick My Fruit - Workspace",
 	"author": "James A Rosen, Pick My Fruit",
 	"scripts": {
+		"clean": "pnpm -r --if-present clean",
 		"build": "pnpm -r build",
 		"format": "pnpm -r format",
 		"format:check": "pnpm -r format:check",
