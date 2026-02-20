@@ -72,12 +72,12 @@ describe('toPublicListing', () => {
 		expect(Object.keys(result).sort()).toEqual(EXPECTED_PUBLIC_KEYS)
 	})
 
-	it('coarsens h3Index from resolution 13 to 7', () => {
+	it('coarsens h3Index from resolution 13 to 8', () => {
 		const listing = makeListing()
 		const result = toPublicListing(listing)!
 
-		expect(getResolution(result.approximateH3Index)).toBe(7)
-		expect(result.approximateH3Index).toBe(cellToParent(listing.h3Index, 7))
+		expect(getResolution(result.approximateH3Index)).toBe(8)
+		expect(result.approximateH3Index).toBe(cellToParent(listing.h3Index, 8))
 	})
 
 	it('preserves safe fields unchanged', () => {

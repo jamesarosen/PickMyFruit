@@ -5,6 +5,7 @@ import Layout from '@/components/Layout'
 import SiteHeader from '@/components/SiteHeader'
 import Banner from '@/components/Banner'
 import InquiryForm from '@/components/InquiryForm'
+import ListingMap from '@/components/ListingMap'
 import {
 	getStatusClass,
 	VISIBILITY_OPTIONS,
@@ -223,6 +224,35 @@ function ListingDetailPage() {
 										<span class="info-label">Notes</span>
 										<span class="info-value">{l().notes}</span>
 									</div>
+								</Show>
+							</div>
+
+							<div class="listing-map-section">
+								<Show
+									when={isOwner() && 'lat' in l() ? (l() as Listing) : undefined}
+									fallback={
+										<Show
+											when={
+												'approximateH3Index' in l() ? (l() as PublicListing) : undefined
+											}
+										>
+											{(pub) => (
+												<ListingMap
+													mode="public"
+													approximateH3Index={pub().approximateH3Index}
+												/>
+											)}
+										</Show>
+									}
+								>
+									{(owner) => (
+										<ListingMap
+											mode="owner"
+											lat={owner().lat}
+											lng={owner().lng}
+											h3Index={owner().h3Index}
+										/>
+									)}
 								</Show>
 							</div>
 

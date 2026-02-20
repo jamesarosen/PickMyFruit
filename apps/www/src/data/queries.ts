@@ -9,7 +9,7 @@ import {
 	type NewInquiry,
 	type AddressFields,
 } from './schema'
-import { eq, desc, and, ne, isNull, gt } from 'drizzle-orm'
+import { eq, desc, and, ne, isNull, gt, sql } from 'drizzle-orm'
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 import { Sentry } from '@/lib/sentry'
 import { toPublicListing, type PublicListing } from './public-listing'
@@ -30,6 +30,28 @@ export async function getAvailableListings(
 		.from(listings)
 		.where(eq(listings.status, ListingStatus.available))
 		.orderBy(desc(listings.createdAt))
+		.limit(limit)
+	return rows.flatMap((row) => {
+		const pub = toPublicListing(row, reportH3Error)
+		return pub ? [pub] : []
+	})
+}
+
+/** Fetches available listings ordered by proximity to a point. */
+export async function getNearbyListings(
+	lat: number,
+	lng: number,
+	limit: number = 12
+): Promise<PublicListing[]> {
+	const rows = await db
+		.select()
+		.from(listings)
+		.where(
+			and(eq(listings.status, ListingStatus.available), isNull(listings.deletedAt))
+		)
+		.orderBy(
+			sql`(${listings.lat} - ${lat}) * (${listings.lat} - ${lat}) + (${listings.lng} - ${lng}) * (${listings.lng} - ${lng})`
+		)
 		.limit(limit)
 	return rows.flatMap((row) => {
 		const pub = toPublicListing(row, reportH3Error)
