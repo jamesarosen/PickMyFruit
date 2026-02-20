@@ -40,6 +40,8 @@
 		"better-auth": "^1.4.18",
 		"drizzle-orm": "^0.45.1",
 		"h3-js": "^4.4.0",
+		"lucide-solid": "^0.564.0",
+		"maplibre-gl": "^5.18.0",
 		"resend": "^6.9.2",
 		"solid-js": "^1.9.11",
 		"zod": "^4.3.6"

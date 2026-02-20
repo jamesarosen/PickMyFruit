@@ -93,6 +93,10 @@
 		line-height: 1.5;
 	}
 
+	.listing-map-section {
+		margin-top: 24px;
+	}
+
 	.listing-unavailable,
 	.listing-owner-notice {
 		margin-top: 32px;

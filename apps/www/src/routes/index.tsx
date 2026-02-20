@@ -1,27 +1,63 @@
 import {
 	createFileRoute,
 	Link,
+	useNavigate,
 	useRouteContext,
 	useRouter,
 } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
+import { z } from 'zod'
 import Layout from '@/components/Layout'
-import { getAvailableListings } from '@/api/listings'
+import ListingsMap from '@/components/ListingsMap'
+import { getNearbyListings } from '@/api/listings'
+import { normalizeArea, listingMatchesArea } from '@/lib/h3-area'
 import { performSignOut } from '@/lib/auth-client'
 import '@/routes/index.css'
 
+// Napa City Hall — will be replaced with geolocation later
+const DEFAULT_CENTER = { lat: 38.2966234, lng: -122.2893688 }
+
+const homeSearchSchema = z.object({
+	area: z.string().optional(),
+})
+
 export const Route = createFileRoute('/')({
-	loader: () => getAvailableListings({ data: 3 }),
+	validateSearch: homeSearchSchema,
+	loader: () =>
+		getNearbyListings({
+			data: { lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng },
+		}),
 	component: HomePage,
 })
 
 function HomePage() {
 	const listings = Route.useLoaderData()
 	const router = useRouter()
+	const navigate = useNavigate()
 	const context = useRouteContext({ from: '__root__' })
+	const search = Route.useSearch()
+
+	const selectedH3 = () => normalizeArea(search().area ?? null)
+
+	function setSelectedH3(h3: string | null) {
+		navigate({
+			to: '/',
+			search: h3 ? { area: h3 } : {},
+			replace: true,
+			resetScroll: false,
+		})
+	}
 
 	async function handleSignOut() {
 		await performSignOut(router)
+	}
+
+	const visibleListings = () => {
+		const area = selectedH3()
+		if (!area) return listings()
+		return listings().filter((l) =>
+			listingMatchesArea(l.approximateH3Index, area)
+		)
 	}
 
 	return (
@@ -99,8 +135,25 @@ function HomePage() {
 							when={listings().length > 0}
 							fallback={<p>No listings available right now.</p>}
 						>
+							<ListingsMap
+								listings={listings()}
+								onGroupSelect={setSelectedH3}
+								selectedH3={selectedH3()}
+							/>
+							<Show when={selectedH3()}>
+								<button
+									type="button"
+									class="clear-filter"
+									onClick={() => setSelectedH3(null)}
+								>
+									Show all listings
+								</button>
+							</Show>
+							<Show when={selectedH3() && visibleListings().length === 0}>
+								<p class="no-filtered-listings">No listings in this area.</p>
+							</Show>
 							<div class="listings-grid">
-								<For each={listings()}>
+								<For each={visibleListings()}>
 									{(listing) => (
 										<Link
 											to="/listings/$id"

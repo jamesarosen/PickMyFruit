@@ -13,20 +13,23 @@
 
 # Now
 
-## Resolve Dead-End After Creating Listing
-
-After creating a listing, the user has no clear next step. Add navigation (e.g., "View My Listings" link or redirect) so users aren't left on a dead-end page.
-
 ---
 
 # Next
 
+- Upload cover image to listing. Show image on home page tiles.
+- Home page map: automatically adjust H3 grouping resolution as the user zooms.
+- silence email logging in E2E tests
+
 ## Unit Tests for Security-Critical Modules
 
-- Unit tests for `hmac.ts` (sign/verify roundtrip, tamper rejection)
 - Unit tests for `email-templates.ts` (HTML escaping, subject line generation)
-- Unit tests for `toPublicListing` (field stripping, h3 coarsening, key snapshot)
-- E2E tests for inquiry flow
+
+---
+
+## Add OpenTelemetry and Instrument Home Page Query
+
+Add OpenTelemetry tracing to the server. Specifically instrument `getNearbyListings` in `data/queries.ts` with a span recording query duration, listing count, and the caller's lat/lng. This provides the p95 latency signal needed to decide when to move area filtering to the DB (see Later: "Server-side spatial filtering").
 
 ---
 
@@ -133,7 +136,11 @@ The `hasRecentInquiry` check and `createInquiry` insert are not atomic — concu
 - **Extract shared handleSignOut**: Sign-out logic is duplicated between `SiteHeader.tsx` and `index.tsx` with slight differences. Extract to a shared utility.
 - **Deduplicate auth nav**: Home page (`index.tsx`) has its own header with auth nav duplicating `SiteHeader` functionality. Consider unifying.
 - **E2E tests for sign-out flow**: No E2E coverage for sign-out behavior — add tests verifying redirect, UI state update, and protected-route rejection after sign-out.
-- **Extract shared banner message strings**: Deduplicate "Listing marked as unavailable…" text shared between `listings.$id.tsx` and `listings/mine.tsx` into a constants module.
+- **Extract shared map initialization**: Deduplicate MapLibre boilerplate (tile URL, attribution, navigation controls) shared between `ListingsMap.tsx` and `ListingMap.tsx` into a helper.
+- **Add map loading states**: Show a placeholder/skeleton while MapLibre initializes asynchronously in both map components.
+- **Map accessibility**: Add keyboard-accessible group filter (buttons alongside map), screen reader announcements for filter changes (`aria-live`), and non-color selection indicators (size/stroke) for color-blind users.
+- **Map interaction hints**: Add instructional text ("Click a marker to filter by area"), hover tooltips on markers, and descriptive filter status ("Showing 3 of 12 listings").
+- **Server-side spatial filtering**: `listingMatchesArea` currently runs client-side on the 12 listings returned by `getNearbyListings`. This has two scaling limits: (1) `getNearbyListings` does a full table scan with `ORDER BY distance` — no spatial index, so it degrades at ~1K+ listings; (2) coarse area filters produce false negatives because matching listings may exist in the DB but fall outside the top-12 by distance. Fix: add a precomputed `h3_res7` column (or use `cellToParent` in a generated column), index it, and filter `WHERE h3_res7 = $area` (or `WHERE h3_parent(h3_res7, $areaRes) = $area` for coarser areas) server-side. **Trigger**: OTel shows `getNearbyListings` p95 > 200ms, or expansion beyond one city makes the distance-only ordering insufficient.
 
 ---
 
@@ -154,51 +161,16 @@ These features might be valuable later, but they don't help us reach 10 beta use
 
 # Completed
 
-## ✅ PR #1: SSR with SQLite Persistence
-
-**Size**: Small (~100 lines) | **Impact**: HIGH - enables read+write app architecture
-
-Created Dockerfile for Node.js + SQLite deployment, configured Vite for SSR, added health check endpoint.
-
----
-
-## ✅ PR #2: Deploy to Fly.io with SQLite Persistence
-
-**Size**: Small (~100 lines) | **Impact**: HIGH - enables production feedback loop
-
-Added fly.toml configuration with persistent volume for SQLite, updated package.json with production build scripts.
-
----
-
-## ✅ PR #3: Connect Real SQLite Database via SSR API Routes
-
-**Size**: Small (~80 lines) | **Impact**: HIGH - enables data persistence
-
-Added Vinxi/Solid-Start API routes, wired up schema.ts to real database queries, replaced mock data with real DB calls, added database migrations script.
-
----
-
-## ✅ PR #4: Add CI/CD Pipeline with GitHub Actions
-
-**Size**: Small (~60 lines) | **Impact**: HIGH - enables rapid iteration
-
-Expanded GitHub Actions workflow with deployment step to Fly.io on main branch push.
-
----
-
-## ✅ PR #5: Add Listing Form with Validation
-
-**Size**: Medium (~200 lines) | **Impact**: CRITICAL - enables user-generated content
-
-Created `/listings/new` route, built form with Zod validation, added geocoding via Nominatim API, generates H3 index from coordinates.
-
----
-
-## ✅ PR #6: Add Basic Authentication with Better Auth
-
-**Size**: Medium (~180 lines) | **Impact**: MEDIUM - improves trust and accountability
-
-Configured Better Auth with magic link authentication via Resend, linked listings to authenticated users, added "My Listings" page.
+- PR #1: SSR with SQLite Persistence. Created Dockerfile for Node.js + SQLite deployment, configured Vite for SSR, added health check endpoint.
+- PR #2: Deploy to Fly.io with SQLite Persistence. Added fly.toml configuration with persistent volume for SQLite, updated package.json with production build scripts.
+- PR #3: Connect Real SQLite Database via SSR API Routes. Added Vinxi/Solid-Start API routes, wired up schema.ts to real database queries, replaced mock data with real DB calls, added database migrations script.
+- PR #4: Add CI/CD Pipeline with GitHub Actions. Expanded GitHub Actions workflow with deployment step to Fly.io on main branch push.
+- PR #5: Add Listing Form with Validation. Created `/listings/new` route, built form with Zod validation, added geocoding via Nominatim API, generates H3 index from coordinates.
+- PR #6: Add Basic Authentication with Better Auth. Configured Better Auth with magic link authentication via Resend, linked listings to authenticated users, added "My Listings" page.
+- E2E tests for inquiry flow
+- Unit tests for `hmac.ts` (sign/verify roundtrip, tamper rejection)
+- Unit tests for `toPublicListing` (field stripping, h3 coarsening, key snapshot)
+- Resolve Dead-End After Creating Listing. After creating a listing, the user has no clear next step. Add navigation (e.g., "View My Listings" link or redirect) so users aren't left on a dead-end page.
 
 ---
 

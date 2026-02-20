@@ -246,6 +246,30 @@
 		text-align: center;
 	}
 
+	.clear-filter {
+		display: block;
+		margin: 16px auto 0;
+		padding: 6px 16px;
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--color-primary);
+		background: none;
+		border: 1px solid var(--color-primary);
+		border-radius: 6px;
+		cursor: pointer;
+		transition: background-color 0.15s;
+	}
+
+	.clear-filter:hover {
+		background: oklch(from var(--color-primary) l c h / 0.08);
+	}
+
+	.no-filtered-listings {
+		text-align: center;
+		color: var(--color-quiet);
+		margin: 24px 0 0;
+	}
+
 	.listings-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

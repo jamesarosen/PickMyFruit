@@ -1,7 +1,5 @@
 import { latLngToCell } from 'h3-js'
-
-// H3 resolution 13 gives ~3m edge length for tree-level precision
-const H3_RESOLUTION = 13
+import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
 
 export interface GeocodingResult {
 	lat: number
@@ -62,8 +60,7 @@ export async function geocodeAddress(
 	const lat = parseFloat(result.lat)
 	const lng = parseFloat(result.lon)
 
-	// Generate H3 index at tree-level precision
-	const h3Index = latLngToCell(lat, lng, H3_RESOLUTION)
+	const h3Index = latLngToCell(lat, lng, H3_RESOLUTIONS.STORAGE)
 
 	return {
 		lat,

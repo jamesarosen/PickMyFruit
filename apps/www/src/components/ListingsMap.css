@@ -1,0 +1,16 @@
+@layer components {
+	.listings-map {
+		width: 100%;
+		height: 350px;
+		border-radius: 12px;
+		overflow: hidden;
+		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.2) h);
+	}
+
+	@media (max-width: 768px) {
+		.listings-map {
+			height: 250px;
+			border-radius: 8px;
+		}
+	}
+}
