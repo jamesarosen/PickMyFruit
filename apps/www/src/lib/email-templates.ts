@@ -1,4 +1,6 @@
 import { buildUnavailableUrl } from './hmac'
+import { Sentry } from './sentry'
+import { serverEnv } from './env.server'
 
 interface InquiryEmailData {
 	ownerName: string
@@ -84,29 +86,28 @@ function escapeHtml(text: string): string {
 export async function sendInquiryEmail(
 	data: InquiryEmailData
 ): Promise<boolean> {
-	const resendApiKey = process.env.RESEND_API_KEY
-
-	if (!resendApiKey) {
-		// Development mode: log to console
-		console.log('\n========================================')
-		console.log('INQUIRY EMAIL (dev mode - no RESEND_API_KEY)')
-		console.log('========================================')
-		console.log(`To: ${data.ownerEmail}`)
-		console.log(`Reply-To: ${data.gleanerEmail}`)
-		console.log(`Subject: ${buildInquiryEmailSubject(data)}`)
-		console.log('----------------------------------------')
-		console.log(buildInquiryEmailHtml(data))
-		console.log('========================================\n')
+	if (!serverEnv.RESEND_API_KEY) {
+		if (serverEnv.LOG_DEV_EMAILS) {
+			console.log('\n========================================')
+			console.log('INQUIRY EMAIL (dev mode - no RESEND_API_KEY)')
+			console.log('========================================')
+			console.log(`To: ${data.ownerEmail}`)
+			console.log(`Reply-To: ${data.gleanerEmail}`)
+			console.log(`Subject: ${buildInquiryEmailSubject(data)}`)
+			console.log('----------------------------------------')
+			console.log(buildInquiryEmailHtml(data))
+			console.log('========================================\n')
+		}
 		return true
 	}
 
 	try {
 		const { Resend } = await import('resend')
-		const resend = new Resend(resendApiKey)
+		const resend = new Resend(serverEnv.RESEND_API_KEY)
 
 		await resend.emails.send({
 			from:
-				process.env.EMAIL_FROM || 'Pick My Fruit <notifications@pickmyfruit.com>',
+				serverEnv.EMAIL_FROM || 'Pick My Fruit <notifications@pickmyfruit.com>',
 			to: data.ownerEmail,
 			replyTo: data.gleanerEmail,
 			subject: buildInquiryEmailSubject(data),
@@ -115,7 +116,7 @@ export async function sendInquiryEmail(
 
 		return true
 	} catch (error) {
-		console.error('Failed to send inquiry email:', error)
+		Sentry.captureException(error)
 		return false
 	}
 }

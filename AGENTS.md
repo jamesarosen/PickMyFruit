@@ -79,6 +79,7 @@ We use a monorepo structure
 ## Important Notes
 
 - Validate input at system boundaries with Zod
+- Use Vite's `.env.[mode]` files (`.env.development`, `.env.test`) for environment-specific defaults rather than conditional logic in Zod schemas. Validation schemas should be uniform across environments — always require what production requires, and let configuration files supply non-production values.
 - HTML: write semantically-meaningful and accessible markup
 - Use SQLite for the data layer
 - Use the ORM for simple operations; use SQL and prepared statements for complex ones

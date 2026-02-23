@@ -3,8 +3,8 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { magicLink } from 'better-auth/plugins'
 import { tanstackStartCookies } from 'better-auth/tanstack-start/solid'
 import { db } from '../data/db'
+import { serverEnv } from './env.server'
 
-// Conditionally import Resend only if API key is available
 const sendMagicLinkEmail = async ({
 	email,
 	url,
@@ -14,11 +14,8 @@ const sendMagicLinkEmail = async ({
 	url: string
 	token: string
 }) => {
-	const resendApiKey = process.env.RESEND_API_KEY
-
-	if (!resendApiKey) {
-		// Development mode: log to console (can be disabled via AUTH_LOG_MAGIC_LINK=false)
-		if (process.env.AUTH_LOG_MAGIC_LINK !== 'false') {
+	if (!serverEnv.RESEND_API_KEY) {
+		if (serverEnv.LOG_DEV_EMAILS) {
 			console.log('\n========================================')
 			console.log('MAGIC LINK (dev mode - no RESEND_API_KEY)')
 			console.log('========================================')
@@ -30,12 +27,11 @@ const sendMagicLinkEmail = async ({
 		return
 	}
 
-	// Production mode: send via Resend
 	const { Resend } = await import('resend')
-	const resend = new Resend(resendApiKey)
+	const resend = new Resend(serverEnv.RESEND_API_KEY)
 
 	await resend.emails.send({
-		from: process.env.EMAIL_FROM || 'Pick My Fruit <noreply@pickmyfruit.com>',
+		from: serverEnv.EMAIL_FROM || 'Pick My Fruit <noreply@pickmyfruit.com>',
 		to: email,
 		subject: 'Sign in to Pick My Fruit',
 		html: `
@@ -56,23 +52,12 @@ const sendMagicLinkEmail = async ({
 	})
 }
 
-// Development fallback for BETTER_AUTH_SECRET
-const secret = process.env.BETTER_AUTH_SECRET
-if (!secret && process.env.NODE_ENV === 'production') {
-	throw new Error('BETTER_AUTH_SECRET must be set in production')
-}
-if (!secret) {
-	console.warn(
-		'[auth] BETTER_AUTH_SECRET not set, using insecure development default'
-	)
-}
-
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
 		provider: 'sqlite',
 	}),
-	baseURL: process.env.BETTER_AUTH_URL,
-	secret: secret || 'dev-secret-do-not-use-in-production-min32chars',
+	baseURL: serverEnv.BETTER_AUTH_URL,
+	secret: serverEnv.BETTER_AUTH_SECRET,
 	plugins: [
 		magicLink({
 			sendMagicLink: sendMagicLinkEmail,

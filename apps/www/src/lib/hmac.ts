@@ -1,13 +1,5 @@
 import { createHmac, timingSafeEqual, randomUUID } from 'crypto'
-
-const secret = process.env.HMAC_SECRET
-if (!secret && process.env.NODE_ENV === 'production') {
-	throw new Error('HMAC_SECRET must be set in production')
-}
-if (!secret) {
-	console.warn('[hmac] HMAC_SECRET not set, using insecure development default')
-}
-const HMAC_SECRET = secret || 'dev-secret-change-in-prod'
+import { serverEnv } from './env.server'
 
 /** Signed URLs expire after 7 days. */
 export const SIGNATURE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
@@ -21,7 +13,9 @@ export function signUrl(listingId: number): {
 	const nonce = randomUUID()
 	const ts = Date.now()
 	const message = `${listingId}:${nonce}:${ts}`
-	const sig = createHmac('sha256', HMAC_SECRET).update(message).digest('hex')
+	const sig = createHmac('sha256', serverEnv.HMAC_SECRET)
+		.update(message)
+		.digest('hex')
 	return { nonce, ts, sig }
 }
 
@@ -38,7 +32,7 @@ export function verifySignature(
 		return false
 	}
 	const message = `${listingId}:${nonce}:${ts}`
-	const expected = createHmac('sha256', HMAC_SECRET)
+	const expected = createHmac('sha256', serverEnv.HMAC_SECRET)
 		.update(message)
 		.digest('hex')
 	if (sig.length !== expected.length) {
