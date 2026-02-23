@@ -1,7 +1,13 @@
 import { faker } from '@faker-js/faker'
 import { latLngToCell } from 'h3-js'
 import { db } from './db'
-import { listings, user, type NewListing, type NewUser } from './schema'
+import {
+	inquiries,
+	listings,
+	user,
+	type NewListing,
+	type NewUser,
+} from './schema'
 import { ListingStatus } from '@/lib/validation'
 
 // Napa Valley approximate bounds
@@ -139,7 +145,8 @@ function generateListing(userId: string): NewListing {
 async function seed() {
 	console.log('🌱 Seeding database...')
 
-	// Clear listings only — preserve existing auth users
+	// Clear data in FK-safe order — preserve existing auth users
+	await db.delete(inquiries)
 	await db.delete(listings)
 
 	// Insert seed users (skip any that conflict with existing emails)

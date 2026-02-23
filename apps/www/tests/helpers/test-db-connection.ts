@@ -17,8 +17,10 @@ export function toLibsqlUrl(dbPath: string): string {
 }
 
 /** Creates a Drizzle database connection for testing. */
-export function createTestDbConnection(dbPath: string) {
+export async function createTestDbConnection(dbPath: string) {
 	const client = createClient({ url: toLibsqlUrl(dbPath) })
+	// SQLite does not enforce foreign keys by default; opt in for every connection.
+	await client.execute('PRAGMA foreign_keys = ON')
 	const db = drizzle(client, { schema })
 
 	return {
@@ -30,7 +32,9 @@ export function createTestDbConnection(dbPath: string) {
 	}
 }
 
-export type TestDbConnection = ReturnType<typeof createTestDbConnection>
+export type TestDbConnection = Awaited<
+	ReturnType<typeof createTestDbConnection>
+>
 
 /**
  * Opt-in test database lifecycle. Call at the top of a `describe` block to
@@ -69,14 +73,14 @@ export function useTestDb() {
 			return ctx.path
 		},
 		/** Returns a Drizzle connection to the current test's database. Lazily created, auto-closed in afterEach. */
-		getDb() {
+		async getDb() {
 			if (!ctx) {
 				throw new Error(
 					'No test database available. Call getDb()/getPath() inside a test (it/beforeEach/afterEach), not at describe-scope or module level.'
 				)
 			}
 			if (!conn) {
-				conn = createTestDbConnection(ctx.path)
+				conn = await createTestDbConnection(ctx.path)
 			}
 			return conn.db
 		},
