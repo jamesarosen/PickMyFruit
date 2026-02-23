@@ -77,6 +77,18 @@
 	"overrides": [
 		{
 			"files": [
+				"tests/helpers/**/*.ts",
+				"tests/vitest-global-setup.ts",
+				"tests/e2e/**/*.ts",
+				"vitest.config.ts",
+				"playwright.config.ts"
+			],
+			"rules": {
+				"import/no-nodejs-modules": "off"
+			}
+		},
+		{
+			"files": [
 				"src/**/*.test.ts",
 				"src/**/*.test.tsx",
 				"tests/**/*.ts",
