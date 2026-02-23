@@ -29,10 +29,11 @@ export default defineConfig({
 		stdout: 'pipe',
 		stderr: 'pipe',
 		env: {
-			AUTH_LOG_MAGIC_LINK: 'false',
+			LOG_DEV_EMAILS: 'false',
 			PORT: '5174',
 			DATABASE_URL: `file:${testDbPath}`,
 			BETTER_AUTH_SECRET: 'test-secret-for-e2e-minimum-32-characters',
+			HMAC_SECRET: 'test-secret-for-e2e-minimum-32-characters',
 			BETTER_AUTH_URL: 'http://localhost:5174',
 		},
 	},

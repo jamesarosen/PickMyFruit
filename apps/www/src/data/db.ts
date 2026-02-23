@@ -1,11 +1,11 @@
 import { drizzle } from 'drizzle-orm/libsql'
 import { createClient } from '@libsql/client'
 import * as schema from './schema'
+import { serverEnv } from '@/lib/env.server'
 
-// For local development, use a local SQLite file
 const client = createClient({
-	url: process.env.DATABASE_URL || 'file:local.db',
-	authToken: process.env.DATABASE_AUTH_TOKEN,
+	url: serverEnv.DATABASE_URL,
+	authToken: serverEnv.DATABASE_AUTH_TOKEN,
 })
 
 export const db = drizzle(client, { schema })

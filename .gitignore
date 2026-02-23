@@ -13,6 +13,7 @@ dist
 .env.*
 !.env.common
 !.env.development
+!.env.test
 !.env.sample
 !.env.example
 !.env.*.sample
