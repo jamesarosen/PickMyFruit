@@ -121,15 +121,6 @@
 		margin: 0;
 	}
 
-	.inquiry-success .email-warning {
-		margin-top: 16px;
-		padding: 12px;
-		background: oklch(from var(--color-accent) l c h / 0.1);
-		color: var(--color-accent);
-		border-radius: 8px;
-		font-size: 14px;
-	}
-
 	.inquiry-rate-limited {
 		background: oklch(from var(--color-accent) l c h / 0.1);
 	}

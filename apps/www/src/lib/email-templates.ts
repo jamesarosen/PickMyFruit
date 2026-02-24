@@ -1,5 +1,4 @@
 import { buildUnavailableUrl } from './hmac'
-import { Sentry } from './sentry'
 import { serverEnv } from './env.server'
 
 interface InquiryEmailData {
@@ -83,10 +82,9 @@ function escapeHtml(text: string): string {
 		.replace(/'/g, '&#039;')
 }
 
-export async function sendInquiryEmail(
-	data: InquiryEmailData
-): Promise<boolean> {
-	if (serverEnv.EMAIL_PROVIDER === 'silent') return true
+/** Sends an inquiry notification email. Throws on failure. */
+export async function sendInquiryEmail(data: InquiryEmailData): Promise<void> {
+	if (serverEnv.EMAIL_PROVIDER === 'silent') return
 
 	if (serverEnv.EMAIL_PROVIDER === 'console') {
 		console.log('\n========================================')
@@ -98,27 +96,25 @@ export async function sendInquiryEmail(
 		console.log('----------------------------------------')
 		console.log(buildInquiryEmailHtml(data))
 		console.log('========================================\n')
-		return true
+		return
 	}
 
 	if (serverEnv.EMAIL_PROVIDER === 'resend') {
-		try {
-			const { Resend } = await import('resend')
-			const resend = new Resend(serverEnv.RESEND_API_KEY)
+		const { Resend } = await import('resend')
+		const resend = new Resend(serverEnv.RESEND_API_KEY)
 
-			await resend.emails.send({
-				from: serverEnv.EMAIL_FROM,
-				to: data.ownerEmail,
-				replyTo: data.gleanerEmail,
-				subject: buildInquiryEmailSubject(data),
-				html: buildInquiryEmailHtml(data),
-			})
+		const { error } = await resend.emails.send({
+			from: serverEnv.EMAIL_FROM,
+			to: data.ownerEmail,
+			replyTo: data.gleanerEmail,
+			subject: buildInquiryEmailSubject(data),
+			html: buildInquiryEmailHtml(data),
+		})
 
-			return true
-		} catch (error) {
-			Sentry.captureException(error)
-			return false
+		if (error) {
+			throw new Error(`Email send failed: ${error.name} — ${error.message}`)
 		}
+		return
 	}
 
 	// All EMAIL_PROVIDER values are handled above; this is unreachable.
