@@ -1,35 +1,45 @@
 import { z } from 'zod'
 
-let fileEnv: Record<string, string> = {}
-if (process.env.NODE_ENV !== 'production') {
-	try {
-		const { loadEnv } = await import('vite')
-		try {
-			fileEnv = loadEnv(process.env.NODE_ENV || 'development', process.cwd(), '')
-		} catch (err) {
-			console.warn(
-				'env.server: loadEnv failed, falling back to process.env only',
-				err
-			)
-		}
-	} catch {
-		// vite not installed — production runtime or standalone script, expected
-	}
-}
-
-const schema = z.object({
-	NODE_ENV: z.string().default('development'),
-	DATABASE_URL: z.string().min(1),
-	DATABASE_AUTH_TOKEN: z.string().optional(),
+const baseSchema = z.object({
 	BETTER_AUTH_SECRET: z.string().min(32),
-	BETTER_AUTH_URL: z.string().optional(),
-	RESEND_API_KEY: z.string().optional(),
-	EMAIL_FROM: z.string().optional(),
-	LOG_DEV_EMAILS: z.string().transform((v) => v === 'true'),
+	BETTER_AUTH_URL: z.string(),
+	DATABASE_AUTH_TOKEN: z.string().optional(),
+	DATABASE_URL: z.string().min(1),
+	EMAIL_FROM: z.string(),
+	EMAIL_PROVIDER: z.string(),
 	HMAC_SECRET: z.string().min(32),
+	NODE_ENV: z.string(),
 })
 
-const result = schema.safeParse({ ...fileEnv, ...process.env })
+const schema = z.preprocess(
+	(raw) => ({
+		NODE_ENV: 'development',
+		EMAIL_PROVIDER: 'console',
+		...(raw as object),
+	}),
+	z
+		.discriminatedUnion('EMAIL_PROVIDER', [
+			baseSchema.extend({
+				EMAIL_PROVIDER: z.literal('resend'),
+				RESEND_API_KEY: z.string().min(1),
+			}),
+			baseSchema.extend({
+				EMAIL_PROVIDER: z.enum(['console', 'silent']),
+			}),
+		])
+		.superRefine((data, ctx) => {
+			// Sending real emails is required in production; the console stub must not be used.
+			if (data.NODE_ENV === 'production' && data.EMAIL_PROVIDER !== 'resend') {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ['EMAIL_PROVIDER'],
+					message: 'Must be "resend" in production',
+				})
+			}
+		})
+)
+
+const result = schema.safeParse(process.env)
 if (!result.success) {
 	const missing = result.error.issues.map(
 		(i) => `  ${i.path.join('.')}: ${i.message}`

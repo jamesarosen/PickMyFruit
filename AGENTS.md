@@ -79,7 +79,7 @@ We use a monorepo structure
 ## Important Notes
 
 - Validate input at system boundaries with Zod
-- Use Vite's `.env.[mode]` files (`.env.development`, `.env.test`) for environment-specific defaults rather than conditional logic in Zod schemas. Validation schemas should be uniform across environments — always require what production requires, and let configuration files supply non-production values.
+- Use Vite's `.env.[mode]` files (`.env.development`, `.env.test`) for environment-specific defaults. Prefer uniform schemas — always require what production requires, and let configuration files supply non-production values. Where a feature is genuinely absent in dev (e.g. a third-party provider), a `discriminatedUnion` on a capability flag (e.g. `EMAIL_PROVIDER`) is acceptable; the production branch must be the stricter one.
 - HTML: write semantically-meaningful and accessible markup
 - Use SQLite for the data layer
 - Use the ORM for simple operations; use SQL and prepared statements for complex ones
@@ -97,7 +97,7 @@ We use a monorepo structure
 - Client: `src/lib/auth-client.ts` - use `useSession()` hook for session state
 - API routes at `/api/auth/*` handled by catch-all route
 - Protected routes `/listings/mine` and `/listings/new` require authentication
-- Magic links: set `RESEND_API_KEY` for email delivery, otherwise logs to console
+- Magic links: set `EMAIL_PROVIDER=resend` and `RESEND_API_KEY` for email delivery; `EMAIL_PROVIDER=console` (the default) logs to console instead
 
 ## Known Issues
 

@@ -14,27 +14,28 @@ const sendMagicLinkEmail = async ({
 	url: string
 	token: string
 }) => {
-	if (!serverEnv.RESEND_API_KEY) {
-		if (serverEnv.LOG_DEV_EMAILS) {
-			console.log('\n========================================')
-			console.log('MAGIC LINK (dev mode - no RESEND_API_KEY)')
-			console.log('========================================')
-			console.log(`Email: ${email}`)
-			console.log(`URL: ${url}`)
-			console.log(`Token: ${token}`)
-			console.log('========================================\n')
-		}
+	if (serverEnv.EMAIL_PROVIDER === 'silent') return
+
+	if (serverEnv.EMAIL_PROVIDER === 'console') {
+		console.log('\n========================================')
+		console.log('MAGIC LINK (EMAIL_PROVIDER=console)')
+		console.log('========================================')
+		console.log(`Email: ${email}`)
+		console.log(`URL: ${url}`)
+		console.log(`Token: ${token}`)
+		console.log('========================================\n')
 		return
 	}
 
-	const { Resend } = await import('resend')
-	const resend = new Resend(serverEnv.RESEND_API_KEY)
+	if (serverEnv.EMAIL_PROVIDER === 'resend') {
+		const { Resend } = await import('resend')
+		const resend = new Resend(serverEnv.RESEND_API_KEY)
 
-	await resend.emails.send({
-		from: serverEnv.EMAIL_FROM || 'Pick My Fruit <noreply@pickmyfruit.com>',
-		to: email,
-		subject: 'Sign in to Pick My Fruit',
-		html: `
+		await resend.emails.send({
+			from: serverEnv.EMAIL_FROM,
+			to: email,
+			subject: 'Sign in to Pick My Fruit',
+			html: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -48,8 +49,9 @@ const sendMagicLinkEmail = async ({
 	<p style="color: #666; font-size: 14px; margin-top: 24px;">This link expires in 5 minutes. If you didn't request this, you can safely ignore this email.</p>
 </body>
 </html>
-		`.trim(),
-	})
+			`.trim(),
+		})
+	}
 }
 
 export const auth = betterAuth({
