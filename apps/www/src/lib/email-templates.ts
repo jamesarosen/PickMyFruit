@@ -86,37 +86,43 @@ function escapeHtml(text: string): string {
 export async function sendInquiryEmail(
 	data: InquiryEmailData
 ): Promise<boolean> {
-	if (!serverEnv.RESEND_API_KEY) {
-		if (serverEnv.LOG_DEV_EMAILS) {
-			console.log('\n========================================')
-			console.log('INQUIRY EMAIL (dev mode - no RESEND_API_KEY)')
-			console.log('========================================')
-			console.log(`To: ${data.ownerEmail}`)
-			console.log(`Reply-To: ${data.gleanerEmail}`)
-			console.log(`Subject: ${buildInquiryEmailSubject(data)}`)
-			console.log('----------------------------------------')
-			console.log(buildInquiryEmailHtml(data))
-			console.log('========================================\n')
+	if (serverEnv.EMAIL_PROVIDER === 'silent') return true
+
+	if (serverEnv.EMAIL_PROVIDER === 'console') {
+		console.log('\n========================================')
+		console.log('INQUIRY EMAIL (EMAIL_PROVIDER=console)')
+		console.log('========================================')
+		console.log(`To: ${data.ownerEmail}`)
+		console.log(`Reply-To: ${data.gleanerEmail}`)
+		console.log(`Subject: ${buildInquiryEmailSubject(data)}`)
+		console.log('----------------------------------------')
+		console.log(buildInquiryEmailHtml(data))
+		console.log('========================================\n')
+		return true
+	}
+
+	if (serverEnv.EMAIL_PROVIDER === 'resend') {
+		try {
+			const { Resend } = await import('resend')
+			const resend = new Resend(serverEnv.RESEND_API_KEY)
+
+			await resend.emails.send({
+				from: serverEnv.EMAIL_FROM,
+				to: data.ownerEmail,
+				replyTo: data.gleanerEmail,
+				subject: buildInquiryEmailSubject(data),
+				html: buildInquiryEmailHtml(data),
+			})
+
+			return true
+		} catch (error) {
+			Sentry.captureException(error)
+			return false
 		}
-		return true
 	}
 
-	try {
-		const { Resend } = await import('resend')
-		const resend = new Resend(serverEnv.RESEND_API_KEY)
-
-		await resend.emails.send({
-			from:
-				serverEnv.EMAIL_FROM || 'Pick My Fruit <notifications@pickmyfruit.com>',
-			to: data.ownerEmail,
-			replyTo: data.gleanerEmail,
-			subject: buildInquiryEmailSubject(data),
-			html: buildInquiryEmailHtml(data),
-		})
-
-		return true
-	} catch (error) {
-		Sentry.captureException(error)
-		return false
-	}
+	// All EMAIL_PROVIDER values are handled above; this is unreachable.
+	throw new Error(
+		`Unhandled EMAIL_PROVIDER: ${(serverEnv as { EMAIL_PROVIDER: string }).EMAIL_PROVIDER}`
+	)
 }

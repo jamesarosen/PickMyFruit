@@ -11,10 +11,12 @@ export default defineConfig({
 		// loadEnv doesn't work in vitest's jsdom environment, so we
 		// duplicate .env.test values here for test-time injection.
 		env: {
-			DATABASE_URL: 'file:local.db',
 			BETTER_AUTH_SECRET: 'test-secret-do-not-use-in-production-min32chars',
+			BETTER_AUTH_URL: 'http://localhost:5174',
+			DATABASE_URL: 'file:local.db',
+			EMAIL_FROM: 'test@example.com',
+			EMAIL_PROVIDER: 'silent',
 			HMAC_SECRET: 'test-secret-do-not-use-in-production-min32chars',
-			LOG_DEV_EMAILS: 'false',
 		},
 		globalSetup: ['./tests/vitest-global-setup.ts'],
 		setupFiles: ['./tests/setup.ts'],
