@@ -4,6 +4,7 @@ import { authClient } from '@/lib/auth-client'
 import { submitInquiry as submitInquiryFn } from '@/api/inquiries'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import '@/components/InquiryForm.css'
+import { Sentry } from '@/lib/sentry'
 
 interface InquiryFormProps {
 	listingId: number
@@ -77,17 +78,19 @@ export default function InquiryForm(props: InquiryFormProps) {
 				return
 			}
 
-			try {
-				await authClient.signIn.magicLink({
-					email: emailValue,
-					callbackURL: `${props.callbackURL}?inquiry_complete=true`,
+			const { error } = await authClient.signIn.magicLink({
+				email: emailValue,
+				callbackURL: `${props.callbackURL}?inquiry_complete=true`,
+			})
+
+			if (error) {
+				Sentry.captureException('Failed to send magic link', {
+					extra: { cause: error, context: 'InquiryForm' },
 				})
-				setFormState('awaiting-magic-link')
-			} catch (err) {
-				const message =
-					err instanceof Error ? err.message : 'Failed to send sign-in link'
-				setError(message)
+				setError("Failed to send sign-in link. We've been notified of the problem.")
 				setFormState('error')
+			} else {
+				setFormState('awaiting-magic-link')
 			}
 		}
 	}

@@ -12,6 +12,7 @@ import SiteHeader from '@/components/SiteHeader'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import { authClient } from '@/lib/auth-client'
 import './login.css'
+import { Sentry } from '@/lib/sentry'
 
 const loginSearchSchema = z.object({
 	returnTo: z
@@ -53,16 +54,24 @@ function LoginPage() {
 		}
 
 		setIsSubmitting(true)
-		try {
-			await authClient.signIn.magicLink({
-				email: emailValue,
-				callbackURL: returnTo(),
+		const { error } = await authClient.signIn.magicLink({
+			email: emailValue,
+			callbackURL: returnTo(),
+		})
+
+		setIsSubmitting(false)
+
+		if (error) {
+			setError(
+				error instanceof Error
+					? error.message
+					: "Failed to send sign-in link. We've been notified of the problem."
+			)
+			Sentry.captureException('Failed to send magic link', {
+				extra: { cause: error, context: 'Login' },
 			})
+		} else {
 			setEmailSent(true)
-		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to send sign-in link')
-		} finally {
-			setIsSubmitting(false)
 		}
 	}
 

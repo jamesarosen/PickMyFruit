@@ -49,9 +49,11 @@ describe('InquiryForm error handling', () => {
 		// Unauthenticated context.
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		mockSession.mockReturnValue({ session: null } as any)
-		mockSendMagicLink.mockRejectedValue(
-			new Error('Magic link email failed: validation_error — API key is invalid')
-		)
+		// authClient.signIn.magicLink returns { data, error } — it does not throw.
+		mockSendMagicLink.mockResolvedValue({
+			data: undefined,
+			error: { status: 500, message: 'validation_error — API key is invalid' },
+		})
 
 		const { getByRole, getByLabelText, getByText } = render(() => (
 			<InquiryForm listingId={42} callbackURL="/listings/42" />
@@ -64,7 +66,9 @@ describe('InquiryForm error handling', () => {
 
 		await waitFor(() => {
 			expect(
-				getByText('Magic link email failed: validation_error — API key is invalid')
+				getByText(
+					"Failed to send sign-in link. We've been notified of the problem."
+				)
 			).toBeInTheDocument()
 		})
 
