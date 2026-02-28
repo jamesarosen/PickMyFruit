@@ -77,11 +77,18 @@ export default function InquiryForm(props: InquiryFormProps) {
 				return
 			}
 
-			setFormState('awaiting-magic-link')
-			await authClient.signIn.magicLink({
-				email: emailValue,
-				callbackURL: `${props.callbackURL}?inquiry_complete=true`,
-			})
+			try {
+				await authClient.signIn.magicLink({
+					email: emailValue,
+					callbackURL: `${props.callbackURL}?inquiry_complete=true`,
+				})
+				setFormState('awaiting-magic-link')
+			} catch (err) {
+				const message =
+					err instanceof Error ? err.message : 'Failed to send sign-in link'
+				setError(message)
+				setFormState('error')
+			}
 		}
 	}
 
