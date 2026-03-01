@@ -53,7 +53,7 @@ const sendMagicLinkEmail = async ({
 		})
 
 		if (error) {
-			throw new Error(`Magic link email failed: ${error.name} — ${error.message}`)
+			throw new Error('Magic link email failed', { cause: error })
 		}
 	}
 }
