@@ -11,6 +11,8 @@ const APEX_DOMAIN = 'pickmyfruit.com'
  * - Redirects apex domain (pickmyfruit.com) to www.pickmyfruit.com with 307
  * - Adds HSTS header for HTTPS connections (1 year, includeSubDomains)
  *
+ * Other security headers (CSP, X-Frame-Options, etc.) are in `security-headers.ts`.
+ *
  * Note: Fly.io has a force_https feature, but it's limited to a 301 redirect
  * and doesn't handle apex to www redirects, so we handle both here. This also
  * defends against losing the redirect if we switch hosting providers.
