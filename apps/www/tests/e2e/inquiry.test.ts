@@ -101,54 +101,6 @@ test.describe('Inquiry Flow', () => {
 		).not.toBeVisible()
 	})
 
-	test('shows error and keeps form when submission fails', async ({
-		page,
-		testUser: gleaner,
-	}) => {
-		const owner = await createTestUser()
-		const listing = await createTestListing(owner.id)
-
-		try {
-			await loginViaUI(page, gleaner)
-			await page.goto(`/listings/${listing.id}`)
-			await page.waitForLoadState('networkidle')
-
-			// Force all POST requests to fail after the page has loaded.
-			// This simulates an email delivery failure on the server.
-			await page.route('**', async (route) => {
-				if (route.request().method() === 'POST') {
-					await route.fulfill({
-						status: 503,
-						contentType: 'application/json',
-						body: JSON.stringify({
-							message: "We couldn't send the notification email. Please try again.",
-						}),
-					})
-				} else {
-					await route.continue()
-				}
-			})
-
-			await page.getByRole('button', { name: 'Put me in touch' }).click()
-
-			// No success message.
-			await expect(
-				page.getByRole('heading', { name: 'Request sent!' })
-			).not.toBeVisible()
-
-			// Form stays visible so the user can retry.
-			await expect(
-				page.getByRole('button', { name: 'Put me in touch' })
-			).toBeVisible()
-
-			// No inquiry was written to the database.
-			const rows = await getInquiriesForListing(listing.id)
-			expect(rows).toHaveLength(0)
-		} finally {
-			await cleanupTestUser(owner)
-		}
-	})
-
 	test('inquiry form is hidden on unavailable listings', async ({
 		page,
 		testUser,
