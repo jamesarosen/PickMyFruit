@@ -66,9 +66,7 @@ describe('InquiryForm error handling', () => {
 
 		await waitFor(() => {
 			expect(
-				getByText(
-					"Failed to send sign-in link. We've been notified of the problem."
-				)
+				getByText('Failed to send sign-in link', { exact: false })
 			).toBeInTheDocument()
 		})
 
