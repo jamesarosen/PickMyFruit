@@ -116,10 +116,10 @@ function OwnerControls(props: {
 						</label>
 					)}
 				</For>
+				<Show when={error()}>
+					<p class="visibility-error">{error()}</p>
+				</Show>
 			</fieldset>
-			<Show when={error()}>
-				<p class="visibility-error">{error()}</p>
-			</Show>
 		</>
 	)
 }

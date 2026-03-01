@@ -14,6 +14,16 @@ function logError(error: unknown, context?: Record<string, unknown>): void {
 	})
 }
 
+/**
+ * Tanstack uses `throw redirect(...)` for control flow. These are control-flow,
+ * not exceptions, so Sentry doesn't need to know about them.
+ */
+function isControlFlow(cause: unknown): boolean {
+	return !!(
+		cause instanceof Response || (cause as Record<string, unknown>)?.isRedirect
+	)
+}
+
 if (clientEnv.sentryDsn) {
 	Sentry.init({
 		dsn: clientEnv.sentryDsn,
@@ -21,9 +31,10 @@ if (clientEnv.sentryDsn) {
 		environment: clientEnv.mode,
 		tracesSampleRate: 1.0,
 		beforeSend(event, hint) {
-			logError(hint.originalException, {
-				sentryEventId: event.event_id,
-			})
+			const err = hint.originalException
+			if (isControlFlow(err)) return null
+
+			logError(err, { sentryEventId: event.event_id })
 			return event
 		},
 	})
