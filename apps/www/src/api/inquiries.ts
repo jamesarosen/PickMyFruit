@@ -17,13 +17,8 @@ export const submitInquiry = createServerFn({ method: 'POST' })
 			throw new UserError('AUTH_REQUIRED', 'Authentication required')
 		}
 
-		const {
-			createInquiry,
-			hasRecentInquiry,
-			getListingWithOwner,
-			getUserById,
-			markInquiryEmailSent,
-		} = await import('@/data/queries')
+		const { createInquiry, hasRecentInquiry, getListingWithOwner, getUserById } =
+			await import('@/data/queries')
 
 		const result = await getListingWithOwner(listingId)
 		if (!result) {
@@ -59,31 +54,41 @@ export const submitInquiry = createServerFn({ method: 'POST' })
 			throw new UserError('NOT_FOUND', 'User not found')
 		}
 
+		// Send email first — if it fails, no inquiry record is created
+		// so the user can retry.
+		const { getRequestBaseUrl } = await import('@/lib/request-url')
+		const baseUrl = getRequestBaseUrl(headers)
+		const { sendInquiryEmail } = await import('@/lib/email-templates')
+		try {
+			await sendInquiryEmail({
+				ownerName: owner.name,
+				ownerEmail: owner.email,
+				gleanerName: gleaner.name,
+				gleanerEmail: gleaner.email,
+				gleanerNote: note,
+				produceType: listing.type,
+				quantity: listing.quantity,
+				listingNotes: listing.notes,
+				plantId: listing.id,
+				baseUrl,
+			})
+		} catch (error) {
+			const { Sentry } = await import('@/lib/sentry')
+			Sentry.captureException(error, {
+				extra: { listingId, gleanerId: session.user.id },
+			})
+			throw new UserError(
+				'EMAIL_FAILED',
+				"We couldn't send the notification email. Please try again."
+			)
+		}
+
 		const inquiry = await createInquiry({
 			listingId,
 			gleanerId: session.user.id,
 			note: note || null,
+			emailSentAt: new Date(),
 		})
 
-		const { getRequestBaseUrl } = await import('@/lib/request-url')
-		const baseUrl = getRequestBaseUrl(headers)
-		const { sendInquiryEmail } = await import('@/lib/email-templates')
-		const emailSent = await sendInquiryEmail({
-			ownerName: owner.name,
-			ownerEmail: owner.email,
-			gleanerName: gleaner.name,
-			gleanerEmail: gleaner.email,
-			gleanerNote: note,
-			produceType: listing.type,
-			quantity: listing.quantity,
-			listingNotes: listing.notes,
-			plantId: listing.id,
-			baseUrl,
-		})
-
-		if (emailSent) {
-			await markInquiryEmailSent(inquiry.id)
-		}
-
-		return { inquiryId: inquiry.id, emailSent }
+		return { inquiryId: inquiry.id }
 	})

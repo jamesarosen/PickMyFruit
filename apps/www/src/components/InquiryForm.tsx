@@ -4,6 +4,7 @@ import { authClient } from '@/lib/auth-client'
 import { submitInquiry as submitInquiryFn } from '@/api/inquiries'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import '@/components/InquiryForm.css'
+import { Sentry } from '@/lib/sentry'
 
 interface InquiryFormProps {
 	listingId: number
@@ -26,7 +27,6 @@ export default function InquiryForm(props: InquiryFormProps) {
 	const [email, setEmail] = createSignal('')
 	const [note, setNote] = createSignal('')
 	const [error, setError] = createSignal<string | null>(null)
-	const [emailSent, setEmailSent] = createSignal(true)
 
 	const isAuthenticated = () => Boolean(context().session?.user)
 
@@ -35,14 +35,13 @@ export default function InquiryForm(props: InquiryFormProps) {
 		setError(null)
 
 		try {
-			const result = await submitInquiryFn({
+			await submitInquiryFn({
 				data: {
 					listingId: props.listingId,
 					note: note() || undefined,
 				},
 			})
 
-			setEmailSent(result.emailSent)
 			setFormState('success')
 			sessionStorage.removeItem(PENDING_INQUIRY_KEY)
 		} catch (err) {
@@ -79,11 +78,20 @@ export default function InquiryForm(props: InquiryFormProps) {
 				return
 			}
 
-			setFormState('awaiting-magic-link')
-			await authClient.signIn.magicLink({
+			const { error } = await authClient.signIn.magicLink({
 				email: emailValue,
 				callbackURL: `${props.callbackURL}?inquiry_complete=true`,
 			})
+
+			if (error) {
+				Sentry.captureException('Failed to send magic link', {
+					extra: { cause: error, context: 'InquiryForm' },
+				})
+				setError("Failed to send sign-in link. We've been notified of the problem.")
+				setFormState('error')
+			} else {
+				setFormState('awaiting-magic-link')
+			}
 		}
 	}
 
@@ -142,12 +150,6 @@ export default function InquiryForm(props: InquiryFormProps) {
 				<div class="inquiry-success">
 					<h3>Request sent!</h3>
 					<p>The owner has been notified and will reach out to you soon.</p>
-					<Show when={!emailSent()}>
-						<p class="email-warning">
-							Note: There was an issue sending the email, but your request was
-							recorded. The owner will see it when they check their listings.
-						</p>
-					</Show>
 				</div>
 			</Show>
 

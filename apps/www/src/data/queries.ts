@@ -116,13 +116,6 @@ export async function createInquiry(data: NewInquiry): Promise<Inquiry> {
 	return result[0]
 }
 
-export async function markInquiryEmailSent(id: number): Promise<void> {
-	await db
-		.update(inquiries)
-		.set({ emailSentAt: new Date() })
-		.where(eq(inquiries.id, id))
-}
-
 export async function hasRecentInquiry(
 	gleanerId: string,
 	listingId: number

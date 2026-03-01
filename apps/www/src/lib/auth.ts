@@ -31,7 +31,7 @@ const sendMagicLinkEmail = async ({
 		const { Resend } = await import('resend')
 		const resend = new Resend(serverEnv.RESEND_API_KEY)
 
-		await resend.emails.send({
+		const { error } = await resend.emails.send({
 			from: serverEnv.EMAIL_FROM,
 			to: email,
 			subject: 'Sign in to Pick My Fruit',
@@ -51,6 +51,10 @@ const sendMagicLinkEmail = async ({
 </html>
 			`.trim(),
 		})
+
+		if (error) {
+			throw new Error('Magic link email failed', { cause: error })
+		}
 	}
 }
 

@@ -12,7 +12,6 @@ export const Route = createFileRoute('/api/inquiries')({
 					hasRecentInquiry,
 					getListingWithOwner,
 					getUserById,
-					markInquiryEmailSent,
 				} = await import('@/data/queries')
 				const { sendInquiryEmail } = await import('@/lib/email-templates')
 
@@ -85,38 +84,46 @@ export const Route = createFileRoute('/api/inquiries')({
 					return Response.json({ error: 'User not found' }, { status: 400 })
 				}
 
-				// Create inquiry record
+				// Send email first — if it fails, no inquiry is created
+				// so the user can retry.
+				const baseUrl = new URL(request.url).origin
+				try {
+					await sendInquiryEmail({
+						ownerName: owner.name,
+						ownerEmail: owner.email,
+						gleanerName: gleaner.name,
+						gleanerEmail: gleaner.email,
+						gleanerNote: note,
+						produceType: listing.type,
+						quantity: listing.quantity,
+						listingNotes: listing.notes,
+						plantId: listing.id,
+						baseUrl,
+					})
+				} catch (error) {
+					const { Sentry } = await import('@/lib/sentry')
+					Sentry.captureException(error, {
+						extra: { listingId, gleanerId: session.user.id },
+					})
+					return Response.json(
+						{
+							error: "We couldn't send the notification email. Please try again.",
+						},
+						{ status: 503 }
+					)
+				}
+
 				const inquiry = await createInquiry({
 					listingId,
 					gleanerId: session.user.id,
 					note: note || null,
+					emailSentAt: new Date(),
 				})
-
-				// Attempt to send email
-				const baseUrl = new URL(request.url).origin
-				const emailSent = await sendInquiryEmail({
-					ownerName: owner.name,
-					ownerEmail: owner.email,
-					gleanerName: gleaner.name,
-					gleanerEmail: gleaner.email,
-					gleanerNote: note,
-					produceType: listing.type,
-					quantity: listing.quantity,
-					listingNotes: listing.notes,
-					plantId: listing.id,
-					baseUrl,
-				})
-
-				// Update emailSentAt if successful
-				if (emailSent) {
-					await markInquiryEmailSent(inquiry.id)
-				}
 
 				return Response.json(
 					{
 						success: true,
 						inquiryId: inquiry.id,
-						emailSent,
 					},
 					{ status: 201 }
 				)
