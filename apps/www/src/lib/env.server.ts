@@ -8,6 +8,7 @@ const baseSchema = z.object({
 	EMAIL_FROM: z.string(),
 	EMAIL_PROVIDER: z.string(),
 	HMAC_SECRET: z.string().min(32),
+	MIGRATE_ON_REQUEST: z.stringbool().default(false),
 	NODE_ENV: z.string(),
 })
 

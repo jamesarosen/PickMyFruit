@@ -49,6 +49,7 @@ primary_region = 'sjc'
 # Environment variables
 [env]
   EMAIL_PROVIDER = 'resend'
+  MIGRATE_ON_REQUEST = 'true'
   NODE_ENV = 'production'
 
 # VM resources - Start with minimal for MVP
