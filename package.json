@@ -27,5 +27,17 @@
 		"docker:up": "docker compose up --build",
 		"docker:down": "docker compose down",
 		"docker:logs": "docker compose logs -f"
+	},
+	"pnpm": {
+		"supportedArchitectures": {
+			"os": [
+				"linux",
+				"darwin"
+			],
+			"cpu": [
+				"x64",
+				"arm64"
+			]
+		}
 	}
 }
