@@ -150,6 +150,10 @@ Key configuration files:
 - `../../.dockerignore` - Files excluded from Docker build (workspace root)
 - `.env` - Local environment variables (not deployed)
 
+In released environments, client-side environment variables are (1) set in
+`fly.toml` `[build.args]`, (2) passed through `Dockerfile` `ARG`s, and (3)
+parsed in `env.client.ts`.
+
 **Note:** The `.dockerignore` file must be at the workspace root because Fly.io's `build.ignorefile` setting resolves relative to the working directory (where you run `fly deploy`).
 
 Production environment variables are set in `fly.toml` under `[env]`.
