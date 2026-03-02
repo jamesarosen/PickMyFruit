@@ -97,10 +97,49 @@ jobs:
           path: apps/www/playwright-report/
           retention-days: 7
 
+  docker:
+    name: Docker Build & Smoke Test
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t pickmyfruit-web -f apps/www/Dockerfile .
+
+      - name: Start container
+        run: |
+          docker run -d --name web -p 3000:3000 \
+            -e DATABASE_URL=file:/app/data/ci.db \
+            -e BETTER_AUTH_SECRET=test-secret-for-ci-minimum-32-characters \
+            -e BETTER_AUTH_URL=http://localhost:3000 \
+            -e EMAIL_PROVIDER=console \
+            -e HMAC_SECRET=test-hmac-secret-for-ci-minimum-32-characters \
+            -e EMAIL_FROM=ci@test.example \
+            -e NODE_ENV=development \
+            pickmyfruit-web
+
+      - name: Wait for health check
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/api/health > /dev/null; then
+              echo "Health check passed"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Timed out waiting for /api/health after 60s"
+          exit 1
+
+      - name: Dump container logs on failure
+        if: failure()
+        run: docker logs web
+
   deploy:
     name: Deploy to Fly.io
     runs-on: ubuntu-latest
-    needs: [test, e2e]
+    needs: [test, e2e, docker]
     # Only deploy on push to main branch
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment:

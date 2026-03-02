@@ -11,7 +11,10 @@ export const Route = createFileRoute('/api/health')({
 					await db.run(sql`SELECT 1`)
 				} catch (error) {
 					Sentry.captureException(error)
-					return Response.json({ status: 'error', error: 'db unavailable' }, { status: 503 })
+					return Response.json(
+						{ status: 'error', error: 'db unavailable' },
+						{ status: 503 }
+					)
 				}
 
 				return Response.json({
