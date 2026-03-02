@@ -53,6 +53,12 @@ WORKDIR /app
 COPY --from=builder /app/apps/www/.output ./.output
 COPY --from=builder /app/apps/www/package.json ./package.json
 
+# Migration SQL files are read from disk at runtime by drizzle-orm/libsql/migrator.
+# They must be at ./drizzle relative to the working directory (/app/drizzle).
+COPY --from=builder /app/apps/www/drizzle ./drizzle
+RUN test -f /app/drizzle/meta/_journal.json || \
+  (echo "ERROR: drizzle migrations missing from image" && exit 1)
+
 # Create directory for SQLite database
 RUN mkdir -p /app/data
 
@@ -60,7 +66,7 @@ RUN mkdir -p /app/data
 EXPOSE 3000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start the server
