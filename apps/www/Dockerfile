@@ -24,6 +24,13 @@ RUN pnpm install --frozen-lockfile --filter @pickmyfruit/www... \
 # Copy the entire workspace (excluding dockerignored files)
 COPY . .
 
+# VITE_* variables are replaced at build time; they cannot be injected at
+# runtime via Fly secrets.
+# See fly.toml [build.args]
+# See env.client.ts
+ARG VITE_SENTRY_DSN
+ARG VITE_SENTRY_ENABLED
+
 # Build the www application
 RUN cd apps/www && pnpm build
 

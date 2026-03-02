@@ -2,6 +2,10 @@ import { z } from 'zod'
 
 const isProd = import.meta.env.PROD as boolean
 
+/**
+ * @see Dockerfile
+ * @see fly.toml [build.args]
+ */
 const schema = z
 	.object({
 		VITE_SENTRY_DSN: z.url().optional(),
@@ -21,9 +25,19 @@ const schema = z
 	.refine((data) => !isProd || data.sentryDsn, {
 		message: 'VITE_SENTRY_DSN must be set in production',
 	})
-	.refine((data) => !isProd || data.sentryEnabled, {
-		message: 'VITE_SENTRY_ENABLED cannot be false in production',
-	})
+
+const result = schema.safeParse({
+	VITE_SENTRY_DSN: import.meta.env.VITE_SENTRY_DSN,
+	VITE_SENTRY_ENABLED: import.meta.env.VITE_SENTRY_ENABLED,
+})
+if (!result.success) {
+	const issues = result.error.issues.map(
+		(i) => `  ${i.path.join('.')}: ${i.message}`
+	)
+	throw new Error(
+		`Client environment validation failed. Check fly.toml [build.args] and Dockerfile ARGs:\n${issues.join('\n')}`
+	)
+}
 
 /**
  * Validated client-side environment variables.
@@ -32,7 +46,4 @@ const schema = z
  * is a build-tool detail. Compare with serverEnv, which keeps canonical
  * SCREAMING_SNAKE_CASE names matching what operators set in .env / Docker.
  */
-export const clientEnv = schema.parse({
-	VITE_SENTRY_DSN: import.meta.env.VITE_SENTRY_DSN,
-	VITE_SENTRY_ENABLED: import.meta.env.VITE_SENTRY_ENABLED,
-})
+export const clientEnv = result.data

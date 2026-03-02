@@ -12,6 +12,13 @@ primary_region = 'sjc'
   dockerfile = "apps/www/Dockerfile"
   ignorefile = ".dockerignore"
 
+  # VITE_* vars are baked into the JS bundle at build time by Vite.
+  # Fly secrets are runtime-only, so they can't be used for build-time vars.
+  # See Dockerfile ARGs and apps/www/src/lib/env.client.ts.
+  # Pass VITE_SENTRY_DSN via: flyctl deploy --build-arg VITE_SENTRY_DSN=...
+  [build.args]
+    VITE_SENTRY_ENABLED = "true"
+
 # HTTP service configuration
 [http_service]
   internal_port = 3000
