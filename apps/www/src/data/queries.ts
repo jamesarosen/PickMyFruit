@@ -28,7 +28,9 @@ export async function getAvailableListings(
 	const rows = await db
 		.select()
 		.from(listings)
-		.where(eq(listings.status, ListingStatus.available))
+		.where(
+			and(eq(listings.status, ListingStatus.available), isNull(listings.deletedAt))
+		)
 		.orderBy(desc(listings.createdAt))
 		.limit(limit)
 	return rows.flatMap((row) => {
@@ -76,33 +78,51 @@ export async function getListingById(id: number): Promise<Listing | undefined> {
 	const result = await db
 		.select()
 		.from(listings)
-		.where(eq(listings.id, id))
+		.where(and(eq(listings.id, id), isNull(listings.deletedAt)))
 		.limit(1)
 	return result[0]
 }
 
-/** Fetches a listing by ID, returning only public-safe fields. Excludes private listings. */
+/** Fetches a listing by ID, returning only public-safe fields. Excludes private and deleted listings. */
 export async function getPublicListingById(
 	id: number
 ): Promise<PublicListing | undefined> {
 	const result = await db
 		.select()
 		.from(listings)
-		.where(and(eq(listings.id, id), ne(listings.status, ListingStatus.private)))
+		.where(
+			and(
+				eq(listings.id, id),
+				ne(listings.status, ListingStatus.private),
+				isNull(listings.deletedAt)
+			)
+		)
 		.limit(1)
 	return result[0]
 		? (toPublicListing(result[0], reportH3Error) ?? undefined)
 		: undefined
 }
 
+/** Soft-deletes a listing by setting its deletedAt timestamp and removes related inquiries. */
 export async function deleteListingById(
 	id: number,
 	userId: string
 ): Promise<boolean> {
 	const result = await db
-		.delete(listings)
-		.where(and(eq(listings.id, id), eq(listings.userId, userId)))
+		.update(listings)
+		.set({ deletedAt: new Date() })
+		.where(
+			and(
+				eq(listings.id, id),
+				eq(listings.userId, userId),
+				isNull(listings.deletedAt)
+			)
+		)
 		.returning({ id: listings.id })
+
+	if (result.length > 0) {
+		await db.delete(inquiries).where(eq(inquiries.listingId, id))
+	}
 
 	return result.length > 0
 }
@@ -185,7 +205,13 @@ export async function updateListingStatus(
 	const result = await db
 		.update(listings)
 		.set({ status, updatedAt: new Date() })
-		.where(and(eq(listings.id, id), eq(listings.userId, userId)))
+		.where(
+			and(
+				eq(listings.id, id),
+				eq(listings.userId, userId),
+				isNull(listings.deletedAt)
+			)
+		)
 		.returning({ id: listings.id })
 	return result.length > 0
 }

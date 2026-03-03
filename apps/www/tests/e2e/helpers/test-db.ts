@@ -9,7 +9,7 @@ import {
 	inquiries,
 	type NewListing,
 } from '../../../src/data/schema'
-import { eq, desc, like, inArray } from 'drizzle-orm'
+import { eq, desc, like } from 'drizzle-orm'
 import { faker } from '@faker-js/faker'
 import { latLngToCell } from 'h3-js'
 
@@ -28,9 +28,10 @@ export interface TestUser {
 	updatedAt: Date
 }
 
-function getDb() {
-	return drizzle(createClient({ url: TEST_DB_URL }))
-}
+// SQLite does not enforce foreign keys by default; opt in for every connection.
+const client = createClient({ url: TEST_DB_URL })
+await client.execute('PRAGMA foreign_keys = ON')
+const db = drizzle(client)
 
 export function generateTestUser(): TestUser {
 	const id = faker.string.uuid()
@@ -45,29 +46,20 @@ export function generateTestUser(): TestUser {
 }
 
 export async function createTestUser(testUser?: TestUser): Promise<TestUser> {
-	const db = getDb()
 	const userToCreate = testUser ?? generateTestUser()
 	await db.insert(user).values(userToCreate)
 	return userToCreate
 }
 
 export async function cleanupTestUser(testUser: TestUser): Promise<void> {
-	const db = getDb()
+	// verification has no FK cascade to user, so clean up manually
 	const valuePattern = `%"email":"${testUser.email}"%`
 	await db.delete(verification).where(like(verification.value, valuePattern))
-	// Delete inquiries the user made AND inquiries on the user's listings
-	await db.delete(inquiries).where(eq(inquiries.gleanerId, testUser.id))
-	const ownedListingIds = db
-		.select({ id: listings.id })
-		.from(listings)
-		.where(eq(listings.userId, testUser.id))
-	await db.delete(inquiries).where(inArray(inquiries.listingId, ownedListingIds))
-	await db.delete(listings).where(eq(listings.userId, testUser.id))
+	// Listings and inquiries cascade-delete from user deletion
 	await db.delete(user).where(eq(user.id, testUser.id))
 }
 
 export async function getMagicLinkToken(email: string): Promise<string> {
-	const db = getDb()
 	// Better Auth stores email in 'value' column as JSON: {"email":"..."}
 	// The token is in the 'identifier' column
 	const valuePattern = `%"email":"${email}"%`
@@ -116,7 +108,6 @@ export async function createTestListing(
 	userId: string,
 	overrides: Partial<NewListing> = {}
 ): Promise<TestListing> {
-	const db = getDb()
 	const lat = 38.3
 	const lng = -122.3
 	const data: NewListing = {
@@ -153,7 +144,6 @@ export async function getInquiriesForListing(listingId: number): Promise<
 		emailSentAt: Date | null
 	}>
 > {
-	const db = getDb()
 	return db
 		.select({
 			id: inquiries.id,

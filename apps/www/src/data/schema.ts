@@ -161,10 +161,10 @@ export const inquiries = sqliteTable(
 			.default(sql`(unixepoch())`),
 		listingId: integer('listing_id')
 			.notNull()
-			.references(() => listings.id),
+			.references(() => listings.id, { onDelete: 'cascade' }),
 		gleanerId: text('gleaner_id')
 			.notNull()
-			.references(() => user.id),
+			.references(() => user.id, { onDelete: 'cascade' }),
 		note: text('note'), // max 500 chars, validated at API layer
 		emailSentAt: integer('email_sent_at', { mode: 'timestamp' }),
 	},
