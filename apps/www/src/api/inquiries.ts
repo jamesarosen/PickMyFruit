@@ -61,16 +61,11 @@ export const submitInquiry = createServerFn({ method: 'POST' })
 		const { sendInquiryEmail } = await import('@/lib/email-templates')
 		try {
 			await sendInquiryEmail({
-				ownerName: owner.name,
-				ownerEmail: owner.email,
-				gleanerName: gleaner.name,
-				gleanerEmail: gleaner.email,
-				gleanerNote: note,
-				produceType: listing.type,
-				quantity: listing.quantity,
-				listingNotes: listing.notes,
-				plantId: listing.id,
 				baseUrl,
+				gleaner,
+				gleanerNote: note,
+				listing,
+				owner,
 			})
 		} catch (error) {
 			const { Sentry } = await import('@/lib/sentry')

@@ -8,6 +8,7 @@ import {
 	type NewListing,
 	type NewUser,
 } from './schema'
+import { logger } from '@/lib/logger.server'
 import { ListingStatus } from '@/lib/validation'
 
 // Napa Valley approximate bounds
@@ -143,7 +144,7 @@ function generateListing(userId: string): NewListing {
 }
 
 async function seed() {
-	console.log('🌱 Seeding database...')
+	logger.info('Seeding database...')
 
 	// Clear data in FK-safe order — preserve existing auth users
 	await db.delete(inquiries)
@@ -159,8 +160,13 @@ async function seed() {
 
 	// Use all users (seed + existing) for listing assignment
 	const allUsers = await db.select().from(user)
-	console.log(
-		`✅ ${allUsers.length} users available (${inserted.length} new, ${allUsers.length - inserted.length} existing)`
+	logger.info(
+		{
+			total: allUsers.length,
+			inserted: inserted.length,
+			existing: allUsers.length - inserted.length,
+		},
+		'Users available'
 	)
 
 	// Generate 50 listings with random users
@@ -172,21 +178,23 @@ async function seed() {
 	// Insert listings
 	await db.insert(listings).values(listingsData)
 
-	console.log(`✅ Seeded ${listingsData.length} listings`)
+	logger.info({ count: listingsData.length }, 'Listings seeded')
 
 	// Show a few examples
 	const examples = await db.select().from(listings).limit(3)
-	console.log('\n📋 Sample listings:')
-	examples.forEach((listing, i) => {
-		console.log(
-			`${i + 1}. ${listing.name} - ${listing.type} (${listing.variety}) in ${listing.city}`
-		)
-	})
+	logger.info(
+		{
+			samples: examples.map(
+				(l) => `${l.name} - ${l.type} (${l.variety}) in ${l.city}`
+			),
+		},
+		'Sample listings'
+	)
 
 	process.exit(0)
 }
 
 seed().catch((error) => {
-	console.error('❌ Seed failed:', error)
+	logger.error({ err: error }, 'Seed failed')
 	process.exit(1)
 })

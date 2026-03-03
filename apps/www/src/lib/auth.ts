@@ -4,6 +4,7 @@ import { magicLink } from 'better-auth/plugins'
 import { tanstackStartCookies } from 'better-auth/tanstack-start/solid'
 import { db } from '../data/db'
 import { serverEnv } from './env.server'
+import { logger } from './logger.server'
 
 const sendMagicLinkEmail = async ({
 	email,
@@ -17,13 +18,7 @@ const sendMagicLinkEmail = async ({
 	if (serverEnv.EMAIL_PROVIDER === 'silent') return
 
 	if (serverEnv.EMAIL_PROVIDER === 'console') {
-		console.log('\n========================================')
-		console.log('MAGIC LINK (EMAIL_PROVIDER=console)')
-		console.log('========================================')
-		console.log(`Email: ${email}`)
-		console.log(`URL: ${url}`)
-		console.log(`Token: ${token}`)
-		console.log('========================================\n')
+		logger.info({ email, token, url }, 'Magic link (EMAIL_PROVIDER=console)')
 		return
 	}
 
