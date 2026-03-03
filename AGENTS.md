@@ -30,7 +30,8 @@ A site for gardeners to share surplus produce with their community.
 - Use semantic names for variables and functions to document what they do. Use comments to document why, especially for non-intuitive or unusual code.
 - Use idiomatic Solid JS, TanStack Router, TypeScript, SQLite.
 - Use context7
-- When handling exceptions, import Sentry from `@/lib/sentry` and use `Sentry.captureException`. Do not separately log errors — `src/lib/sentry.ts` is the designated exception handler and manages console output itself.
+- When handling exceptions, import Sentry from `@/lib/sentry` and use `Sentry.captureException`. Do not separately log errors — `src/lib/sentry.ts` is the designated exception handler and manages console output itself. (Exception: `sentry.ts` itself uses `console.error` because it runs on both client and server and cannot depend on Pino.)
+- For server-side informational/debug logging, import `logger` from `@/lib/logger.server` (Pino). Always pass structured data as the first argument: `logger.info(fields, msg)`, `logger.debug(fields, msg)`, `logger.warn(fields, msg)`. Use `logger.error(fields, msg)` only in CLI scripts (e.g. `seed.ts`) where Sentry is not initialized — in all other server code, use `Sentry.captureException` for errors. Do **not** use `console.log` or `console.error` in application code. (Exception: test infrastructure files such as `vitest-global-setup.ts` may use `console.log`.)
 
 ### Solid JS
 
