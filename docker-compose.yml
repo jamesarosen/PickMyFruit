@@ -3,6 +3,9 @@ services:
     build:
       context: .
       dockerfile: apps/www/Dockerfile
+      args:
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN}
+        VITE_SENTRY_ENABLED: ${VITE_SENTRY_ENABLED}
     ports:
       - "3000:3000"
     volumes:

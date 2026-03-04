@@ -18,7 +18,8 @@ const schema = z
 		sentryDsn: data.VITE_SENTRY_DSN,
 		// In prod: default to true if DSN is available
 		// In other envs: default to false (reporting off, opt-in for testing)
-		sentryEnabled: data.VITE_SENTRY_ENABLED ?? (isProd && !!data.VITE_SENTRY_DSN),
+		sentryEnabled:
+			data.VITE_SENTRY_ENABLED ?? (isProd && Boolean(data.VITE_SENTRY_DSN)),
 		mode: import.meta.env.MODE as string,
 		prod: isProd,
 	}))
@@ -35,7 +36,7 @@ if (!result.success) {
 		(i) => `  ${i.path.join('.')}: ${i.message}`
 	)
 	throw new Error(
-		`Client environment validation failed. Check fly.toml [build.args] and Dockerfile ARGs:\n${issues.join('\n')}`
+		`Client environment validation failed. Check fly.toml [build.args], .env, and Dockerfile ARGs:\n${issues.join('\n')}`
 	)
 }
 
