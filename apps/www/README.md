@@ -55,14 +55,20 @@ All commands are run from the root of the project, from a terminal:
 Test the production build locally using Docker Compose:
 
 ```bash
+# Change to the workspace directory
+$ cd path/to/PickMyFruit
+
+# Create a .env file in the workspace
+$ cp -n .env.example .env
+
 # Build and start the container
-pnpm docker:up
+$ pnpm docker:up
 
 # View logs
-pnpm docker:logs
+$ pnpm docker:logs
 
 # Stop the container
-pnpm docker:down
+$ pnpm docker:down
 ```
 
 The application will be available at `http://localhost:3000`. The SQLite database will be persisted in `./data/` directory.
