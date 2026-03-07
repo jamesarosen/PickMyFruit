@@ -1,12 +1,11 @@
 import { Link, useNavigate, useRouteContext } from '@tanstack/solid-router'
-import { createSignal, Show } from 'solid-js'
+import { createSignal, createUniqueId, Show } from 'solid-js'
 import { z } from 'zod'
 import { Input, Textarea } from '@/components/FormField'
-import { Select, SelectItem, SelectItemLabel } from '@/components/Select'
+import ProduceTypeSelector from '@/components/ProduceTypeSelector'
 import type { AddressFields } from '@/data/schema'
-import { capitalize } from '@/lib/capitalize'
 import { Sentry } from '@/lib/sentry'
-import { listingFormSchema, fruitTypes } from '@/lib/validation'
+import { listingFormSchema } from '@/lib/validation'
 import '@/components/ListingForm.css'
 
 type FieldErrors = ReturnType<
@@ -19,6 +18,8 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 	const [isSubmitting, setIsSubmitting] = createSignal(false)
 	const [submitError, setSubmitError] = createSignal<string | null>(null)
 	const [fieldErrors, setFieldErrors] = createSignal<FieldErrors>({ errors: [] })
+	const [selectedType, setSelectedType] = createSignal<string>('')
+	const typeId = createUniqueId()
 
 	async function submitListing(data: Record<string, unknown>) {
 		setIsSubmitting(true)
@@ -64,7 +65,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 		const formData = new FormData(form)
 
 		const data = {
-			type: formData.get('type'),
+			type: selectedType(),
 			harvestWindow: formData.get('harvestWindow'),
 			address: formData.get('address'),
 			city: formData.get('city'),
@@ -103,20 +104,17 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 			<fieldset>
 				<legend>What are you sharing?</legend>
 				<div class="form-row">
-					<Select<string>
-						errors={fieldErrors().properties?.type?.errors}
-						itemComponent={(props) => (
-							<SelectItem item={props.item}>
-								<SelectItemLabel>{capitalize(props.item.rawValue)}</SelectItemLabel>
-							</SelectItem>
-						)}
-						label="Fruit Type"
-						name="type"
-						options={[...fruitTypes]}
-						placeholder="Select fruit type…"
-						renderValue={capitalize}
-						required
-					/>
+					<div class="form-field">
+						<label class="form-field__label" for={typeId}>
+							Produce Type&nbsp;<span class="form-field__required">*</span>
+						</label>
+						<ProduceTypeSelector
+							id={typeId}
+							value={selectedType()}
+							onChange={setSelectedType}
+							errorMessage={fieldErrors().properties?.type?.errors?.[0]}
+						/>
+					</div>
 
 					<Input
 						errors={fieldErrors().properties?.harvestWindow?.errors}

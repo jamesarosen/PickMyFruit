@@ -1,28 +1,5 @@
 import { z } from 'zod'
-
-export const fruitTypes = [
-	'apple',
-	'apricot',
-	'avocado',
-	'cherry',
-	'fig',
-	'grape',
-	'grapefruit',
-	'lemon',
-	'lime',
-	'nectarine',
-	'olive',
-	'orange',
-	'peach',
-	'pear',
-	'persimmon',
-	'plum',
-	'pomegranate',
-	'quince',
-	'walnut',
-	'other',
-] as const
-export type FruitType = (typeof fruitTypes)[number]
+import { produceTypeSlugs } from '@/lib/produce-types'
 
 const optionalZip = z.preprocess(
 	(val) => (val === '' || val === null ? undefined : val),
@@ -41,7 +18,14 @@ const requiredString = (message: string, max: number = 200) =>
 
 // Schema for form input (before geocoding)
 export const listingFormSchema = z.object({
-	type: z.enum(fruitTypes, { message: 'Please select a fruit type' }),
+	type: z.preprocess(
+		(val) => (val === null ? '' : val),
+		z
+			.string({ message: 'Please select a produce type' })
+			.refine((v) => produceTypeSlugs.has(v), {
+				message: 'Please select a produce type',
+			})
+	),
 	harvestWindow: requiredString('Harvest window is required', 50),
 	address: requiredString('Address is required', 200),
 	city: requiredString('City is required', 100),

@@ -1,4 +1,17 @@
 @layer base {
+	:root {
+		--_focus-ring-width: 2px;
+		--_focus-ring-color-1: var(--color-background);
+		--_focus-ring-color-2: var(--color-accent);
+		--_focus-ring-color-3: var(--color-background);
+		--_focus-ring-color-4: var(--color-foreground);
+		--_focus-ring-shadow:
+			0 0 0 var(--_focus-ring-width) var(--_focus-ring-color-1),
+			0 0 0 calc(var(--_focus-ring-width) * 2) var(--_focus-ring-color-2),
+			0 0 0 calc(var(--_focus-ring-width) * 3) var(--_focus-ring-color-3),
+			0 0 0 calc(var(--_focus-ring-width) * 4) var(--_focus-ring-color-4);
+	}
+
 	:where(
 		a,
 		button,
@@ -23,17 +36,18 @@
 	* @see https://piccalil.li/blog/taking-a-shot-at-the-double-focus-ring-problem-using-modern-css/
 	*/
 	:focus-visible {
-		--_focus-ring-width: 2px;
-		--_focus-ring-color-1: var(--color-background);
-		--_focus-ring-color-2: var(--color-accent);
-		--_focus-ring-color-3: var(--color-background);
-		--_focus-ring-color-4: var(--color-foreground);
-
-		box-shadow:
-			0 0 0 var(--_focus-ring-width) var(--_focus-ring-color-1),
-			0 0 0 calc(var(--_focus-ring-width) * 2) var(--_focus-ring-color-2),
-			0 0 0 calc(var(--_focus-ring-width) * 3) var(--_focus-ring-color-3),
-			0 0 0 calc(var(--_focus-ring-width) * 4) var(--_focus-ring-color-4);
+		box-shadow: var(--_focus-ring-shadow);
 		outline: none;
+	}
+}
+
+@layer utilities {
+	.focus-ring:focus-within {
+		box-shadow: var(--_focus-ring-shadow);
+		outline: none;
+	}
+
+	.focus-ring-none:focus-visible {
+		box-shadow: none;
 	}
 }
