@@ -87,7 +87,9 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 	return (
 		<form class="listing-form" onSubmit={handleSubmit}>
 			<Show when={submitError()}>
-				<div role="alert" class="form-message error">{submitError()}</div>
+				<div role="alert" class="form-message error">
+					{submitError()}
+				</div>
 			</Show>
 
 			<Show when={context().session?.user}>
