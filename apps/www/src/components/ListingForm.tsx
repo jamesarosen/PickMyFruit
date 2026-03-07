@@ -1,5 +1,6 @@
 import { Link, useNavigate, useRouteContext } from '@tanstack/solid-router'
 import { createSignal, Show } from 'solid-js'
+import { z } from 'zod'
 import { Input, Textarea } from '@/components/FormField'
 import { Select, SelectItem, SelectItemLabel } from '@/components/Select'
 import type { AddressFields } from '@/data/schema'
@@ -8,16 +9,16 @@ import { Sentry } from '@/lib/sentry'
 import { listingFormSchema, fruitTypes } from '@/lib/validation'
 import '@/components/ListingForm.css'
 
-interface FieldErrors {
-	[key: string]: string[] | undefined
-}
+type FieldErrors = ReturnType<
+	typeof z.treeifyError<z.infer<typeof listingFormSchema>>
+>
 
 export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 	const context = useRouteContext({ from: '__root__' })
 	const navigate = useNavigate()
 	const [isSubmitting, setIsSubmitting] = createSignal(false)
 	const [submitError, setSubmitError] = createSignal<string | null>(null)
-	const [fieldErrors, setFieldErrors] = createSignal<FieldErrors>({})
+	const [fieldErrors, setFieldErrors] = createSignal<FieldErrors>({ errors: [] })
 
 	async function submitListing(data: Record<string, unknown>) {
 		setIsSubmitting(true)
@@ -57,7 +58,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 		event.preventDefault()
 		if (isSubmitting()) return
 		setSubmitError(null)
-		setFieldErrors({})
+		setFieldErrors({ errors: [] })
 
 		const form = event.target as HTMLFormElement
 		const formData = new FormData(form)
@@ -74,7 +75,9 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 
 		const parsed = listingFormSchema.safeParse(data)
 		if (!parsed.success) {
-			setFieldErrors(parsed.error.flatten().fieldErrors as FieldErrors)
+			const tree = z.treeifyError(parsed.error)
+			setFieldErrors(tree)
+			if (tree.errors.length > 0) setSubmitError(tree.errors.join(' '))
 			return
 		}
 
@@ -84,7 +87,9 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 	return (
 		<form class="listing-form" onSubmit={handleSubmit}>
 			<Show when={submitError()}>
-				<div class="form-message error">{submitError()}</div>
+				<div role="alert" class="form-message error">
+					{submitError()}
+				</div>
 			</Show>
 
 			<Show when={context().session?.user}>
@@ -99,7 +104,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 				<legend>What are you sharing?</legend>
 				<div class="form-row">
 					<Select<string>
-						errors={fieldErrors().type}
+						errors={fieldErrors().properties?.type?.errors}
 						itemComponent={(props) => (
 							<SelectItem item={props.item}>
 								<SelectItemLabel>{capitalize(props.item.rawValue)}</SelectItemLabel>
@@ -114,7 +119,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 					/>
 
 					<Input
-						errors={fieldErrors().harvestWindow}
+						errors={fieldErrors().properties?.harvestWindow?.errors}
 						label="When to Pick"
 						name="harvestWindow"
 						placeholder="e.g., Now through February"
@@ -137,7 +142,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 						props.defaultAddress?.address ? 'address-prefill-notice' : undefined
 					}
 					defaultValue={props.defaultAddress?.address ?? ''}
-					errors={fieldErrors().address}
+					errors={fieldErrors().properties?.address?.errors}
 					hint="Others will see your neighborhood, but not your exact address."
 					label="Street Address"
 					name="address"
@@ -148,14 +153,14 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 				<div class="form-row-3">
 					<Input
 						defaultValue={props.defaultAddress?.city ?? 'Napa'}
-						errors={fieldErrors().city}
+						errors={fieldErrors().properties?.city?.errors}
 						label="City"
 						name="city"
 						required
 					/>
 					<Input
 						defaultValue={props.defaultAddress?.state ?? 'CA'}
-						errors={fieldErrors().state}
+						errors={fieldErrors().properties?.state?.errors}
 						label="State"
 						maxlength={2}
 						name="state"
@@ -163,7 +168,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 					/>
 					<Input
 						defaultValue={props.defaultAddress?.zip ?? ''}
-						errors={fieldErrors().zip}
+						errors={fieldErrors().properties?.zip?.errors}
 						label="ZIP"
 						name="zip"
 						placeholder="94558"
@@ -174,10 +179,10 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 			<fieldset>
 				<legend>Notes</legend>
 				<Textarea
-					errors={fieldErrors().notes}
+					errors={fieldErrors().properties?.notes?.errors}
 					label="Additional Details"
 					name="notes"
-					placeholder="e.g., Ring doorbell first. Take a few. Take 'em all! Gate code is 1234."
+					placeholder="e.g., Ring doorbell first. Take a few or take 'em all!"
 					rows={3}
 				/>
 			</fieldset>
