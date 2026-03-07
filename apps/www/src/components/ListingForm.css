@@ -25,75 +25,6 @@
 		margin: 0 0 16px 0;
 	}
 
-	.form-group {
-		margin-bottom: 20px;
-	}
-
-	.form-group label {
-		display: block;
-		font-size: 14px;
-		font-weight: 500;
-		color: var(--color-foreground);
-		margin-bottom: 6px;
-	}
-
-	.form-group .required {
-		color: var(--color-primary);
-	}
-
-	.form-group input[type='text'],
-	.form-group input[type='email'],
-	.form-group input[type='tel'],
-	.form-group select,
-	.form-group textarea {
-		width: 100%;
-		padding: 12px 14px;
-		font-size: 16px;
-		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.3) h);
-		border-radius: 8px;
-		background: var(--color-background);
-		color: var(--color-foreground);
-		transition: border-color 0.2s;
-	}
-
-	.form-group input:focus,
-	.form-group select:focus,
-	.form-group textarea:focus {
-		border-color: var(--color-accent);
-		outline: none;
-	}
-
-	.form-group input.error,
-	.form-group select.error,
-	.form-group textarea.error {
-		border-color: var(--color-primary);
-	}
-
-	.form-group textarea {
-		min-height: 100px;
-		resize: vertical;
-	}
-
-	.form-group select {
-		appearance: none;
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
-		background-repeat: no-repeat;
-		background-position: right 14px center;
-		padding-right: 40px;
-	}
-
-	.hint {
-		font-size: 13px;
-		color: var(--color-quiet);
-		margin-top: 4px;
-	}
-
-	.form-error {
-		font-size: 13px;
-		color: var(--color-primary);
-		margin-top: 4px;
-	}
-
 	.form-row {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
@@ -166,7 +97,7 @@
 	}
 
 	/* Readonly input styling */
-	.form-group input[readonly] {
+	.form-field input[readonly] {
 		background: oklch(from var(--color-quiet) l c h / 0.1);
 		cursor: not-allowed;
 	}

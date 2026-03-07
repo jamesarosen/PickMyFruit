@@ -1,9 +1,11 @@
-import { createSignal, Show, For } from 'solid-js'
 import { Link, useNavigate, useRouteContext } from '@tanstack/solid-router'
-import { listingFormSchema, fruitTypes } from '@/lib/validation'
-import { Sentry } from '@/lib/sentry'
-import FormField, { capitalize } from '@/components/FormField'
+import { createSignal, Show } from 'solid-js'
+import { Input, Textarea } from '@/components/FormField'
+import { Select, SelectItem, SelectItemLabel } from '@/components/Select'
 import type { AddressFields } from '@/data/schema'
+import { capitalize } from '@/lib/capitalize'
+import { Sentry } from '@/lib/sentry'
+import { listingFormSchema, fruitTypes } from '@/lib/validation'
 import '@/components/ListingForm.css'
 
 interface FieldErrors {
@@ -96,117 +98,88 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 			<fieldset>
 				<legend>What are you sharing?</legend>
 				<div class="form-row">
-					<FormField
-						id="type"
+					<Select<string>
+						errors={fieldErrors().type}
+						itemComponent={(props) => (
+							<SelectItem item={props.item}>
+								<SelectItemLabel>{capitalize(props.item.rawValue)}</SelectItemLabel>
+							</SelectItem>
+						)}
 						label="Fruit Type"
+						name="type"
+						options={[...fruitTypes]}
+						placeholder="Select fruit type…"
+						renderValue={capitalize}
 						required
-						error={fieldErrors().type}
-					>
-						<select
-							id="type"
-							name="type"
-							class={fieldErrors().type ? 'error' : ''}
-							required
-						>
-							<option value="">Select fruit type</option>
-							<For each={fruitTypes}>
-								{(type) => <option value={type}>{capitalize(type)}</option>}
-							</For>
-						</select>
-					</FormField>
-					<FormField
-						id="harvestWindow"
+					/>
+
+					<Input
+						errors={fieldErrors().harvestWindow}
 						label="When to Pick"
+						name="harvestWindow"
+						placeholder="e.g., Now through February"
 						required
-						error={fieldErrors().harvestWindow}
-					>
-						<input
-							type="text"
-							id="harvestWindow"
-							name="harvestWindow"
-							placeholder="e.g., Now through February"
-							class={fieldErrors().harvestWindow ? 'error' : ''}
-							required
-						/>
-					</FormField>
+					/>
 				</div>
 			</fieldset>
 
 			<fieldset>
 				<legend>Where is it?</legend>
+
 				<Show when={props.defaultAddress?.address}>
 					<p class="form-prefill-notice" id="address-prefill-notice">
 						Pre-filled from your last listing. Edit if different.
 					</p>
 				</Show>
-				<FormField
-					id="address"
-					label="Street Address"
-					required
-					error={fieldErrors().address}
+
+				<Input
+					aria-describedby={
+						props.defaultAddress?.address ? 'address-prefill-notice' : undefined
+					}
+					defaultValue={props.defaultAddress?.address ?? ''}
+					errors={fieldErrors().address}
 					hint="Others will see your neighborhood, but not your exact address."
-				>
-					<input
-						type="text"
-						id="address"
-						name="address"
-						placeholder="123 Main Street"
-						value={props.defaultAddress?.address ?? ''}
-						class={fieldErrors().address ? 'error' : ''}
-						aria-describedby={
-							props.defaultAddress?.address ? 'address-prefill-notice' : undefined
-						}
+					label="Street Address"
+					name="address"
+					placeholder="123 Main Street"
+					required
+				/>
+
+				<div class="form-row-3">
+					<Input
+						defaultValue={props.defaultAddress?.city ?? 'Napa'}
+						errors={fieldErrors().city}
+						label="City"
+						name="city"
 						required
 					/>
-				</FormField>
-				<div class="form-row-3">
-					<FormField id="city" label="City" required error={fieldErrors().city}>
-						<input
-							type="text"
-							id="city"
-							name="city"
-							value={props.defaultAddress?.city ?? 'Napa'}
-							class={fieldErrors().city ? 'error' : ''}
-							required
-						/>
-					</FormField>
-					<FormField id="state" label="State" required error={fieldErrors().state}>
-						<input
-							type="text"
-							id="state"
-							name="state"
-							value={props.defaultAddress?.state ?? 'CA'}
-							maxlength="2"
-							class={fieldErrors().state ? 'error' : ''}
-							required
-						/>
-					</FormField>
-					<FormField id="zip" label="ZIP" error={fieldErrors().zip}>
-						<input
-							type="text"
-							id="zip"
-							name="zip"
-							value={props.defaultAddress?.zip ?? ''}
-							placeholder="94558"
-						/>
-					</FormField>
+					<Input
+						defaultValue={props.defaultAddress?.state ?? 'CA'}
+						errors={fieldErrors().state}
+						label="State"
+						maxlength={2}
+						name="state"
+						required
+					/>
+					<Input
+						defaultValue={props.defaultAddress?.zip ?? ''}
+						errors={fieldErrors().zip}
+						label="ZIP"
+						name="zip"
+						placeholder="94558"
+					/>
 				</div>
 			</fieldset>
 
 			<fieldset>
 				<legend>Notes</legend>
-				<FormField
-					id="notes"
+				<Textarea
+					errors={fieldErrors().notes}
 					label="Additional Details"
-					error={fieldErrors().notes}
-				>
-					<textarea
-						id="notes"
-						name="notes"
-						placeholder="e.g., Ring doorbell first. Take a few. Take 'em all! Gate code is 1234."
-						rows="3"
-					/>
-				</FormField>
+					name="notes"
+					placeholder="e.g., Ring doorbell first. Take a few. Take 'em all! Gate code is 1234."
+					rows={3}
+				/>
 			</fieldset>
 
 			<div class="form-actions">

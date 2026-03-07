@@ -59,7 +59,7 @@ describe('InquiryForm error handling', () => {
 			<InquiryForm listingId={42} callbackURL="/listings/42" />
 		))
 
-		fireEvent.input(getByLabelText('Your email'), {
+		fireEvent.input(getByLabelText(/Your email/), {
 			target: { value: 'gardener@example.com' },
 		})
 		fireEvent.click(getByRole('button', { name: 'Put me in touch' }))

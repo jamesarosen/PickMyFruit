@@ -9,7 +9,7 @@ async function signIn(page: Page, testUser: TestUser) {
 		page.getByRole('heading', { name: 'Sign in to Pick My Fruit' })
 	).toBeVisible()
 
-	const emailInput = page.locator('input#email')
+	const emailInput = page.getByLabel(/email/i)
 	await expect(emailInput).toBeVisible()
 	await emailInput.pressSequentially(testUser.email, { delay: 30 })
 	await expect(emailInput).toHaveValue(testUser.email)
@@ -55,7 +55,7 @@ test.describe('Authentication', () => {
 		).toBeVisible()
 
 		// Wait for form to be ready (same as first test)
-		const emailInput = page.locator('input#email')
+		const emailInput = page.getByLabel(/email/i)
 		await expect(emailInput).toBeVisible()
 
 		// Type email using pressSequentially (same as first test)

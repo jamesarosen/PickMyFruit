@@ -7,19 +7,29 @@ import {
 } from '@tanstack/solid-router'
 import { createSignal, Show } from 'solid-js'
 import { z } from 'zod'
+import { Input } from '@/components/FormField'
 import Layout from '@/components/Layout'
 import SiteHeader from '@/components/SiteHeader'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import { authClient } from '@/lib/auth-client'
-import './login.css'
 import { Sentry } from '@/lib/sentry'
+import './login.css'
 
 const loginSearchSchema = z.object({
 	returnTo: z
 		.string()
-		.refine((val) => val.startsWith('/') && !val.startsWith('//'), {
-			message: 'returnTo must be a relative path',
-		})
+		.refine(
+			(val) => {
+				try {
+					// Parse relative to a dummy origin; reject anything that resolves
+					// to a different host (catches //, /\, and protocol-relative tricks).
+					return new URL(val, 'http://localhost').hostname === 'localhost'
+				} catch {
+					return false
+				}
+			},
+			{ message: 'returnTo must be a relative path' }
+		)
 		.optional(),
 })
 
@@ -67,7 +77,7 @@ function LoginPage() {
 					? error.message
 					: "Failed to send sign-in link. We've been notified of the problem."
 			)
-			Sentry.captureException('Failed to send magic link', {
+			Sentry.captureException(new Error('Failed to send magic link'), {
 				extra: { cause: error, context: 'Login' },
 			})
 		} else {
@@ -119,19 +129,16 @@ function LoginPage() {
 									<div class="form-error">{error()}</div>
 								</Show>
 
-								<div class="form-group">
-									<label for="email">Email address</label>
-									<input
-										type="email"
-										id="email"
-										name="email"
-										placeholder="you@example.com"
-										value={email()}
-										onInput={(e) => setEmail(e.currentTarget.value)}
-										required
-										autofocus
-									/>
-								</div>
+								<Input
+									autocomplete="on"
+									autofocus
+									label="Email address"
+									onChange={setEmail}
+									placeholder="you@example.com"
+									required
+									value={email()}
+									name="email"
+								/>
 
 								<button type="submit" class="submit-button" disabled={isSubmitting()}>
 									{isSubmitting() ? 'Sending…' : 'Send sign-in link'}

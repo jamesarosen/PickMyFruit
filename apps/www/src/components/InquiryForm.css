@@ -16,47 +16,9 @@
 		margin-bottom: 16px;
 	}
 
-	.inquiry-form label {
-		display: block;
-		font-size: 14px;
-		font-weight: 500;
-		color: var(--color-foreground);
-		margin-bottom: 6px;
-	}
-
 	.inquiry-form .optional {
 		font-weight: 400;
 		color: var(--color-quiet);
-	}
-
-	.inquiry-form input,
-	.inquiry-form textarea {
-		width: 100%;
-		padding: 12px;
-		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.3) h);
-		border-radius: 8px;
-		font-size: 16px;
-		font-family: inherit;
-		color: var(--color-foreground);
-		background: var(--color-background);
-		transition: border-color 0.2s;
-	}
-
-	.inquiry-form input:focus,
-	.inquiry-form textarea:focus {
-		outline: none;
-		border-color: var(--color-primary);
-	}
-
-	.inquiry-form input:disabled,
-	.inquiry-form textarea:disabled {
-		background: oklch(from var(--color-quiet) l calc(c * 0.1) h);
-		cursor: not-allowed;
-	}
-
-	.inquiry-form textarea {
-		resize: vertical;
-		min-height: 80px;
 	}
 
 	.inquiry-form .char-count {
@@ -64,7 +26,6 @@
 		text-align: right;
 		font-size: 12px;
 		color: var(--color-quiet);
-		margin-top: 4px;
 	}
 
 	.inquiry-submit {

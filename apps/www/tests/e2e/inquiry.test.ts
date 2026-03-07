@@ -29,7 +29,8 @@ test.describe('Inquiry Flow', () => {
 
 			// Fill in the note and submit
 			const noteText = 'I would love some figs!'
-			const noteField = page.locator('#inquiry-note')
+			const noteField = page.locator('textarea')
+			// const noteField = page.getByLabel('Message', { exact: false })
 			await noteField.click()
 			await noteField.pressSequentially(noteText, { delay: 20 })
 			await expect(noteField).toHaveValue(noteText)
