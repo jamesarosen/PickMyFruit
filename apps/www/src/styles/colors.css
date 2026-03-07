@@ -29,6 +29,10 @@
 			var(--color-morning-cream),
 			oklch(from var(--color-warm-charcoal) 0.19 c h)
 		);
+		--color-error: light-dark(
+			oklch(from var(--color-sunset-coral) 0.35 c h),
+			oklch(from var(--color-sunset-coral) 0.75 c h)
+		);
 		--color-foreground: light-dark(
 			var(--color-warm-charcoal),
 			var(--color-morning-cream)

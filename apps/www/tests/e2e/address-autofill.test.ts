@@ -10,9 +10,9 @@ test.describe('Address Autofill', () => {
 		await loginViaUI(page, testUser)
 		await page.goto('/listings/new')
 
-		await expect(page.locator('input#address')).toHaveValue('')
-		await expect(page.locator('input#city')).toHaveValue('Napa')
-		await expect(page.locator('input#state')).toHaveValue('CA')
+		await expect(page.getByLabel(/Address/)).toHaveValue('')
+		await expect(page.getByLabel('City')).toHaveValue('Napa')
+		await expect(page.getByLabel('State')).toHaveValue('CA')
 
 		// No prefill notice
 		await expect(page.locator('.form-prefill-notice')).not.toBeVisible()
@@ -32,10 +32,10 @@ test.describe('Address Autofill', () => {
 		await loginViaUI(page, testUser)
 		await page.goto('/listings/new')
 
-		await expect(page.locator('input#address')).toHaveValue('456 Oak Avenue')
-		await expect(page.locator('input#city')).toHaveValue('St. Helena')
-		await expect(page.locator('input#state')).toHaveValue('CA')
-		await expect(page.locator('input#zip')).toHaveValue('94574')
+		await expect(page.getByLabel(/Address/)).toHaveValue('456 Oak Avenue')
+		await expect(page.getByLabel('City')).toHaveValue('St. Helena')
+		await expect(page.getByLabel('State')).toHaveValue('CA')
+		await expect(page.getByLabel('ZIP')).toHaveValue('94574')
 
 		// Prefill notice is visible
 		const notice = page.locator('.form-prefill-notice')

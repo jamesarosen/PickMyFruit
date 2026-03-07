@@ -41,43 +41,6 @@
 		gap: 20px;
 	}
 
-	.login-form .form-group {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-	}
-
-	.login-form label {
-		font-size: 14px;
-		font-weight: 500;
-		color: var(--color-foreground);
-	}
-
-	.login-form input[type='email'] {
-		width: 100%;
-		padding: 12px 14px;
-		font-size: 16px;
-		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.3) h);
-		border-radius: 8px;
-		background: var(--color-background);
-		color: var(--color-foreground);
-		transition: border-color 0.2s;
-	}
-
-	.login-form input[type='email']:focus {
-		border-color: var(--color-accent);
-		outline: none;
-	}
-
-	.login-form .form-error {
-		padding: 12px;
-		background: oklch(from var(--color-primary) l c h / 0.1);
-		border: 1px solid oklch(from var(--color-primary) l c h / 0.3);
-		border-radius: 8px;
-		color: var(--color-primary);
-		font-size: 14px;
-	}
-
 	.login-form .submit-button {
 		width: 100%;
 		padding: 14px;

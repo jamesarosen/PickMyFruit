@@ -1,10 +1,11 @@
 import { createEffect, createSignal, on, Show } from 'solid-js'
 import { useRouteContext } from '@tanstack/solid-router'
-import { authClient } from '@/lib/auth-client'
 import { submitInquiry as submitInquiryFn } from '@/api/inquiries'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
-import '@/components/InquiryForm.css'
+import { authClient } from '@/lib/auth-client'
 import { Sentry } from '@/lib/sentry'
+import { Input, Textarea } from './FormField'
+import '@/components/InquiryForm.css'
 
 interface InquiryFormProps {
 	listingId: number
@@ -63,13 +64,17 @@ export default function InquiryForm(props: InquiryFormProps) {
 			await submitInquiry()
 		} else {
 			// Store pending inquiry data
-			sessionStorage.setItem(
-				PENDING_INQUIRY_KEY,
-				JSON.stringify({
-					listingId: props.listingId,
-					note: note(),
-				})
-			)
+			try {
+				sessionStorage.setItem(
+					PENDING_INQUIRY_KEY,
+					JSON.stringify({
+						listingId: props.listingId,
+						note: note(),
+					})
+				)
+			} catch {
+				// QuotaExceededError or similar — not fatal, continue with magic link flow
+			}
 
 			// Trigger magic link flow
 			const emailValue = email().trim()
@@ -84,7 +89,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 			})
 
 			if (error) {
-				Sentry.captureException('Failed to send magic link', {
+				Sentry.captureException(new Error('Failed to send magic link'), {
 					extra: { cause: error, context: 'InquiryForm' },
 				})
 				setError("Failed to send sign-in link. We've been notified of the problem.")
@@ -105,7 +110,8 @@ export default function InquiryForm(props: InquiryFormProps) {
 		await submitInquiry()
 	}
 
-	// Auto-submit pending inquiry when returning from magic link authentication
+	// Auto-submit pending inquiry when returning from magic link authentication.
+	// Clear the URL param after triggering to prevent re-submission on remount.
 	let hasAutoSubmitted = false
 	createEffect(
 		on(
@@ -122,6 +128,12 @@ export default function InquiryForm(props: InquiryFormProps) {
 				let storedNote: string
 				try {
 					const parsed = JSON.parse(pending)
+					// Guard: only auto-submit if the stored inquiry is for this listing.
+					// The user may have opened a different listing before clicking the link.
+					if (parsed.listingId !== props.listingId) {
+						sessionStorage.removeItem(PENDING_INQUIRY_KEY)
+						return
+					}
 					storedNote = parsed.note || ''
 				} catch {
 					sessionStorage.removeItem(PENDING_INQUIRY_KEY)
@@ -130,6 +142,12 @@ export default function InquiryForm(props: InquiryFormProps) {
 
 				hasAutoSubmitted = true
 				setNote(storedNote)
+				// Remove the param so re-mounting doesn't trigger a second submit.
+				// Use the History API directly — this param is not part of the typed
+				// TanStack Router search schema for this route.
+				const url = new URL(window.location.href)
+				url.searchParams.delete('inquiry_complete')
+				window.history.replaceState({}, '', url.toString())
 				submitInquiry()
 			}
 		)
@@ -174,35 +192,30 @@ export default function InquiryForm(props: InquiryFormProps) {
 					<h3>Interested in this fruit?</h3>
 
 					<Show when={!isAuthenticated()}>
-						<div class="form-field">
-							<label for="inquiry-email">Your email</label>
-							<input
-								type="email"
-								id="inquiry-email"
-								value={email()}
-								onInput={(e) => setEmail(e.currentTarget.value)}
-								placeholder="you@example.com"
-								required
-								disabled={formState() === 'submitting'}
-							/>
-						</div>
+						<Input
+							disabled={formState() === 'submitting'}
+							label="Your email"
+							onChange={setEmail}
+							placeholder="you@example.com"
+							required
+							value={email()}
+						/>
 					</Show>
 
-					<div class="form-field">
-						<label for="inquiry-note">
-							Message to owner <span class="optional">(optional)</span>
-						</label>
-						<textarea
-							id="inquiry-note"
-							value={note()}
-							onInput={(e) => setNote(e.currentTarget.value)}
-							placeholder="Hi! I'd love to pick some of your fruit..."
-							maxLength={500}
-							rows={3}
-							disabled={formState() === 'submitting'}
-						/>
-						<span class="char-count">{note().length}/500</span>
-					</div>
+					<Textarea
+						disabled={formState() === 'submitting'}
+						hint={<span class="char-count">{note().length}/500</span>}
+						label={
+							<>
+								Message to owner <span class="optional">(optional)</span>
+							</>
+						}
+						maxLength={500}
+						onChange={setNote}
+						placeholder="Hi! I'd love to pick some of your fruit..."
+						rows={3}
+						value={note()}
+					/>
 
 					<Show when={error()}>
 						<div class="inquiry-error">{error()}</div>

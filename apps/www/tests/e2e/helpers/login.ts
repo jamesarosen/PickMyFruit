@@ -9,7 +9,7 @@ export async function loginViaUI(page: Page, testUser: TestUser) {
 		page.getByRole('heading', { name: 'Sign in to Pick My Fruit' })
 	).toBeVisible()
 
-	const emailInput = page.locator('input#email')
+	const emailInput = page.getByLabel(/email/i)
 	await expect(emailInput).toBeVisible()
 	await emailInput.pressSequentially(testUser.email, { delay: 30 })
 	await expect(emailInput).toHaveValue(testUser.email)
