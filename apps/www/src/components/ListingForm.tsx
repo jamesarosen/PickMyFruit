@@ -10,7 +10,7 @@ import { listingFormSchema, fruitTypes } from '@/lib/validation'
 import '@/components/ListingForm.css'
 
 type FieldErrors = ReturnType<
-	typeof z.treeifyError<z.input<typeof listingFormSchema>>
+	typeof z.treeifyError<z.infer<typeof listingFormSchema>>
 >
 
 export default function ListingForm(props: { defaultAddress?: AddressFields }) {
@@ -75,7 +75,9 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 
 		const parsed = listingFormSchema.safeParse(data)
 		if (!parsed.success) {
-			setFieldErrors(z.treeifyError(parsed.error))
+			const tree = z.treeifyError(parsed.error)
+			setFieldErrors(tree)
+			if (tree.errors.length > 0) setSubmitError(tree.errors.join(' '))
 			return
 		}
 
@@ -85,7 +87,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 	return (
 		<form class="listing-form" onSubmit={handleSubmit}>
 			<Show when={submitError()}>
-				<div class="form-message error">{submitError()}</div>
+				<div role="alert" class="form-message error">{submitError()}</div>
 			</Show>
 
 			<Show when={context().session?.user}>
@@ -178,7 +180,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 					errors={fieldErrors().properties?.notes?.errors}
 					label="Additional Details"
 					name="notes"
-					placeholder="e.g., Ring doorbell first. Take a few. Take 'em all! Gate code is 1234."
+					placeholder="e.g., Ring doorbell first. Take a few or take 'em all!"
 					rows={3}
 				/>
 			</fieldset>
