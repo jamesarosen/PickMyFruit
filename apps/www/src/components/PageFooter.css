@@ -1,0 +1,56 @@
+@layer components {
+	footer.page-footer {
+		background: var(--color-background);
+		padding: 40px 0;
+		border-top: 1px solid oklch(from var(--color-quiet) l calc(c * 0.2) h);
+
+		.container {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.footer-left {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			font-size: 14px;
+			color: var(--color-quiet);
+
+			a {
+				color: var(--color-primary);
+				text-decoration: none;
+
+				&:hover {
+					text-decoration: underline;
+				}
+			}
+		}
+
+		.footer-avatar {
+			width: 32px;
+			height: 32px;
+			border-radius: 50%;
+			background: var(--color-secondary);
+			color: var(--color-background);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-weight: 600;
+			font-size: 12px;
+		}
+
+		.footer-nav {
+			display: flex;
+			font-size: 0.85rem;
+			gap: 24px;
+
+			a::after {
+				content: '.';
+				color: var(--color-accent);
+				text-decoration: none;
+				text-decoration-color: var(--color-background);
+			}
+		}
+	}
+}

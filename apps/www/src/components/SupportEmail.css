@@ -1,0 +1,8 @@
+@layer components {
+	kbd.m29cxk1Fm9W {
+		span:nth-of-type(3n + 1) {
+			color: purple;
+			display: none;
+		}
+	}
+}

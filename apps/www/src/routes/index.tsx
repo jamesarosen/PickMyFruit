@@ -177,31 +177,7 @@ function HomePage() {
 						</Show>
 					</div>
 				</section>
-
-				<section class="contact-info surface-subtle">
-					<div class="container">
-						<p>
-							Questions? Text me at <a href="tel:+15551234567">(555) 123-4567</a>
-						</p>
-					</div>
-				</section>
 			</main>
-
-			<footer>
-				<div class="container">
-					<div class="footer-left">
-						<span class="footer-avatar">JD</span>
-						<span>
-							Built by <span>Your Name</span>
-						</span>
-					</div>
-					<nav class="footer-nav">
-						<button type="button">About</button>
-						<button type="button">Contact</button>
-						<button type="button">Privacy</button>
-					</nav>
-				</div>
-			</footer>
 		</Layout>
 	)
 }

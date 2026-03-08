@@ -1,4 +1,15 @@
 /// <reference types="vite/client" />
+/*
+ * At minimum, base.css must be before any components so we define the
+ * layers in the correct order.
+ * The rest are "site-wide defaults", which are also good to have before the
+ * things that override them so we don't use over-strong selectors to
+ * compensate.
+ */
+import '../styles/base.css'
+import '../styles/colors.css'
+import '../styles/focus.css'
+import '../styles/surfaces.css'
 import * as Solid from 'solid-js'
 import {
 	Outlet,
@@ -9,12 +20,9 @@ import {
 	type ErrorComponentProps,
 } from '@tanstack/solid-router'
 import { HydrationScript } from 'solid-js/web'
+import { PageFooter } from '@/components/PageFooter'
 import { getSession } from '@/lib/session'
 import { Sentry } from '@/lib/sentry'
-import '../styles/base.css'
-import '../styles/colors.css'
-import '../styles/focus.css'
-import '../styles/surfaces.css'
 
 export const Route = createRootRoute({
 	beforeLoad: async () => {
@@ -57,7 +65,12 @@ function RootShell(props: { children: Solid.JSX.Element }) {
 }
 
 function RootComponent() {
-	return <Outlet />
+	return (
+		<>
+			<Outlet />
+			<PageFooter />
+		</>
+	)
 }
 
 function RootError({ error, reset }: ErrorComponentProps) {
