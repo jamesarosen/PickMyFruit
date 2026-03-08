@@ -1,0 +1,208 @@
+slug,common_name,category,description
+chicken-egg,Chicken Egg,egg,A protein-rich egg from backyard chickens in many sizes and colors.
+duck-egg,Duck Egg,egg,A rich large egg with a slightly stronger flavor than chicken eggs.
+goose-egg,Goose Egg,egg,A very large egg with a creamy yolk and rich flavor.
+quail-egg,Quail Egg,egg,A tiny speckled egg with a rich flavor popular in many cuisines.
+turkey-egg,Turkey Egg,egg,A large speckled egg with a mild creamy flavor.
+apple,Apple,fruit,A classic garden favorite available in many heirloom and wild varieties.
+apricot,Apricot,fruit,A sweet stone fruit that ripens in early summer.
+aronia,Aronia Berry,fruit,A tart native berry rich in antioxidants and great for jams.
+asian-pear,Asian Pear,fruit,A crisp and juicy pear with an apple-like texture.
+avocado,Avocado,fruit,A creamy fruit beloved for its rich flavor and versatility.
+blackberry,Blackberry,fruit,A thorny bramble fruit that thrives in gardens and hedgerows.
+blood-orange,Blood Orange,fruit,A citrus fruit with crimson flesh and a raspberry-like flavor.
+blueberry,Blueberry,fruit,A sweet-tart berry perfect for fresh eating or baking.
+boysenberry,Boysenberry,fruit,A large dark berry cross between raspberry and blackberry.
+cantaloupe,Cantaloupe,fruit,A sweet netted melon best eaten fresh off the vine.
+cherry,Cherry,fruit,A sweet or sour stone fruit harvested in early summer.
+crabapple,Crabapple,fruit,A small tart apple ideal for jelly and ornamental uses.
+currant,Currant,fruit,A small tart berry excellent for jams and juice.
+elderberry,Elderberry,fruit,A small dark berry used for syrups and traditional remedies.
+feijoa,Feijoa,fruit,A tropical-flavored fruit with a sweet guava-like taste.
+fig,Fig,fruit,A sweet Mediterranean fruit with a honey-rich interior.
+gooseberry,Gooseberry,fruit,A tart berry great for pies and jams.
+grape,Grape,fruit,A versatile vine fruit enjoyed fresh or as juice and raisins.
+grapefruit,Grapefruit,fruit,A large citrus fruit with a pleasantly bitter flavor.
+ground-cherry,Ground Cherry,fruit,A small husk-wrapped fruit with a sweet pineapple-vanilla flavor.
+guava,Guava,fruit,A tropical fruit with a fragrant sweet interior.
+huckleberry,Huckleberry,fruit,A wild-tasting berry similar to blueberry found in mountain regions.
+jostaberry,Jostaberry,fruit,A thornless hybrid cross between currant and gooseberry.
+jujube,Jujube,fruit,A small date-like fruit with a crunchy apple texture when fresh.
+kiwi,Kiwi,fruit,A tangy green fruit with edible seeds and bright flavor.
+kumquat,Kumquat,fruit,A tiny citrus fruit eaten whole with sweet skin and tart flesh.
+lemon,Lemon,fruit,A bright citrus fruit essential for cooking and beverages.
+lime,Lime,fruit,A tart citrus fruit used in cooking and cocktails.
+loquat,Loquat,fruit,A mild sweet orange fruit that ripens in late winter or spring.
+lychee,Lychee,fruit,A fragrant tropical fruit with floral sweet flesh.
+mandarin,Mandarin,fruit,A small easy-peel citrus fruit with a sweet mild flavor.
+mayhaw,Mayhaw,fruit,A Southern native berry used for prized jelly and syrup.
+medlar,Medlar,fruit,An old-fashioned fruit traditionally eaten after bletting.
+meyer-lemon,Meyer Lemon,fruit,A sweeter thin-skinned lemon hybrid popular for baking.
+mulberry,Mulberry,fruit,A prolific tree fruit with a sweet blackberry-like flavor.
+muscadine,Muscadine,fruit,A thick-skinned Southern grape variety with a musky sweet flavor.
+nectarine,Nectarine,fruit,A smooth-skinned stone fruit closely related to peaches.
+olive,Olive,fruit,A savory drupe used for oil and table eating.
+orange,Orange,fruit,A popular citrus fruit enjoyed fresh or as juice.
+papaya,Papaya,fruit,A tropical fruit with orange flesh and a sweet mild flavor.
+passion-fruit,Passion Fruit,fruit,A vine fruit with fragrant tropical sweet-tart pulp.
+pawpaw,Pawpaw,fruit,A custard-like North American native fruit with banana and mango notes.
+peach,Peach,fruit,A classic summer stone fruit with juicy sweet flesh.
+pear,Pear,fruit,A crisp or buttery fruit available in many heirloom varieties.
+persimmon,Persimmon,fruit,A sweet orange autumn fruit best eaten fully ripe.
+pineapple-guava,Pineapple Guava,fruit,An evergreen shrub fruit with a minty pineapple-like flavor.
+plantain,Plantain,fruit,A starchy cooking banana harvested green or ripe.
+plum,Plum,fruit,A juicy sweet-tart stone fruit available in many colors.
+pomegranate,Pomegranate,fruit,A jewel-toned fruit filled with sweet tangy arils.
+pomelo,Pomelo,fruit,The largest citrus fruit with mild sweet grapefruit-like flesh.
+prickly-pear,Prickly Pear,fruit,A cactus fruit with sweet magenta or yellow flesh.
+quince,Quince,fruit,A fragrant fall fruit best cooked into jelly or paste.
+raspberry,Raspberry,fruit,A delicate tart-sweet bramble fruit popular for fresh eating.
+serviceberry,Serviceberry,fruit,A North American native berry with a sweet almond-like flavor.
+strawberry,Strawberry,fruit,A sweet red spring fruit beloved for fresh eating and jam.
+tamarillo,Tamarillo,fruit,An egg-shaped South American fruit with tart tangy flesh.
+tangerine,Tangerine,fruit,A small bright citrus fruit with an easy-peel sweet flavor.
+walnut,Walnut,fruit,A rich tree nut harvested in fall.
+watermelon,Watermelon,fruit,A refreshing large summer fruit with sweet juicy flesh.
+basil,Basil,herb,A fragrant tender annual herb essential in Italian and Asian cuisines.
+bay-laurel,Bay Laurel,herb,An aromatic evergreen shrub leaf used to flavor soups and stews.
+calendula,Calendula,herb,A bright edible flower with anti-inflammatory and skin-soothing properties.
+chamomile,Chamomile,herb,A gentle daisy-like herb used for calming teas and medicinal remedies.
+chervil,Chervil,herb,A delicate anise-flavored herb used in classic French cooking.
+chives,Chives,herb,A mild onion-flavored herb excellent for garnishing and fresh use.
+cilantro,Cilantro,herb,A bright aromatic herb essential in Mexican and Southeast Asian cooking.
+dill,Dill,herb,A feathery herb used in pickles and as a fresh culinary accent.
+echinacea,Echinacea,herb,A medicinal purple coneflower traditionally used to support immune health.
+epazote,Epazote,herb,A pungent Mexican culinary herb used in bean dishes and salsas.
+hyssop,Hyssop,herb,An aromatic medicinal herb with small purple flowers and a minty flavor.
+lavender,Lavender,herb,A fragrant flowering herb used in cooking and aromatherapy.
+lemon-balm,Lemon Balm,herb,A lemon-scented mint family herb used in teas and as a calming remedy.
+lemon-verbena,Lemon Verbena,herb,An intensely lemon-scented herb used in teas and desserts.
+lemongrass,Lemongrass,herb,A citrusy tropical grass used in Southeast Asian cooking and teas.
+lovage,Lovage,herb,A tall celery-flavored herb used in European soups and stews.
+marjoram,Marjoram,herb,A sweet mild oregano relative used in Mediterranean cooking.
+mint,Mint,herb,A vigorous spreading herb with a refreshing cool flavor.
+mugwort,Mugwort,herb,An aromatic perennial herb used in traditional medicine and smudging.
+nasturtium,Nasturtium,herb,An edible flowering herb with peppery leaves and bright blossoms.
+nettle,Nettle,herb,A nutrient-dense wild herb excellent for teas and cooked greens.
+oregano,Oregano,herb,A robust Mediterranean herb essential in Italian and Greek cuisines.
+parsley,Parsley,herb,A versatile culinary herb used fresh or dried in many dishes.
+passionflower,Passionflower,herb,A tropical vine flower used in calming teas and herbal remedies.
+peppermint,Peppermint,herb,A strongly menthol-flavored mint popular for teas and confections.
+rosemary,Rosemary,herb,A fragrant woody Mediterranean herb used in roasting and baking.
+sage,Sage,herb,A velvety aromatic herb widely used in poultry and Italian dishes.
+savory,Savory,herb,A peppery herb used in bean dishes and as a salt substitute.
+shiso,Shiso,herb,A Japanese herb with a complex basil-mint flavor.
+spearmint,Spearmint,herb,A mildly sweet mint popular for culinary use and herbal teas.
+st-johns-wort,St. John's Wort,herb,A yellow-flowered herb traditionally used as a natural mood support.
+stevia,Stevia,herb,A sweet-leafed herb used as a natural zero-calorie sweetener.
+tarragon,Tarragon,herb,An anise-flavored herb essential in French cuisine.
+thai-basil,Thai Basil,herb,An anise-spiced basil variety used in Thai and Vietnamese dishes.
+thyme,Thyme,herb,A small-leaved herb widely used in European savory cooking.
+tulsi,Tulsi,herb,A sacred Indian basil variety with a clove-like peppery flavor.
+valerian,Valerian,herb,A medicinal herb with sedative properties used for sleep support.
+vietnamese-coriander,Vietnamese Coriander,herb,A peppery lime-flavored herb used in Southeast Asian salads and soups.
+winter-savory,Winter Savory,herb,A pungent perennial savory used in bean and meat dishes.
+yarrow,Yarrow,herb,A feathery-leaved medicinal herb with clusters of small white flowers.
+comb-honey,Comb Honey,honey,Fresh honeycomb with wax cells still intact and naturally drizzling.
+honey,Honey,honey,Pure raw honey harvested from backyard or local hives.
+infused-honey,Infused Honey,honey,Honey infused with herbs or spices for a unique flavor.
+dried-flowers,Dried Flowers,other,Dried garden flowers for decorative or culinary use.
+edible-flowers,Edible Flowers,other,Fresh garden blossoms safe to eat and beautiful on dishes.
+microgreens,Microgreens,other,Young tender seedlings harvested just after sprouting.
+mushrooms,Mushrooms,other,Cultivated or foraged fungi with earthy flavors.
+other,Other,other,Any produce type not listed here.
+sprouts,Sprouts,other,Freshly germinated seeds rich in nutrients and enzymes.
+worm-castings,Worm Castings,other,Nutrient-rich vermicompost castings used as organic fertilizer.
+apple-butter,Apple Butter,preserved,A smooth spiced spread made from slow-cooked apples.
+dehydrated-fruit,Dehydrated Fruit,preserved,Fruit dried to concentrate sweetness and extend shelf life.
+fermented-hot-sauce,Fermented Hot Sauce,preserved,A tangy lacto-fermented hot sauce made from fresh peppers.
+fermented-vegetables,Fermented Vegetables,preserved,Vegetables preserved through natural lacto-fermentation.
+fruit-leather,Fruit Leather,preserved,Pureed fruit dried into a chewy portable snack.
+garlic-dill-pickles,Garlic Dill Pickles,preserved,Classic cucumber pickles with garlic and fresh dill.
+herb-infused-vinegar,Herb-Infused Vinegar,preserved,Aromatic vinegar steeped with fresh garden herbs.
+jam,Jam,preserved,Cooked fruit preserve with a spreadable texture.
+jelly,Jelly,preserved,A smooth clear fruit preserve made from strained juice.
+kimchi,Kimchi,preserved,A spicy fermented Korean vegetable condiment.
+marmalade,Marmalade,preserved,A citrus preserve with suspended peel for a bittersweet flavor.
+miso,Miso,preserved,A fermented soybean paste rich in umami flavor.
+pickled-peppers,Pickled Peppers,preserved,Peppers preserved in brine or vinegar.
+salsa,Salsa,preserved,A tangy cooked or raw tomato condiment with peppers and onion.
+sauerkraut,Sauerkraut,preserved,Finely shredded cabbage fermented in its own brine.
+shrub,Shrub,preserved,A concentrated fruit and vinegar drinking syrup.
+syrup,Syrup,preserved,A sweet concentrated fruit or herb syrup for drinks and desserts.
+tomato-sauce,Tomato Sauce,preserved,A cooked tomato sauce for pasta and pizza.
+flower-seedling,Flower Seedling,seedling,A young flower plant ready for transplanting to garden beds.
+herb-seedling,Herb Seedling,seedling,A young herb plant ready for transplanting.
+hot-pepper-seedling,Hot Pepper Seedling,seedling,A young hot pepper plant ready for garden transplanting.
+native-plant-seedling,Native Plant Seedling,seedling,A young native plant for pollinators and wildlife habitat.
+perennial-seedling,Perennial Seedling,seedling,A young perennial plant that will return each growing season.
+tomato-seedling,Tomato Seedling,seedling,A young tomato plant ready for transplanting.
+tree-seedling,Tree Seedling,seedling,A young fruit or nut tree seedling ready for planting.
+vegetable-seedling,Vegetable Seedling,seedling,A young vegetable plant ready for transplanting to the garden.
+artichoke,Artichoke,vegetable,A large thistle-like plant with edible tender hearts and bracts.
+arugula,Arugula,vegetable,A peppery salad green that grows quickly in cool weather.
+asparagus,Asparagus,vegetable,A perennial vegetable with tender spring spears.
+beet,Beet,vegetable,A sweet earthy root vegetable with edible greens.
+bok-choy,Bok Choy,vegetable,A crisp mild Asian green in the cabbage family.
+broccoli,Broccoli,vegetable,A nutritious brassica with dense green flower heads.
+brussels-sprouts,Brussels Sprouts,vegetable,Small brassica heads that grow along a tall stalk.
+cabbage,Cabbage,vegetable,A dense leafy brassica used fresh or in fermented preparations.
+carrot,Carrot,vegetable,A sweet crunchy root vegetable in many heirloom colors.
+cauliflower,Cauliflower,vegetable,A mild brassica with a dense white or colored head.
+celeriac,Celeriac,vegetable,A knobby celery-flavored root vegetable great for soups.
+celery,Celery,vegetable,A crisp stalky vegetable with a mild savory flavor.
+chard,Chard,vegetable,A large leafy green with colorful stems and earthy spinach-like flavor.
+chickpea,Chickpea,vegetable,A protein-rich legume harvested fresh or dried.
+collard-greens,Collard Greens,vegetable,A large hearty brassica leaf popular in Southern cooking.
+corn,Corn,vegetable,A sweet summer staple harvested at peak ripeness.
+cucumber,Cucumber,vegetable,A cool refreshing vine vegetable perfect for fresh eating and pickling.
+daikon,Daikon,vegetable,A large mild Japanese radish used fresh or pickled.
+delicata-squash,Delicata Squash,vegetable,A sweet striped winter squash with edible thin skin.
+edamame,Edamame,vegetable,Young soybeans harvested in the pod at peak sweetness.
+eggplant,Eggplant,vegetable,A glossy purple or white fruit-vegetable with creamy cooked flesh.
+endive,Endive,vegetable,A slightly bitter chicory leaf used in salads and braised dishes.
+fava-bean,Fava Bean,vegetable,A meaty broad bean harvested fresh or dried.
+fennel,Fennel,vegetable,An anise-flavored bulb vegetable with edible fronds and seeds.
+garlic,Garlic,vegetable,A pungent allium essential to cuisines around the world.
+green-bean,Green Bean,vegetable,A tender legume pod harvested before the seeds mature.
+heirloom-tomato,Heirloom Tomato,vegetable,A colorful garden tomato prized for its rich flavor and diversity of shapes.
+horseradish,Horseradish,vegetable,A pungent root used to make fiery condiments and sauces.
+hot-pepper,Hot Pepper,vegetable,A spicy Capsicum fruit ranging from mild to extremely hot.
+jerusalem-artichoke,Jerusalem Artichoke,vegetable,A sunflower relative with sweet nutty tubers also called sunchokes.
+jicama,Jicama,vegetable,A crisp sweet Mexican root vegetable eaten raw or cooked.
+kabocha-squash,Kabocha Squash,vegetable,A Japanese pumpkin with sweet dense orange flesh.
+kale,Kale,vegetable,A hearty brassica leaf that is nutrient-rich and excellent raw or cooked.
+kohlrabi,Kohlrabi,vegetable,A crunchy swollen stem vegetable with a mild broccoli-like flavor.
+leek,Leek,vegetable,A mild allium with a sweet onion flavor used in soups and braises.
+lettuce,Lettuce,vegetable,A crisp salad green in many heirloom leaf and head varieties.
+lima-bean,Lima Bean,vegetable,A buttery flat bean harvested fresh or dried.
+mache,Mache,vegetable,A tender nutty salad green also known as lamb's lettuce.
+mizuna,Mizuna,vegetable,A mildly peppery Japanese salad green with feathery leaves.
+mustard-greens,Mustard Greens,vegetable,A pungent brassica leaf used in Southern and Asian cuisines.
+napa-cabbage,Napa Cabbage,vegetable,A mild wrinkled-leaf Chinese cabbage used in kimchi and stir-fries.
+okra,Okra,vegetable,A heat-loving pod vegetable used in gumbo and fried dishes.
+onion,Onion,vegetable,A foundational allium used fresh or cooked in countless dishes.
+parsnip,Parsnip,vegetable,A sweet nutty white root vegetable harvested after frost.
+potato,Potato,vegetable,A starchy tuber in many heirloom fingerling and heritage varieties.
+pumpkin,Pumpkin,vegetable,A large winter squash in many varieties for eating or display.
+radicchio,Radicchio,vegetable,A bitter red Italian chicory used in salads and grilled dishes.
+radish,Radish,vegetable,A crisp peppery root vegetable that matures quickly.
+rhubarb,Rhubarb,vegetable,A tart celery-like stalk used in pies and jams with strawberry.
+rutabaga,Rutabaga,vegetable,A large sweet turnip-cabbage cross with yellow flesh.
+scallion,Scallion,vegetable,A young mild green onion used fresh in many cuisines.
+shallot,Shallot,vegetable,A small mild allium with a delicate onion-garlic flavor.
+snap-pea,Snap Pea,vegetable,A sweet edible-pod pea excellent for fresh snacking.
+snow-pea,Snow Pea,vegetable,A flat edible-pod pea used in stir-fries and fresh salads.
+sorrel,Sorrel,vegetable,A lemony perennial green used in soups and as a tart salad accent.
+spaghetti-squash,Spaghetti Squash,vegetable,A winter squash whose cooked flesh pulls into spaghetti-like strands.
+spinach,Spinach,vegetable,A tender iron-rich green used fresh or cooked in many dishes.
+summer-squash,Summer Squash,vegetable,A soft-skinned squash harvested before it fully matures.
+sweet-pepper,Sweet Pepper,vegetable,A mild Capsicum in many colors harvested at any stage.
+sweet-potato,Sweet Potato,vegetable,A sweet starchy root vegetable rich in beta-carotene.
+tomatillo,Tomatillo,vegetable,A small husk-wrapped green tomato relative used in salsas.
+tomato,Tomato,vegetable,A juicy summer staple enjoyed fresh or cooked in many forms.
+turnip,Turnip,vegetable,A mild white root vegetable with edible greens used in fall cooking.
+watercress,Watercress,vegetable,A peppery aquatic green used in salads and sandwiches.
+winter-squash,Winter Squash,vegetable,A hard-skinned squash harvested mature and stored for months.
+yam,Yam,vegetable,A starchy tropical tuber with dry earthy flesh.
+zucchini,Zucchini,vegetable,A prolific summer squash best harvested young and tender.
