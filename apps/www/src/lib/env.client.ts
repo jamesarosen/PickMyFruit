@@ -13,6 +13,8 @@ const schema = z
 			.enum(['true', 'false'])
 			.transform((v) => v === 'true')
 			.optional(),
+		VITE_SENTRY_ERROR_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),
+		VITE_SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),
 	})
 	.transform((data) => ({
 		sentryDsn: data.VITE_SENTRY_DSN,
@@ -20,6 +22,10 @@ const schema = z
 		// In other envs: default to false (reporting off, opt-in for testing)
 		sentryEnabled:
 			data.VITE_SENTRY_ENABLED ?? (isProd && Boolean(data.VITE_SENTRY_DSN)),
+		// In prod: default to 1.0 (100%); in other envs default to 0 (off)
+		sentrySampleRate: data.VITE_SENTRY_ERROR_SAMPLE_RATE ?? (isProd ? 1.0 : 0),
+		sentryTracesSampleRate:
+			data.VITE_SENTRY_TRACES_SAMPLE_RATE ?? (isProd ? 1.0 : 0),
 		mode: import.meta.env.MODE as string,
 		prod: isProd,
 	}))
@@ -30,6 +36,8 @@ const schema = z
 const result = schema.safeParse({
 	VITE_SENTRY_DSN: import.meta.env.VITE_SENTRY_DSN,
 	VITE_SENTRY_ENABLED: import.meta.env.VITE_SENTRY_ENABLED,
+	VITE_SENTRY_ERROR_SAMPLE_RATE: import.meta.env.VITE_SENTRY_ERROR_SAMPLE_RATE,
+	VITE_SENTRY_TRACES_SAMPLE_RATE: import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE,
 })
 if (!result.success) {
 	const issues = result.error.issues.map(

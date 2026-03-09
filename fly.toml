@@ -16,6 +16,8 @@ primary_region = 'sjc'
   # Fly secrets are runtime-only, so they can't be used for build-time vars.
   # See Dockerfile ARGs and apps/www/src/lib/env.client.ts.
   # Pass VITE_SENTRY_DSN via: flyctl deploy --build-arg VITE_SENTRY_DSN=...
+  # Pass VITE_SENTRY_ERROR_SAMPLE_RATE and VITE_SENTRY_TRACES_SAMPLE_RATE
+  # similarly to tune sampling without changing defaults in env.client.ts.
   [build.args]
     VITE_SENTRY_ENABLED = "true"
 

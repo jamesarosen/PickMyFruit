@@ -23,7 +23,12 @@ vi.mock('../src/data/db', () => ({
 }))
 
 vi.mock('../src/lib/sentry', () => ({
-	Sentry: { captureException: vi.fn() },
+	Sentry: {
+		captureException: vi.fn(),
+		startSpan: vi.fn((_, fn: (span: { setAttribute: () => void }) => unknown) =>
+			fn({ setAttribute: vi.fn() })
+		),
+	},
 }))
 
 // Must import after mocking

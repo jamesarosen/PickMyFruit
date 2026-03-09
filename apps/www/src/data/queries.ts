@@ -25,18 +25,28 @@ function reportH3Error(listingId: number, error: unknown) {
 export async function getAvailableListings(
 	limit: number = 10
 ): Promise<PublicListing[]> {
-	const rows = await db
-		.select()
-		.from(listings)
-		.where(
-			and(eq(listings.status, ListingStatus.available), isNull(listings.deletedAt))
-		)
-		.orderBy(desc(listings.createdAt))
-		.limit(limit)
-	return rows.flatMap((row) => {
-		const pub = toPublicListing(row, reportH3Error)
-		return pub ? [pub] : []
-	})
+	return Sentry.startSpan(
+		{ name: 'getAvailableListings', op: 'db.query', attributes: { limit } },
+		async (span) => {
+			const rows = await db
+				.select()
+				.from(listings)
+				.where(
+					and(
+						eq(listings.status, ListingStatus.available),
+						isNull(listings.deletedAt)
+					)
+				)
+				.orderBy(desc(listings.createdAt))
+				.limit(limit)
+			const results = rows.flatMap((row) => {
+				const pub = toPublicListing(row, reportH3Error)
+				return pub ? [pub] : []
+			})
+			span.setAttribute('listing_count', results.length)
+			return results
+		}
+	)
 }
 
 /** Fetches available listings ordered by proximity to a point. */
@@ -45,62 +55,94 @@ export async function getNearbyListings(
 	lng: number,
 	limit: number = 12
 ): Promise<PublicListing[]> {
-	const rows = await db
-		.select()
-		.from(listings)
-		.where(
-			and(eq(listings.status, ListingStatus.available), isNull(listings.deletedAt))
-		)
-		.orderBy(
-			sql`(${listings.lat} - ${lat}) * (${listings.lat} - ${lat}) + (${listings.lng} - ${lng}) * (${listings.lng} - ${lng})`
-		)
-		.limit(limit)
-	return rows.flatMap((row) => {
-		const pub = toPublicListing(row, reportH3Error)
-		return pub ? [pub] : []
-	})
+	return Sentry.startSpan(
+		{ name: 'getNearbyListings', op: 'db.query', attributes: { limit } },
+		async (span) => {
+			const rows = await db
+				.select()
+				.from(listings)
+				.where(
+					and(
+						eq(listings.status, ListingStatus.available),
+						isNull(listings.deletedAt)
+					)
+				)
+				.orderBy(
+					sql`(${listings.lat} - ${lat}) * (${listings.lat} - ${lat}) + (${listings.lng} - ${lng}) * (${listings.lng} - ${lng})`
+				)
+				.limit(limit)
+			const results = rows.flatMap((row) => {
+				const pub = toPublicListing(row, reportH3Error)
+				return pub ? [pub] : []
+			})
+			span.setAttribute('listing_count', results.length)
+			return results
+		}
+	)
 }
 
 export async function createListing(data: NewListing): Promise<Listing> {
-	const result = await db.insert(listings).values(data).returning()
-	return result[0]
+	return Sentry.startSpan(
+		{ name: 'createListing', op: 'db.query' },
+		async () => {
+			const result = await db.insert(listings).values(data).returning()
+			return result[0]
+		}
+	)
 }
 
 export async function getUserListings(userId: string): Promise<Listing[]> {
-	return await db
-		.select()
-		.from(listings)
-		.where(and(eq(listings.userId, userId), isNull(listings.deletedAt)))
-		.orderBy(desc(listings.createdAt))
+	return Sentry.startSpan(
+		{ name: 'getUserListings', op: 'db.query' },
+		async (span) => {
+			const results = await db
+				.select()
+				.from(listings)
+				.where(and(eq(listings.userId, userId), isNull(listings.deletedAt)))
+				.orderBy(desc(listings.createdAt))
+			span.setAttribute('listing_count', results.length)
+			return results
+		}
+	)
 }
 
 export async function getListingById(id: number): Promise<Listing | undefined> {
-	const result = await db
-		.select()
-		.from(listings)
-		.where(and(eq(listings.id, id), isNull(listings.deletedAt)))
-		.limit(1)
-	return result[0]
+	return Sentry.startSpan(
+		{ name: 'getListingById', op: 'db.query', attributes: { id } },
+		async () => {
+			const result = await db
+				.select()
+				.from(listings)
+				.where(and(eq(listings.id, id), isNull(listings.deletedAt)))
+				.limit(1)
+			return result[0]
+		}
+	)
 }
 
 /** Fetches a listing by ID, returning only public-safe fields. Excludes private and deleted listings. */
 export async function getPublicListingById(
 	id: number
 ): Promise<PublicListing | undefined> {
-	const result = await db
-		.select()
-		.from(listings)
-		.where(
-			and(
-				eq(listings.id, id),
-				ne(listings.status, ListingStatus.private),
-				isNull(listings.deletedAt)
-			)
-		)
-		.limit(1)
-	return result[0]
-		? (toPublicListing(result[0], reportH3Error) ?? undefined)
-		: undefined
+	return Sentry.startSpan(
+		{ name: 'getPublicListingById', op: 'db.query', attributes: { id } },
+		async () => {
+			const result = await db
+				.select()
+				.from(listings)
+				.where(
+					and(
+						eq(listings.id, id),
+						ne(listings.status, ListingStatus.private),
+						isNull(listings.deletedAt)
+					)
+				)
+				.limit(1)
+			return result[0]
+				? (toPublicListing(result[0], reportH3Error) ?? undefined)
+				: undefined
+		}
+	)
 }
 
 /** Soft-deletes a listing by setting its deletedAt timestamp and removes related inquiries. */
@@ -108,23 +150,28 @@ export async function deleteListingById(
 	id: number,
 	userId: string
 ): Promise<boolean> {
-	const result = await db
-		.update(listings)
-		.set({ deletedAt: new Date() })
-		.where(
-			and(
-				eq(listings.id, id),
-				eq(listings.userId, userId),
-				isNull(listings.deletedAt)
-			)
-		)
-		.returning({ id: listings.id })
+	return Sentry.startSpan(
+		{ name: 'deleteListingById', op: 'db.query', attributes: { id } },
+		async () => {
+			const result = await db
+				.update(listings)
+				.set({ deletedAt: new Date() })
+				.where(
+					and(
+						eq(listings.id, id),
+						eq(listings.userId, userId),
+						isNull(listings.deletedAt)
+					)
+				)
+				.returning({ id: listings.id })
 
-	if (result.length > 0) {
-		await db.delete(inquiries).where(eq(inquiries.listingId, id))
-	}
+			if (result.length > 0) {
+				await db.delete(inquiries).where(eq(inquiries.listingId, id))
+			}
 
-	return result.length > 0
+			return result.length > 0
+		}
+	)
 }
 
 // ============================================================================
@@ -132,27 +179,37 @@ export async function deleteListingById(
 // ============================================================================
 
 export async function createInquiry(data: NewInquiry): Promise<Inquiry> {
-	const result = await db.insert(inquiries).values(data).returning()
-	return result[0]
+	return Sentry.startSpan(
+		{ name: 'createInquiry', op: 'db.query' },
+		async () => {
+			const result = await db.insert(inquiries).values(data).returning()
+			return result[0]
+		}
+	)
 }
 
 export async function hasRecentInquiry(
 	gleanerId: string,
 	listingId: number
 ): Promise<boolean> {
-	const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
-	const result = await db
-		.select({ id: inquiries.id })
-		.from(inquiries)
-		.where(
-			and(
-				eq(inquiries.gleanerId, gleanerId),
-				eq(inquiries.listingId, listingId),
-				gt(inquiries.createdAt, twentyFourHoursAgo)
-			)
-		)
-		.limit(1)
-	return result.length > 0
+	return Sentry.startSpan(
+		{ name: 'hasRecentInquiry', op: 'db.query', attributes: { listingId } },
+		async () => {
+			const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+			const result = await db
+				.select({ id: inquiries.id })
+				.from(inquiries)
+				.where(
+					and(
+						eq(inquiries.gleanerId, gleanerId),
+						eq(inquiries.listingId, listingId),
+						gt(inquiries.createdAt, twentyFourHoursAgo)
+					)
+				)
+				.limit(1)
+			return result.length > 0
+		}
+	)
 }
 
 export async function getListingWithOwner(id: number): Promise<
@@ -162,38 +219,48 @@ export async function getListingWithOwner(id: number): Promise<
 	  }
 	| undefined
 > {
-	const result = await db
-		.select({
-			listing: listings,
-			owner: {
-				id: user.id,
-				name: user.name,
-				email: user.email,
-			},
-		})
-		.from(listings)
-		.innerJoin(user, eq(listings.userId, user.id))
-		.where(and(eq(listings.id, id), isNull(listings.deletedAt)))
-		.limit(1)
+	return Sentry.startSpan(
+		{ name: 'getListingWithOwner', op: 'db.query', attributes: { id } },
+		async () => {
+			const result = await db
+				.select({
+					listing: listings,
+					owner: {
+						id: user.id,
+						name: user.name,
+						email: user.email,
+					},
+				})
+				.from(listings)
+				.innerJoin(user, eq(listings.userId, user.id))
+				.where(and(eq(listings.id, id), isNull(listings.deletedAt)))
+				.limit(1)
 
-	return result[0]
+			return result[0]
+		}
+	)
 }
 
 export async function getListingForInquiry(
 	id: number
 ): Promise<Listing | undefined> {
-	const result = await db
-		.select()
-		.from(listings)
-		.where(
-			and(
-				eq(listings.id, id),
-				isNull(listings.deletedAt)
-				// Status validation (available or private) done at API layer
-			)
-		)
-		.limit(1)
-	return result[0]
+	return Sentry.startSpan(
+		{ name: 'getListingForInquiry', op: 'db.query', attributes: { id } },
+		async () => {
+			const result = await db
+				.select()
+				.from(listings)
+				.where(
+					and(
+						eq(listings.id, id),
+						isNull(listings.deletedAt)
+						// Status validation (available or private) done at API layer
+					)
+				)
+				.limit(1)
+			return result[0]
+		}
+	)
 }
 
 /** Updates a listing's status, scoped to the owning user. */
@@ -202,55 +269,72 @@ export async function updateListingStatus(
 	userId: string,
 	status: ListingStatusValue
 ): Promise<boolean> {
-	const result = await db
-		.update(listings)
-		.set({ status, updatedAt: new Date() })
-		.where(
-			and(
-				eq(listings.id, id),
-				eq(listings.userId, userId),
-				isNull(listings.deletedAt)
-			)
-		)
-		.returning({ id: listings.id })
-	return result.length > 0
+	return Sentry.startSpan(
+		{ name: 'updateListingStatus', op: 'db.query', attributes: { id, status } },
+		async () => {
+			const result = await db
+				.update(listings)
+				.set({ status, updatedAt: new Date() })
+				.where(
+					and(
+						eq(listings.id, id),
+						eq(listings.userId, userId),
+						isNull(listings.deletedAt)
+					)
+				)
+				.returning({ id: listings.id })
+			return result.length > 0
+		}
+	)
 }
 
 export async function getUserById(
 	id: string
 ): Promise<{ name: string; email: string } | undefined> {
-	const result = await db
-		.select({ name: user.name, email: user.email })
-		.from(user)
-		.where(eq(user.id, id))
-		.limit(1)
-	return result[0]
+	return Sentry.startSpan({ name: 'getUserById', op: 'db.query' }, async () => {
+		const result = await db
+			.select({ name: user.name, email: user.email })
+			.from(user)
+			.where(eq(user.id, id))
+			.limit(1)
+		return result[0]
+	})
 }
 
 /** Returns address fields from the user's most recent non-deleted listing. */
 export async function getUserLastAddress(
 	userId: string
 ): Promise<AddressFields | undefined> {
-	const result = await db
-		.select({
-			address: listings.address,
-			city: listings.city,
-			state: listings.state,
-			zip: listings.zip,
-		})
-		.from(listings)
-		.where(and(eq(listings.userId, userId), isNull(listings.deletedAt)))
-		.orderBy(desc(listings.createdAt))
-		.limit(1)
-	return result[0]
+	return Sentry.startSpan(
+		{ name: 'getUserLastAddress', op: 'db.query' },
+		async () => {
+			const result = await db
+				.select({
+					address: listings.address,
+					city: listings.city,
+					state: listings.state,
+					zip: listings.zip,
+				})
+				.from(listings)
+				.where(and(eq(listings.userId, userId), isNull(listings.deletedAt)))
+				.orderBy(desc(listings.createdAt))
+				.limit(1)
+			return result[0]
+		}
+	)
 }
 
 /** Mark a listing as unavailable (used by HMAC-signed one-click URL). */
 export async function markListingUnavailable(id: number): Promise<boolean> {
-	const result = await db
-		.update(listings)
-		.set({ status: ListingStatus.unavailable, updatedAt: new Date() })
-		.where(and(eq(listings.id, id), isNull(listings.deletedAt)))
-		.returning({ id: listings.id })
-	return result.length > 0
+	return Sentry.startSpan(
+		{ name: 'markListingUnavailable', op: 'db.query', attributes: { id } },
+		async () => {
+			const result = await db
+				.update(listings)
+				.set({ status: ListingStatus.unavailable, updatedAt: new Date() })
+				.where(and(eq(listings.id, id), isNull(listings.deletedAt)))
+				.returning({ id: listings.id })
+			return result.length > 0
+		}
+	)
 }
