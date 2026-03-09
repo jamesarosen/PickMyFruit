@@ -9,8 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CssTestRouteImport } from './routes/css-test'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ListingsNewRouteImport } from './routes/listings/new'
 import { Route as ListingsMineRouteImport } from './routes/listings/mine'
@@ -22,6 +26,21 @@ import { Route as ApiListingsIdRouteImport } from './routes/api/listings.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiListingsIdUnavailableRouteImport } from './routes/api/listings.$id.unavailable'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
+  id: '/privacy-policy',
+  path: '/privacy-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -30,6 +49,11 @@ const LoginRoute = LoginRouteImport.update({
 const CssTestRoute = CssTestRouteImport.update({
   id: '/css-test',
   path: '/css-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -86,8 +110,12 @@ const ApiListingsIdUnavailableRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/css-test': typeof CssTestRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
+  '/terms': typeof TermsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/inquiries': typeof ApiInquiriesRoute
   '/api/listings': typeof ApiListingsRouteWithChildren
@@ -100,8 +128,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/css-test': typeof CssTestRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
+  '/terms': typeof TermsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/inquiries': typeof ApiInquiriesRoute
   '/api/listings': typeof ApiListingsRouteWithChildren
@@ -115,8 +147,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/css-test': typeof CssTestRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
+  '/terms': typeof TermsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/inquiries': typeof ApiInquiriesRoute
   '/api/listings': typeof ApiListingsRouteWithChildren
@@ -131,8 +167,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/css-test'
     | '/login'
+    | '/privacy'
+    | '/privacy-policy'
+    | '/terms'
     | '/api/health'
     | '/api/inquiries'
     | '/api/listings'
@@ -145,8 +185,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/css-test'
     | '/login'
+    | '/privacy'
+    | '/privacy-policy'
+    | '/terms'
     | '/api/health'
     | '/api/inquiries'
     | '/api/listings'
@@ -159,8 +203,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/about'
     | '/css-test'
     | '/login'
+    | '/privacy'
+    | '/privacy-policy'
+    | '/terms'
     | '/api/health'
     | '/api/inquiries'
     | '/api/listings'
@@ -174,8 +222,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
   CssTestRoute: typeof CssTestRoute
   LoginRoute: typeof LoginRoute
+  PrivacyRoute: typeof PrivacyRoute
+  PrivacyPolicyRoute: typeof PrivacyPolicyRoute
+  TermsRoute: typeof TermsRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiInquiriesRoute: typeof ApiInquiriesRoute
   ApiListingsRoute: typeof ApiListingsRouteWithChildren
@@ -187,6 +239,27 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/solid-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy-policy': {
+      id: '/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof PrivacyPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -199,6 +272,13 @@ declare module '@tanstack/solid-router' {
       path: '/css-test'
       fullPath: '/css-test'
       preLoaderRoute: typeof CssTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -300,8 +380,12 @@ const ApiListingsRouteWithChildren = ApiListingsRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   CssTestRoute: CssTestRoute,
   LoginRoute: LoginRoute,
+  PrivacyRoute: PrivacyRoute,
+  PrivacyPolicyRoute: PrivacyPolicyRoute,
+  TermsRoute: TermsRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiInquiriesRoute: ApiInquiriesRoute,
   ApiListingsRoute: ApiListingsRouteWithChildren,

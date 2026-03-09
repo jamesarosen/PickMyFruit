@@ -1,0 +1,67 @@
+@layer page {
+	.about-page {
+		padding: 48px 0 80px;
+
+		.container {
+			display: flex;
+			flex-direction: column;
+			gap: 0.5rem;
+		}
+
+		h1 {
+			font-size: 2rem;
+			margin-bottom: 24px;
+		}
+
+		section {
+			margin-top: 40px;
+
+			h2 {
+				font-size: 1.25rem;
+				margin-bottom: 12px;
+			}
+
+			p,
+			li {
+				line-height: 1.6;
+				color: var(--color-text);
+			}
+
+			ul {
+				padding-left: 1.25em;
+				display: flex;
+				flex-direction: column;
+				gap: 12px;
+			}
+		}
+
+		.motto {
+			font-style: italic;
+			color: var(--color-quiet);
+			border-left: 3px solid var(--color-accent);
+			padding-left: 16px;
+			margin: 0 0 8px;
+		}
+
+		.about-ctas {
+			display: flex;
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 16px;
+
+			.contact-cta {
+				font-size: 0.9rem;
+				color: var(--color-quiet);
+
+				a {
+					color: var(--color-primary);
+					text-decoration: none;
+
+					&:hover {
+						text-decoration: underline;
+					}
+				}
+			}
+		}
+	}
+}
