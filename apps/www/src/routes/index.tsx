@@ -93,8 +93,11 @@ function HomePage() {
 					<div class="container">
 						<h1>Stop Watching Your Fruit Rot</h1>
 						<p class="hero-subtitle">
-							Turn your backyard abundance into community food. We connect you with
-							local gleaners. Serving all of Napa.
+							Turn your backyard abundance into community food.
+							<br />
+							We connect you with neighbors who will use your produce.
+							<br />
+							Starting in Napa and available everywhere.
 						</p>
 						<Link to="/listings/new" class="cta-button">
 							List My Fruit Tree
@@ -108,17 +111,17 @@ function HomePage() {
 						<div class="steps">
 							<div class="step">
 								<div class="step-number">1</div>
-								<h3>Tell us about your tree</h3>
+								<h3>Tell us about your produce</h3>
 								<p>Takes 30 seconds</p>
 							</div>
 							<div class="step">
 								<div class="step-number">2</div>
-								<h3>We find a local gleaner</h3>
+								<h3>We match you with neighbors</h3>
 								<p>You get notified</p>
 							</div>
 							<div class="step">
 								<div class="step-number">3</div>
-								<h3>They pick, you relax</h3>
+								<h3>They pick (or pick up), you relax</h3>
 								<p>Surplus feeds families</p>
 							</div>
 						</div>
