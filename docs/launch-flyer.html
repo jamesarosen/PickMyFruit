@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Pick My Fruit — Flyer</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap"
+			rel="stylesheet"
+		/>
+		<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+		<style>
+			:root {
+				--color-sunset-coral: #ff6b5a;
+				--color-fresh-green: #10b981;
+				--color-golden: #d38f0f;
+				--color-cream: #fffcf5;
+				--color-charcoal: #2d2d2a;
+			}
+
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+
+			@page {
+				size: 11in 8.5in;
+				margin: 0;
+			}
+
+			body {
+				font-family: "Outfit", Avenir, Montserrat, system-ui, sans-serif;
+				background: white;
+				color: var(--color-charcoal);
+				display: flex;
+				flex-direction: row;
+				align-items: flex-start;
+				margin: 0;
+				padding: 0;
+				width: 11in;
+				height: 8.5in;
+				overflow: hidden;
+			}
+
+			body > article {
+				width: 5.5in;
+				height: 8.5in;
+				padding: 0.45in 0.5in;
+				display: flex;
+				flex-direction: column;
+				flex-shrink: 0;
+				gap: 0;
+			}
+
+			/* Cut guide between the two copies */
+			body > article:first-child {
+				border-right: 1px dashed #ccc;
+			}
+
+			/* ── Top accent bar ── */
+			.accent-bar {
+				height: 6px;
+				background: linear-gradient(
+					to right,
+					var(--color-sunset-coral) 0%,
+					var(--color-sunset-coral) 40%,
+					var(--color-golden) 40%,
+					var(--color-golden) 60%,
+					var(--color-fresh-green) 60%,
+					var(--color-fresh-green) 100%
+				);
+				border-radius: 3px;
+				margin-bottom: 0.32in;
+			}
+
+			/* ── Logo ── */
+			.logo {
+				display: flex;
+				align-items: center;
+				gap: 0.12in;
+				margin-bottom: 0.22in;
+			}
+			.logo-emoji {
+				font-size: 3rem;
+				line-height: 1;
+			}
+			.logo-text {
+				font-size: 2.6rem;
+				font-weight: 800;
+				letter-spacing: -0.02em;
+				color: var(--color-charcoal);
+			}
+
+			/* ── Headline ── */
+			.headline {
+				font-size: 1.55rem;
+				font-weight: 600;
+				line-height: 1.15;
+				letter-spacing: -0.02em;
+				margin-bottom: 0.18in;
+			}
+			.headline .coral {
+				color: var(--color-sunset-coral);
+			}
+			.headline .green {
+				color: var(--color-fresh-green);
+			}
+
+			/* ── Divider ── */
+			.divider {
+				border: none;
+				border-top: 1.5px solid #e5e5e0;
+				margin-bottom: 0.18in;
+			}
+
+			/* ── Two-column body ── */
+			.columns {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 0.2in;
+				margin-top: 0.7in;
+				margin-bottom: 0.22in;
+			}
+			.column h2 {
+				font-size: 0.82rem;
+				font-weight: 800;
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+				margin-bottom: 0.08in;
+			}
+			.column.gardeners h2 {
+				color: var(--color-sunset-coral);
+			}
+			.column.harvesters h2 {
+				color: var(--color-fresh-green);
+			}
+			.column p {
+				font-size: 0.75rem;
+				line-height: 1.5;
+				color: #444;
+			}
+
+			/* ── Story blurb ── */
+			.story {
+				font-size: 0.78rem;
+				line-height: 1.55;
+				color: #555;
+				font-style: italic;
+				border-left: 3px solid var(--color-golden);
+				padding-left: 0.14in;
+				margin-bottom: 0.22in;
+			}
+
+			/* ── Bottom CTA row ── */
+			.cta-row {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 0.2in;
+				margin-top: auto;
+				padding-top: 0.18in;
+				border-top: 1.5px solid #e5e5e0;
+			}
+
+			.cta-text h3 {
+				font-size: 1.1rem;
+				font-weight: 800;
+				letter-spacing: -0.01em;
+				margin-bottom: 0.04in;
+			}
+			.cta-text p {
+				font-size: 0.72rem;
+				color: #555;
+			}
+			.url {
+				display: inline-block;
+				margin-top: 0.07in;
+				font-size: 0.88rem;
+				font-weight: 700;
+				color: var(--color-sunset-coral);
+				text-decoration: none;
+				letter-spacing: -0.01em;
+			}
+
+			.qrcode {
+				flex-shrink: 0;
+			}
+			.qrcode canvas,
+			.qrcode img {
+				display: block;
+				border-radius: 6px;
+			}
+
+			/* ── Bottom accent bar ── */
+			.accent-bar-bottom {
+				height: 4px;
+				background: linear-gradient(
+					to right,
+					var(--color-fresh-green) 0%,
+					var(--color-fresh-green) 40%,
+					var(--color-golden) 40%,
+					var(--color-golden) 60%,
+					var(--color-sunset-coral) 60%,
+					var(--color-sunset-coral) 100%
+				);
+				border-radius: 3px;
+				margin-top: 0.2in;
+			}
+
+			@media print {
+				* {
+					-webkit-print-color-adjust: exact;
+					print-color-adjust: exact;
+				}
+				body {
+					margin: 0;
+					padding: 0;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<article>
+			<div class="accent-bar"></div>
+
+			<div class="logo">
+				<span class="logo-emoji">🍑</span>
+				<span class="logo-text">Pick My Fruit</span>
+			</div>
+
+			<h1 class="headline">
+				Your garden's overflow<br />
+				is your neighbor's<br />
+				<span class="coral">best day</span>
+				<span class="green">this week.</span>
+			</h1>
+
+			<hr class="divider" />
+
+			<div class="columns">
+				<div class="column gardeners">
+					<h2>Got too much?</h2>
+					<p>
+						List your surplus lemons, peaches, tomatoes — whatever your garden's
+						throwing at you. Someone nearby wants it. Free to list, no
+						middleman.
+					</p>
+				</div>
+				<div class="column harvesters">
+					<h2>Want fresh produce?</h2>
+					<p>
+						Browse what local gardeners have to share. Pick it up on your own
+						schedule. No store, no packaging, just someone's backyard bounty.
+					</p>
+				</div>
+			</div>
+
+			<p class="story">
+				A neighbor left a dozen eggs on the doorstep this morning — no reason,
+				just "I had extra." That little surprise made the whole day brighter.
+				Pick My Fruit is for more of that.
+			</p>
+
+			<div class="cta-row">
+				<div class="cta-text">
+					<h3>List your surplus.<br />Find fresh produce.</h3>
+					<p>Free. No app. Just good neighbors.</p>
+					<a class="url" href="https://www.pickmyfruit.com">pickmyfruit.com</a>
+				</div>
+				<div id="qrcode" class="qrcode"></div>
+			</div>
+
+			<div class="accent-bar-bottom"></div>
+		</article>
+
+		<script>
+			function makeQR(el) {
+				new QRCode(el, {
+					text: "https://www.pickmyfruit.com",
+					width: 96,
+					height: 96,
+					colorDark: "#2d2d2a",
+					colorLight: "#ffffff",
+					correctLevel: QRCode.CorrectLevel.M,
+				});
+			}
+
+			makeQR(document.getElementById("qrcode"));
+
+			// Clone the article for the second half-sheet.
+			// Canvas pixels don't transfer via innerHTML, so regenerate the QR code.
+			const duplicate = document
+				.querySelector("body > article")
+				.cloneNode(true);
+			const dupQR = duplicate.querySelector(".qrcode");
+			dupQR.removeAttribute("id");
+			dupQR.innerHTML = "";
+			document.body.append(duplicate);
+			makeQR(dupQR);
+		</script>
+	</body>
+</html>

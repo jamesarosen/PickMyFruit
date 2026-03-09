@@ -31,17 +31,43 @@ export const Route = createRootRoute({
 	},
 	head: () => ({
 		meta: [
+			{ charSet: 'utf-8' },
+			{ name: 'viewport', content: 'width=device-width, initial-scale=1' },
+			{ title: 'Pick My Fruit' },
+			// Open Graph (LinkedIn, NextDoor, Facebook, etc.)
+			{ property: 'og:type', content: 'website' },
+			{ property: 'og:url', content: 'https://www.pickmyfruit.com' },
+			{ property: 'og:site_name', content: 'Pick My Fruit' },
+			{ property: 'og:title', content: 'Pick My Fruit' },
 			{
-				charSet: 'utf-8',
+				property: 'og:description',
+				content:
+					'Share your surplus produce with your neighbors. List your lemons, find fresh peaches.',
 			},
 			{
-				name: 'viewport',
-				content: 'width=device-width, initial-scale=1',
+				property: 'og:image',
+				content: 'https://www.pickmyfruit.com/og-image.png',
+			},
+			{ property: 'og:image:width', content: '2400' },
+			{ property: 'og:image:height', content: '1260' },
+			{
+				property: 'og:image:alt',
+				content: 'Pick My Fruit — Stop Watching Your Fruit Rot',
+			},
+			// Twitter / X card (also used by some other crawlers)
+			{ name: 'twitter:card', content: 'summary_large_image' },
+			{ name: 'twitter:title', content: 'Pick My Fruit' },
+			{
+				name: 'twitter:description',
+				content:
+					'Share your surplus produce with your neighbors. List your lemons, find fresh peaches.',
 			},
 			{
-				title: 'Pick My Fruit',
+				name: 'twitter:image',
+				content: 'https://www.pickmyfruit.com/og-image.png',
 			},
 		],
+		links: [{ rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' }],
 	}),
 	shellComponent: RootShell,
 	component: RootComponent,
