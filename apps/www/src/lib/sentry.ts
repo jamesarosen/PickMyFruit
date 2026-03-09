@@ -32,7 +32,8 @@ if (clientEnv.sentryDsn) {
 		dsn: clientEnv.sentryDsn,
 		enabled: clientEnv.sentryEnabled,
 		environment: clientEnv.mode,
-		tracesSampleRate: 1.0,
+		sampleRate: clientEnv.sentrySampleRate,
+		tracesSampleRate: clientEnv.sentryTracesSampleRate,
 		beforeSend(event, hint) {
 			const err = hint.originalException
 			if (isControlFlow(err)) return null

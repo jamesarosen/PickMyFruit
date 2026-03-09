@@ -16,6 +16,9 @@ importers:
       '@libsql/client':
         specifier: ^0.17.0
         version: 0.17.0
+      '@sentry/solid':
+        specifier: ^10.40.0
+        version: 10.40.0(@tanstack/solid-router@1.160.0(solid-js@1.9.11))(solid-js@1.9.11)
       '@sentry/solidstart':
         specifier: ^10.40.0
         version: 10.40.0(@solidjs/start@1.2.1(@testing-library/jest-dom@6.9.1)(solid-js@1.9.11)(vinxi@0.5.10(@libsql/client@0.17.0)(@types/node@25.2.3)(db0@0.3.4(@libsql/client@0.17.0)(drizzle-orm@0.45.1(@libsql/client@0.17.0)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(kysely@0.28.11)))(drizzle-orm@0.45.1(@libsql/client@0.17.0)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(kysely@0.28.11))(ioredis@5.9.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1))(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1)))(@tanstack/solid-router@1.160.0(solid-js@1.9.11))(rollup@4.57.1)(solid-js@1.9.11)

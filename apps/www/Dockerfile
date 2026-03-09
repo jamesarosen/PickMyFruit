@@ -30,6 +30,8 @@ COPY . .
 # See env.client.ts
 ARG VITE_SENTRY_DSN
 ARG VITE_SENTRY_ENABLED
+ARG VITE_SENTRY_ERROR_SAMPLE_RATE
+ARG VITE_SENTRY_TRACES_SAMPLE_RATE
 
 # Build the www application
 RUN cd apps/www && pnpm build
