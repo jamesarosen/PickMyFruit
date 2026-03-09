@@ -13,7 +13,7 @@ export const Route = createFileRoute('/listings/mine')({
 	pendingComponent: () => (
 		<Layout title="My Garden - Pick My Fruit">
 			<SiteHeader breadcrumbs={[{ label: 'My Garden' }]} />
-			<main class="page-container">
+			<main class="listings-mine">
 				<p>Loading…</p>
 			</main>
 		</Layout>
@@ -68,7 +68,7 @@ function MyGardenPage() {
 	return (
 		<Layout title="My Garden - Pick My Fruit">
 			<SiteHeader breadcrumbs={[{ label: 'My Garden' }]} />
-			<main class="page-container">
+			<main class="listings-mine">
 				<header class="page-header">
 					<h1>My Garden</h1>
 					<Show when={context().session?.user}>

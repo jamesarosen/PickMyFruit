@@ -5,6 +5,7 @@ import ListingForm from '@/components/ListingForm'
 import { authMiddleware } from '@/middleware/auth'
 import { getMyLastAddress } from '@/api/listings'
 import '@/routes/listings/new.css'
+import '@/components/ListingForm.css'
 
 export const Route = createFileRoute('/listings/new')({
 	loader: async () => {
@@ -31,7 +32,7 @@ function NewListingPage() {
 					{ label: 'New Listing' },
 				]}
 			/>
-			<main class="page-container">
+			<main class="listing-new">
 				<header class="page-header">
 					<h1>List Your Fruit Tree</h1>
 					<p>Share your surplus with the community. Takes about 30 seconds.</p>

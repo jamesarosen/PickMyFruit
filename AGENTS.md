@@ -43,6 +43,7 @@ A site for gardeners to share surplus produce with their community.
 - Do not use Tailwind. Use CSS layers and variables. Keep CSS near the relevant components
 - For colors, use semantic CSS variables (e.g. `--color-accent`) where possible and named color variables (e.g. `--color-sunset-coral`) where necessary. Avoid inline color definitions (e.g. `#fedbca`).
 - Use CSS relative color syntax to create modifications, e.g. `oklch(from var(--color-accent) 0.65 c h)` to darken the accent color.
+- Route CSS must use `@layer page` and scope all rules under a route-specific namespace class (e.g. `.home-page`, `.listing-new`, `.listings-mine`) applied to the route's root element; this prevents styles from bleeding into other routes during SPA navigation.
 
 ### Testing
 

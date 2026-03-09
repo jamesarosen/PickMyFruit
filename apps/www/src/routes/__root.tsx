@@ -1,15 +1,4 @@
 /// <reference types="vite/client" />
-/*
- * At minimum, base.css must be before any components so we define the
- * layers in the correct order.
- * The rest are "site-wide defaults", which are also good to have before the
- * things that override them so we don't use over-strong selectors to
- * compensate.
- */
-import '../styles/base.css'
-import '../styles/colors.css'
-import '../styles/focus.css'
-import '../styles/surfaces.css'
 import * as Solid from 'solid-js'
 import {
 	Outlet,
@@ -23,6 +12,10 @@ import { HydrationScript } from 'solid-js/web'
 import { PageFooter } from '@/components/PageFooter'
 import { getSession } from '@/lib/session'
 import { Sentry } from '@/lib/sentry'
+import '../styles/base.css'
+import '../styles/colors.css'
+import '../styles/focus.css'
+import '../styles/surfaces.css'
 
 export const Route = createRootRoute({
 	beforeLoad: async () => {
@@ -80,6 +73,13 @@ function RootShell(props: { children: Solid.JSX.Element }) {
 		<html lang="en-US">
 			<head>
 				<HydrationScript />
+				{/*
+				 * Declare layer order before any dynamic <link> or <style> tags so
+				 * the cascade priority is always base < components < page < utilities,
+				 * regardless of the order in which TanStack Start injects route CSS.
+				 * This can use a CSP hash when we want to drop `unsafe-inline`.
+				 */}
+				<style>@layer base, components, page, utilities;</style>
 			</head>
 			<body>
 				<HeadContent />

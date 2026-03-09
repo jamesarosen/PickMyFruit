@@ -10,8 +10,6 @@
  * @see https://github.com/mayank99/reset.css
  */
 
-@layer base, components, page, utilities;
-
 @font-face {
 	font-family: 'Outfit';
 	src: url('/Outfit/Outfit-Variable.ttf') format('truetype-variations');
