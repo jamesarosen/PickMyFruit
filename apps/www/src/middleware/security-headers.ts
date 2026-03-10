@@ -5,8 +5,10 @@ const CSP_DIRECTIVES = [
 	// Solid's HydrationScript injects an inline script for SSR hydration.
 	// @todo replace 'unsafe-inline' with nonce-based CSP when Solid supports it
 	"script-src 'self' 'unsafe-inline'",
-	// Inline styles are used by Solid JSX style attributes and MapLibre GL.
-	// @todo investigate whether 'unsafe-inline' can be removed for style-src
+	// 'unsafe-inline' is required for Solid JSX style="" attributes and MapLibre GL.
+	// If JSX inline styles are moved to CSS classes, 'unsafe-inline' can be dropped and
+	// replaced with 'sha256-VQTei97aMH9YclKPQM3e8rL/RXSmj3lPwKVXZgaN2QA=' to whitelist
+	// only the static @layer ordering <style> block in RootShell.
 	"style-src 'self' 'unsafe-inline'",
 	"img-src 'self' data: blob:",
 	"font-src 'self'",
@@ -43,7 +45,7 @@ const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
 ]
 
 /** Applies all security headers to a `Headers` object. */
-function applySecurityHeaders(headers: Headers): void {
+export function applySecurityHeaders(headers: Headers): void {
 	for (const [name, value] of SECURITY_HEADERS) {
 		headers.set(name, value)
 	}

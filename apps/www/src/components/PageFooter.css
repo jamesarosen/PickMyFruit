@@ -5,9 +5,11 @@
 		border-top: 1px solid oklch(from var(--color-quiet) l calc(c * 0.2) h);
 
 		.container {
+			align-items: center;
 			display: flex;
 			justify-content: space-between;
-			align-items: center;
+			margin: 0 auto;
+			max-width: 1200px;
 		}
 
 		.footer-left {

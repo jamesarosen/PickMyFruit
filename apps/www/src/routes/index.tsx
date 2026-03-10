@@ -62,125 +62,127 @@ function HomePage() {
 
 	return (
 		<Layout title="Pick My Fruit - Turn your backyard abundance into community food">
-			<header>
-				<div class="container">
-					<div class="logo">
-						<span class="logo-icon">🍑</span>
-						<span class="logo-text">Pick My Fruit</span>
-					</div>
-					<nav class="header-nav">
-						<Show
-							when={context().session?.user}
-							fallback={
-								<Link to="/login" class="nav-link">
-									Sign In
-								</Link>
-							}
-						>
-							<Link to="/listings/mine" class="nav-link">
-								My Garden
-							</Link>
-							<button type="button" class="nav-link sign-out" onClick={handleSignOut}>
-								Sign Out
-							</button>
-						</Show>
-					</nav>
-				</div>
-			</header>
-
-			<main>
-				<section class="hero surface-subtle">
+			<div class="home-page">
+				<header>
 					<div class="container">
-						<h1>Stop Watching Your Fruit Rot</h1>
-						<p class="hero-subtitle">
-							Turn your backyard abundance into community food.
-							<br />
-							We connect you with neighbors who will use your produce.
-							<br />
-							Starting in Napa and available everywhere.
-						</p>
-						<Link to="/listings/new" class="cta-button">
-							List My Fruit Tree
-						</Link>
-					</div>
-				</section>
-
-				<section class="how-it-works">
-					<div class="container">
-						<h2>How It Works</h2>
-						<div class="steps">
-							<div class="step">
-								<div class="step-number">1</div>
-								<h3>Tell us about your produce</h3>
-								<p>Takes 30 seconds</p>
-							</div>
-							<div class="step">
-								<div class="step-number">2</div>
-								<h3>We match you with neighbors</h3>
-								<p>You get notified</p>
-							</div>
-							<div class="step">
-								<div class="step-number">3</div>
-								<h3>They pick (or pick up), you relax</h3>
-								<p>Surplus feeds families</p>
-							</div>
+						<div class="logo">
+							<span class="logo-icon">🍑</span>
+							<span class="logo-text">Pick My Fruit</span>
 						</div>
-						<Link to="/listings/new" class="cta-button">
-							List My Fruit Tree
-						</Link>
-					</div>
-				</section>
-
-				<section class="available-listings">
-					<div class="container">
-						<h2>Available Now in Napa</h2>
-						<Show
-							when={listings().length > 0}
-							fallback={<p>No listings available right now.</p>}
-						>
-							<ListingsMap
-								listings={listings()}
-								onGroupSelect={setSelectedH3}
-								selectedH3={selectedH3()}
-							/>
-							<Show when={selectedH3()}>
-								<button
-									type="button"
-									class="clear-filter"
-									onClick={() => setSelectedH3(null)}
-								>
-									Show all listings
+						<nav class="header-nav">
+							<Show
+								when={context().session?.user}
+								fallback={
+									<Link to="/login" class="nav-link">
+										Sign In
+									</Link>
+								}
+							>
+								<Link to="/listings/mine" class="nav-link">
+									My Garden
+								</Link>
+								<button type="button" class="nav-link sign-out" onClick={handleSignOut}>
+									Sign Out
 								</button>
 							</Show>
-							<Show when={selectedH3() && visibleListings().length === 0}>
-								<p class="no-filtered-listings">No listings in this area.</p>
-							</Show>
-							<div class="listings-grid">
-								<For each={visibleListings()}>
-									{(listing) => (
-										<Link
-											to="/listings/$id"
-											params={{ id: String(listing.id) }}
-											class="listing-card surface-subtle"
-										>
-											<h3>{listing.name}</h3>
-											<p class="listing-variety">
-												{listing.type} - {listing.variety}
-											</p>
-											<p class="listing-quantity">Quantity: {listing.quantity}</p>
-											<p class="listing-harvest">Harvest: {listing.harvestWindow}</p>
-											<p class="listing-location">
-												{listing.city}, {listing.state}
-											</p>
-											{listing.notes && <p class="listing-notes">{listing.notes}</p>}
-										</Link>
-									)}
-								</For>
-							</div>
-						</Show>
+						</nav>
 					</div>
-				</section>
-			</main>
+				</header>
+
+				<main>
+					<section class="hero surface-subtle">
+						<div class="container">
+							<h1>Stop Watching Your Fruit Rot</h1>
+							<p class="hero-subtitle">
+								Turn your backyard abundance into community food.
+								<br />
+								We connect you with neighbors who will use your produce.
+								<br />
+								Starting in Napa and available everywhere.
+							</p>
+							<Link to="/listings/new" class="cta-button">
+								List My Fruit Tree
+							</Link>
+						</div>
+					</section>
+
+					<section class="how-it-works">
+						<div class="container">
+							<h2>How It Works</h2>
+							<div class="steps">
+								<div class="step">
+									<div class="step-number">1</div>
+									<h3>Tell us about your produce</h3>
+									<p>Takes 30 seconds</p>
+								</div>
+								<div class="step">
+									<div class="step-number">2</div>
+									<h3>We match you with neighbors</h3>
+									<p>You get notified</p>
+								</div>
+								<div class="step">
+									<div class="step-number">3</div>
+									<h3>They pick (or pick up), you relax</h3>
+									<p>Surplus feeds families</p>
+								</div>
+							</div>
+							<Link to="/listings/new" class="cta-button">
+								List My Fruit Tree
+							</Link>
+						</div>
+					</section>
+
+					<section class="available-listings">
+						<div class="container">
+							<h2>Available Now in Napa</h2>
+							<Show
+								when={listings().length > 0}
+								fallback={<p>No listings available right now.</p>}
+							>
+								<ListingsMap
+									listings={listings()}
+									onGroupSelect={setSelectedH3}
+									selectedH3={selectedH3()}
+								/>
+								<Show when={selectedH3()}>
+									<button
+										type="button"
+										class="clear-filter"
+										onClick={() => setSelectedH3(null)}
+									>
+										Show all listings
+									</button>
+								</Show>
+								<Show when={selectedH3() && visibleListings().length === 0}>
+									<p class="no-filtered-listings">No listings in this area.</p>
+								</Show>
+								<div class="listings-grid">
+									<For each={visibleListings()}>
+										{(listing) => (
+											<Link
+												to="/listings/$id"
+												params={{ id: String(listing.id) }}
+												class="listing-card surface-subtle"
+											>
+												<h3>{listing.name}</h3>
+												<p class="listing-variety">
+													{listing.type} - {listing.variety}
+												</p>
+												<p class="listing-quantity">Quantity: {listing.quantity}</p>
+												<p class="listing-harvest">Harvest: {listing.harvestWindow}</p>
+												<p class="listing-location">
+													{listing.city}, {listing.state}
+												</p>
+												{listing.notes && <p class="listing-notes">{listing.notes}</p>}
+											</Link>
+										)}
+									</For>
+								</div>
+							</Show>
+						</div>
+					</section>
+				</main>
+			</div>
 		</Layout>
 	)
 }

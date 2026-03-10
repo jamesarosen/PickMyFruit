@@ -16,7 +16,7 @@ import { Sentry } from '@/lib/sentry'
 import { getListingForViewer } from '@/api/listings'
 import type { Listing } from '@/data/schema'
 import type { PublicListing } from '@/data/queries'
-import '@/routes/listings.css'
+import '@/routes/listing-show.css'
 
 const listingSearchSchema = z.object({
 	created: z.boolean().optional(),
@@ -145,7 +145,7 @@ function ListingDetailPage() {
 			fallback={
 				<Layout title="Listing Not Found - Pick My Fruit">
 					<SiteHeader breadcrumbs={[{ label: 'Listing' }]} />
-					<main class="listing-page">
+					<main class="listing-show">
 						<div class="listing-not-found">
 							<h1>Listing Not Found</h1>
 							<p>This listing may have been removed or doesn't exist.</p>
@@ -160,7 +160,7 @@ function ListingDetailPage() {
 			{(l) => (
 				<Layout title={`${l().name} - Pick My Fruit`}>
 					<SiteHeader breadcrumbs={[{ label: l().name }]} />
-					<main class="listing-page">
+					<main class="listing-show">
 						<Show when={justCreated() && isOwner()}>
 							<Banner variant="success" dismissible>
 								Your fruit is listed! Share it with your neighbors.
