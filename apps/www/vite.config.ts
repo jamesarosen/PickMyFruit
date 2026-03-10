@@ -33,13 +33,29 @@ export default defineConfig(({ command, mode }) => {
 	}
 
 	return {
+		build: {
+			// 'hidden' generates .map files but omits the //# sourceMappingURL= comment,
+			// so browsers do not auto-fetch them. sentry-cli (run in the Dockerfile
+			// build step after pnpm build) can still locate and upload them by path.
+			sourcemap: 'hidden',
+		},
+		// Enable sourcemaps in the SSR Vite environment so Nitro has source-mapped
+		// input when it builds the final server bundle. Without this, server-side
+		// error stack traces in Sentry cannot be mapped back to original TypeScript.
+		environments: {
+			ssr: {
+				build: { sourcemap: 'hidden' },
+			},
+		},
 		server: {},
 		plugins: [
 			tsconfigPaths(),
 			tanstackStart(),
 			// traceDeps copies @libsql's native binaries into .output/server/node_modules/
 			// so the production bundle can resolve them without a full node_modules install.
-			nitro({ traceDeps: ['libsql'] }),
+			// sourcemap: true makes Nitro's Rollup pass emit .map files for the final
+			// .output/server bundle and chain them through the SSR sourcemaps above.
+			nitro({ sourcemap: true, traceDeps: ['libsql'] }),
 			h3jsDirnamePolyfill,
 			solid({ ssr: true }),
 		],

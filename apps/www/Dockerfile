@@ -1,8 +1,18 @@
+# syntax=docker/dockerfile:1
 # Build stage
 FROM node:24-slim AS builder
 
-# Install pnpm
+# Install CA certificates (required by sentry-cli to make TLS connections)
+# and pnpm. node:24-slim omits the system CA bundle by default.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN corepack enable && corepack prepare pnpm@10.22.0 --activate
+
+# Install sentry-cli for the sourcemap upload step below.
+# Pin to a specific version to prevent unplanned breakage on future builds.
+# Bump this intentionally when upgrading; changelog: https://github.com/getsentry/sentry-cli/releases
+RUN npm install -g @sentry/cli@3.3.2
 
 WORKDIR /app
 
@@ -32,9 +42,35 @@ ARG VITE_SENTRY_DSN
 ARG VITE_SENTRY_ENABLED
 ARG VITE_SENTRY_ERROR_SAMPLE_RATE
 ARG VITE_SENTRY_TRACES_SAMPLE_RATE
+# Non-sensitive Sentry identifiers needed by sentry-cli at upload time.
+ARG SENTRY_ORG
+ARG SENTRY_PROJECT
+# SENTRY_RELEASE is the canonical release name (git SHA) used by sentry-cli.
+# VITE_SENTRY_RELEASE defaults to it so both consumers always reference the same
+# release — only pass SENTRY_RELEASE at build time; VITE_SENTRY_RELEASE is derived.
+ARG SENTRY_RELEASE
+ARG VITE_SENTRY_RELEASE=${SENTRY_RELEASE}
 
-# Build the www application
+# Build the www application.
 RUN cd apps/www && pnpm build
+
+# Upload sourcemaps to Sentry and delete them so they are absent from the
+# final image. Runs after the full build so both client (.output/public/)
+# and server (.output/server/) maps exist. If SENTRY_AUTH_TOKEN is absent
+# (e.g. CI smoke tests), the step is a no-op.
+# SENTRY_ORG, SENTRY_PROJECT, and SENTRY_RELEASE are available from the
+# ARG declarations above; sentry-cli reads them from the environment.
+RUN --mount=type=secret,id=sentry_auth_token \
+    export SENTRY_AUTH_TOKEN=$(cat /run/secrets/sentry_auth_token 2>/dev/null || true) && \
+    if [ -n "$SENTRY_AUTH_TOKEN" ]; then \
+        sentry-cli sourcemaps upload \
+            --release "$SENTRY_RELEASE" \
+            apps/www/.output/public \
+            apps/www/.output/server; \
+    else \
+        echo "INFO: SENTRY_AUTH_TOKEN absent — skipping sourcemap upload"; \
+    fi; \
+    find apps/www/.output -name '*.map' -delete
 
 # traceDeps traces only the builder's native @libsql binary. Copy all Linux
 # variants directly from pnpm's virtual store so the image runs on both x64
