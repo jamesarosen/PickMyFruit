@@ -192,7 +192,7 @@ export default function ListingsMap(props: Props) {
 			layout: {
 				'text-field': ['get', 'label'],
 				'text-size': 13,
-				'text-font': ['Open Sans Bold'],
+				'text-font': ['Noto Sans Bold'],
 				'text-allow-overlap': true,
 			},
 			paint: {
