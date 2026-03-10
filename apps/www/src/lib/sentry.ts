@@ -32,6 +32,7 @@ if (clientEnv.sentryDsn) {
 		dsn: clientEnv.sentryDsn,
 		enabled: clientEnv.sentryEnabled,
 		environment: clientEnv.mode,
+		release: clientEnv.sentryRelease,
 		sampleRate: clientEnv.sentrySampleRate,
 		tracesSampleRate: clientEnv.sentryTracesSampleRate,
 		beforeSend(event, hint) {
