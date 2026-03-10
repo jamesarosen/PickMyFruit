@@ -2,7 +2,6 @@ import { createFileRoute } from '@tanstack/solid-router'
 import Layout from '@/components/Layout'
 import SiteHeader from '@/components/SiteHeader'
 import ListingForm from '@/components/ListingForm'
-import { authMiddleware } from '@/middleware/auth'
 import { getMyLastAddress } from '@/api/listings'
 import '@/routes/listings/new.css'
 import '@/components/ListingForm.css'
@@ -12,13 +11,12 @@ export const Route = createFileRoute('/listings/new')({
 		try {
 			return await getMyLastAddress()
 		} catch {
+			// errorMiddleware on getMyLastAddress already sent the original exception
+			// to Sentry and re-threw it as a UserError. No need to re-capture here.
 			return undefined
 		}
 	},
 	component: NewListingPage,
-	server: {
-		middleware: [authMiddleware],
-	},
 })
 
 function NewListingPage() {
