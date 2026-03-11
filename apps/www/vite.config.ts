@@ -4,6 +4,29 @@ import { tanstackStart } from '@tanstack/solid-start/plugin/vite'
 import { nitro } from 'nitro/vite'
 import solid from 'vite-plugin-solid'
 
+// Kobalte's layerStack.isTopMostLayer does not guard against an empty layers
+// array, crashing on mobile when a deferred touch-click fires after the
+// DismissableLayer has already been removed from the stack.
+// Filed: https://github.com/kobaltedev/kobalte/issues/649
+// Remove this patch once a fixed version of @kobalte/core is released.
+const kobalteIsTopMostLayerPatch = {
+	name: 'kobalte-is-top-most-layer-patch',
+	transform(code: string, id: string) {
+		if (
+			id.includes('/@kobalte/core/') &&
+			code.includes('layers[layers.length - 1].node === node')
+		) {
+			return {
+				code: code.replace(
+					'layers[layers.length - 1].node === node',
+					'layers.length > 0 && layers[layers.length - 1].node === node'
+				),
+				map: { mappings: '' },
+			}
+		}
+	},
+}
+
 // h3-js is an Emscripten-generated bundle that uses `__dirname` to locate its
 // WASM initializer. When Nitro bundles it as ESM, `__dirname` is undefined.
 // The WASM is inlined as a base64 data URI so the path is never actually used,
@@ -56,6 +79,7 @@ export default defineConfig(({ command, mode }) => {
 			// sourcemap: true makes Nitro's Rollup pass emit .map files for the final
 			// .output/server bundle and chain them through the SSR sourcemaps above.
 			nitro({ sourcemap: true, traceDeps: ['libsql'] }),
+			kobalteIsTopMostLayerPatch,
 			h3jsDirnamePolyfill,
 			solid({ ssr: true }),
 		],
