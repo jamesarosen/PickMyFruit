@@ -8,8 +8,15 @@
 			align-items: center;
 			display: flex;
 			justify-content: space-between;
+			gap: 24px;
 			margin: 0 auto;
 			max-width: 1200px;
+			padding-inline: clamp(16px, 4vw, 48px);
+
+			@media (width < 600px) {
+				flex-direction: column;
+				gap: 16px;
+			}
 		}
 
 		.footer-left {
@@ -18,6 +25,19 @@
 			gap: 12px;
 			font-size: 14px;
 			color: var(--color-quiet);
+			flex-wrap: wrap;
+
+			@media (width < 600px) {
+				justify-content: center;
+				text-align: center;
+			}
+
+			/* Hide the pipe separator whenever the left section wraps */
+			@media (width < 715px) {
+				.footer-separator {
+					display: none;
+				}
+			}
 
 			a {
 				color: var(--color-primary);
@@ -44,8 +64,13 @@
 
 		.footer-nav {
 			display: flex;
+			flex-shrink: 0;
 			font-size: 0.85rem;
 			gap: 24px;
+
+			a {
+				white-space: nowrap;
+			}
 
 			a::after {
 				content: '.';

@@ -11,7 +11,7 @@ export function PageFooter() {
 					<span>
 						Built by <a href="https://jamesarosen.com">James A Rosen</a>
 					</span>
-					<span>|</span>
+					<span class="footer-separator">|</span>
 					<span>
 						Email <SupportEmail class="text-accent" />
 					</span>
