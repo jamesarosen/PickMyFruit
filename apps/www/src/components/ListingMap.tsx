@@ -1,9 +1,9 @@
-import { onMount, onCleanup, Show } from 'solid-js'
+import { Show } from 'solid-js'
 import { cellToLatLng, cellToBoundary, cellToParent } from 'h3-js'
 import MapPin from 'lucide-solid/icons/map-pin'
 import Hexagon from 'lucide-solid/icons/hexagon'
 import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
-import { Sentry } from '@/lib/sentry'
+import MapLibreGL, { MapLibreGLReadyArgs } from '@/components/MapLibreGL'
 import '@/components/ListingMap.css'
 
 interface OwnerProps {
@@ -33,28 +33,23 @@ function h3ToPolygonRing(h3Index: string): number[][] {
 
 /** Map showing a single listing's location. */
 export default function ListingMap(props: Props) {
-	let containerRef!: HTMLDivElement
 	let map: import('maplibre-gl').Map | undefined
-	let mounted = true
 
-	onMount(async () => {
-		try {
-			const maplibregl = await import('maplibre-gl')
-			await import('maplibre-gl/dist/maplibre-gl.css')
-			if (!mounted) return
-
-			if (props.mode === 'owner') {
-				initOwnerMap(maplibregl, props.lat, props.lng, props.h3Index)
-			} else {
-				initPublicMap(maplibregl, props.approximateH3Index)
-			}
-		} catch (err) {
-			Sentry.captureException(err)
+	function setupMap({ container, maplibregl }: MapLibreGLReadyArgs) {
+		if (props.mode === 'owner') {
+			initOwnerMap(maplibregl, container, props.lat, props.lng, props.h3Index)
+		} else {
+			initPublicMap(maplibregl, container, props.approximateH3Index)
 		}
-	})
+		return () => {
+			map?.remove()
+			map = undefined
+		}
+	}
 
 	function initOwnerMap(
 		maplibregl: typeof import('maplibre-gl'),
+		container: HTMLDivElement,
 		lat: number,
 		lng: number,
 		h3Index: string
@@ -62,7 +57,7 @@ export default function ListingMap(props: Props) {
 		const publicH3 = cellToParent(h3Index, H3_RESOLUTIONS.PUBLIC_DETAIL)
 
 		map = new maplibregl.Map({
-			container: containerRef,
+			container,
 			style: 'https://tiles.openfreemap.org/styles/liberty',
 			center: [lng, lat],
 			zoom: 13,
@@ -116,13 +111,14 @@ export default function ListingMap(props: Props) {
 
 	function initPublicMap(
 		maplibregl: typeof import('maplibre-gl'),
+		container: HTMLDivElement,
 		h3Index: string
 	) {
 		const [lat, lng] = cellToLatLng(h3Index)
 		const boundary = h3ToPolygonRing(h3Index)
 
 		map = new maplibregl.Map({
-			container: containerRef,
+			container,
 			style: 'https://tiles.openfreemap.org/styles/liberty',
 			center: [lng, lat],
 			zoom: 14,
@@ -169,16 +165,9 @@ export default function ListingMap(props: Props) {
 		})
 	}
 
-	onCleanup(() => {
-		mounted = false
-		map?.remove()
-		map = undefined
-	})
-
 	return (
 		<div class="listing-map-container">
-			<div
-				ref={containerRef}
+			<MapLibreGL
 				class="listing-map"
 				role="img"
 				aria-label={
@@ -186,6 +175,7 @@ export default function ListingMap(props: Props) {
 						? 'Map showing exact listing location and public area'
 						: 'Map showing approximate listing area'
 				}
+				onReady={setupMap}
 			/>
 			<Show when={props.mode === 'owner'}>
 				<div class="listing-map-legend">
