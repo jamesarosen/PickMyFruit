@@ -1,8 +1,9 @@
-import { onMount, onCleanup, createEffect, on } from 'solid-js'
+import { createEffect, on } from 'solid-js'
 import type { PublicListing } from '@/data/queries'
 import { cellToLatLng, cellToBoundary, cellToParent } from 'h3-js'
 import { H3_RESOLUTIONS, zoomToH3Resolution } from '@/lib/h3-resolutions'
 import { Sentry } from '@/lib/sentry'
+import MapLibreGL, { MapLibreGLReadyArgs } from '@/components/MapLibreGL'
 import '@/components/ListingsMap.css'
 
 /** A group of listings sharing the same approximate H3 cell. */
@@ -58,73 +59,67 @@ interface Props {
 
 /** Map showing nearby listings grouped by H3 cell. */
 export default function ListingsMap(props: Props) {
-	let containerRef!: HTMLDivElement
 	let map: import('maplibre-gl').Map | undefined
-	let mounted = true
 	let layersReady = false
+	let currentRes: number = H3_RESOLUTIONS.HOME_GROUPING
 
-	onMount(async () => {
-		try {
-			const maplibregl = await import('maplibre-gl')
-			await import('maplibre-gl/dist/maplibre-gl.css')
-			if (!mounted) return
+	function setupMap({ container, maplibregl }: MapLibreGLReadyArgs) {
+		const groups = groupByH3(props.listings)
+		const bounds = new maplibregl.LngLatBounds()
+		for (const group of groups) {
+			bounds.extend(group.center)
+		}
 
-			const groups = groupByH3(props.listings)
-			const bounds = new maplibregl.LngLatBounds()
-			for (const group of groups) {
-				bounds.extend(group.center)
+		map = new maplibregl.Map({
+			container,
+			style: 'https://tiles.openfreemap.org/styles/liberty',
+			bounds: groups.length > 0 ? bounds : undefined,
+			center: groups.length === 0 ? [-122.2893688, 38.2966234] : undefined,
+			zoom: groups.length === 0 ? 13 : undefined,
+			fitBoundsOptions: { padding: 60, maxZoom: 14 },
+			attributionControl: false,
+		})
+
+		map.addControl(
+			new maplibregl.AttributionControl({ compact: true }),
+			'bottom-right'
+		)
+		map.addControl(new maplibregl.NavigationControl({ showCompass: false }))
+
+		map.on('load', () => {
+			addGroupLayers(groups)
+			addRegionLayers()
+			layersReady = true
+
+			// Adjust resolution to match the map's initial zoom
+			if (!map) return
+			const initialRes = zoomToH3Resolution(map.getZoom())
+			if (initialRes !== currentRes) {
+				currentRes = initialRes
+				updateGroupSource(groupByH3(props.listings, currentRes))
 			}
 
-			map = new maplibregl.Map({
-				container: containerRef,
-				style: 'https://tiles.openfreemap.org/styles/liberty',
-				bounds: groups.length > 0 ? bounds : undefined,
-				center: groups.length === 0 ? [-122.2893688, 38.2966234] : undefined,
-				zoom: groups.length === 0 ? 13 : undefined,
-				fitBoundsOptions: { padding: 60, maxZoom: 14 },
-				attributionControl: false,
-			})
+			if (props.selectedH3) {
+				updateRegion(props.selectedH3)
+				updateHighlight()
+			}
+		})
 
-			map.addControl(
-				new maplibregl.AttributionControl({ compact: true }),
-				'bottom-right'
-			)
-			map.addControl(new maplibregl.NavigationControl({ showCompass: false }))
+		map.on('zoomend', () => {
+			if (!layersReady || !map) return
+			const newRes = zoomToH3Resolution(map.getZoom())
+			if (newRes === currentRes) return
+			currentRes = newRes
+			updateGroupSource(groupByH3(props.listings, currentRes))
+			// Clear selection — the old cell may not exist at the new resolution
+			props.onGroupSelect?.(null)
+		})
 
-			let currentRes: number = H3_RESOLUTIONS.HOME_GROUPING
-
-			map.on('load', () => {
-				addGroupLayers(groups)
-				addRegionLayers()
-				layersReady = true
-
-				// Adjust resolution to match the map's initial zoom
-				if (!map) return
-				const initialRes = zoomToH3Resolution(map.getZoom())
-				if (initialRes !== currentRes) {
-					currentRes = initialRes
-					updateGroupSource(groupByH3(props.listings, currentRes))
-				}
-
-				if (props.selectedH3) {
-					updateRegion(props.selectedH3)
-					updateHighlight()
-				}
-			})
-
-			map.on('zoomend', () => {
-				if (!mounted || !layersReady || !map) return
-				const newRes = zoomToH3Resolution(map.getZoom())
-				if (newRes === currentRes) return
-				currentRes = newRes
-				updateGroupSource(groupByH3(props.listings, currentRes))
-				// Clear selection — the old cell may not exist at the new resolution
-				props.onGroupSelect?.(null)
-			})
-		} catch (err) {
-			Sentry.captureException(err)
+		return () => {
+			map?.remove()
+			map = undefined
 		}
-	})
+	}
 
 	/** Converts listing groups to a GeoJSON FeatureCollection for MapLibre. */
 	function groupsToGeoJSON(groups: ListingGroup[]): GeoJSON.FeatureCollection {
@@ -297,6 +292,12 @@ export default function ListingsMap(props: Props) {
 		])
 	}
 
+	// react to listing array changes; keep the visible groups up to date
+	createEffect(() => {
+		if (!map || !layersReady) return
+		updateGroupSource(groupByH3(props.listings, currentRes))
+	})
+
 	createEffect(
 		on(
 			() => props.selectedH3,
@@ -307,18 +308,11 @@ export default function ListingsMap(props: Props) {
 		)
 	)
 
-	onCleanup(() => {
-		mounted = false
-		map?.remove()
-		map = undefined
-	})
-
 	return (
-		<div
-			ref={containerRef}
+		<MapLibreGL
 			class="listings-map"
-			role="application"
 			aria-label="Map of nearby fruit listings"
+			onReady={setupMap}
 		/>
 	)
 }

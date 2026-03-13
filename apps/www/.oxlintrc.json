@@ -15,6 +15,9 @@
 		"eslint/init-declarations": "off",
 		"eslint/no-unassigned-vars": "off",
 
+		// Allow ==null as shorthand for (===null || ===undefined)
+		"eslint/eqeqeq": ["error", "always", { "null": "ignore" }],
+
 		// Overly opinionated style rules that don't add value
 		"eslint/sort-imports": "off",
 		"eslint/sort-keys": "off",
@@ -63,6 +66,9 @@
 
 		// setTimeout in Promise executor is valid and commonly used
 		"eslint/no-promise-executor-return": "off",
+
+		// Conflicts with prefer-called-times
+		"eslint-plugin-vitest/prefer-called-once": "off",
 
 		// Jest plugin incorrectly flags non-test files
 		"jest/require-hook": "off"

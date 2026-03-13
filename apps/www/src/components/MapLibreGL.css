@@ -1,0 +1,12 @@
+@layer components {
+	.maplibregl {
+		.map-unavailable {
+			align-items: center;
+			color: var(--color-quiet);
+			display: flex;
+			height: 100%;
+			justify-content: center;
+			width: 100%;
+		}
+	}
+}
