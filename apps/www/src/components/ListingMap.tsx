@@ -1,9 +1,8 @@
-import { onCleanup, Show } from 'solid-js'
+import { Show } from 'solid-js'
 import { cellToLatLng, cellToBoundary, cellToParent } from 'h3-js'
 import MapPin from 'lucide-solid/icons/map-pin'
 import Hexagon from 'lucide-solid/icons/hexagon'
 import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
-import { Sentry } from '@/lib/sentry'
 import MapLibreGL, { MapLibreGLReadyArgs } from '@/components/MapLibreGL'
 import '@/components/ListingMap.css'
 
