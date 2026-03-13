@@ -57,6 +57,6 @@
 	}
 
 	.site-header .nav-link.sign-out {
-		color: var(--color-primary);
+		color: var(--color-accent);
 	}
 }
