@@ -1,7 +1,6 @@
 import { cleanup, render } from '@solidjs/testing-library'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import MapLibreGL from '@/components/MapLibreGL'
-import { setupVitestCanvasMock } from 'vitest-canvas-mock'
 
 // mock maplibre modules (css stub doesn't need exports)
 vi.mock('maplibre-gl', () => ({
@@ -26,10 +25,6 @@ function mockCreateCanvas(hasWebGL: boolean) {
 }
 
 describe('<MapLibreGL>', () => {
-	beforeEach(() => {
-		setupVitestCanvasMock()
-	})
-
 	afterEach(() => {
 		cleanup()
 		vi.restoreAllMocks()
