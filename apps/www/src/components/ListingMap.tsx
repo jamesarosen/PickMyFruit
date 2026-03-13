@@ -21,8 +21,8 @@ interface PublicProps {
 type Props = OwnerProps | PublicProps
 
 // MapLibre paint properties require literal color strings, not CSS variables.
-const COLOR_MARKER = '#ff6b5a' // --color-sunset-coral
-const COLOR_AREA = '#10b981' // --color-fresh-green
+const COLOR_MARKER = '#10b981' // --color-fresh-green
+const COLOR_AREA = '#8b5a8e' // --color-fig
 
 /** Builds a closed GeoJSON polygon ring from an H3 cell index. */
 function h3ToPolygonRing(h3Index: string): number[][] {

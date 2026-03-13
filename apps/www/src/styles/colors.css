@@ -4,6 +4,7 @@
 		 * Named colors
 		 */
 		--color-sunset-coral: #ff6b5a;
+		--color-fig: #8b5a8e;
 		--color-fresh-green: #10b981;
 		--color-golden-light: #d38f0f;
 		--color-morning-cream: #fffcf5;
@@ -14,12 +15,12 @@
 		 * Semantic colors, base theme
 		 */
 		--color-primary: light-dark(
-			var(--color-sunset-coral),
-			oklch(from var(--color-sunset-coral) 0.65 c h)
-		);
-		--color-secondary: light-dark(
 			var(--color-fresh-green),
 			oklch(from var(--color-fresh-green) calc(l + 0.02) c h)
+		);
+		--color-secondary: light-dark(
+			var(--color-fig),
+			oklch(from var(--color-fig) calc(l + 0.2) c h)
 		);
 		--color-accent: light-dark(
 			var(--color-golden-light),
