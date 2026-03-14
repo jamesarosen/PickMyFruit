@@ -17,6 +17,7 @@ import { getListingForViewer } from '@/api/listings'
 import type { Listing } from '@/data/schema'
 import type { PublicListing } from '@/data/queries'
 import '@/routes/listing-show.css'
+import { createErrorSignal, ErrorMessage } from '@/components/ErrorMessage'
 
 const listingSearchSchema = z.object({
 	created: z.boolean().optional(),
@@ -38,7 +39,7 @@ function OwnerControls(props: {
 	const [isUpdating, setIsUpdating] = createSignal(false)
 	const [savedStatus, setSavedStatus] = createSignal(props.initialStatus)
 	const [displayStatus, setDisplayStatus] = createSignal(props.initialStatus)
-	const [error, setError] = createSignal<string | null>(null)
+	const [error, setError] = createErrorSignal()
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined
 
 	onCleanup(() => clearTimeout(debounceTimer))
@@ -80,7 +81,7 @@ function OwnerControls(props: {
 			setSavedStatus(newStatus)
 		} catch (err) {
 			Sentry.captureException(err)
-			setError(err instanceof Error ? err.message : 'Failed to update')
+			setError(err)
 			setDisplayStatus(savedStatus())
 		} finally {
 			setIsUpdating(false)
@@ -116,9 +117,11 @@ function OwnerControls(props: {
 						</label>
 					)}
 				</For>
-				<Show when={error()}>
-					<p class="visibility-error">{error()}</p>
-				</Show>
+				<ErrorMessage
+					class="visibility-error"
+					defaultMessage="Failed to update"
+					error={error()}
+				/>
 			</fieldset>
 		</>
 	)

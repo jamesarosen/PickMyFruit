@@ -3,9 +3,9 @@ import { useRouteContext } from '@tanstack/solid-router'
 import { submitInquiry as submitInquiryFn } from '@/api/inquiries'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import { authClient } from '@/lib/auth-client'
-import { Sentry } from '@/lib/sentry'
 import { Input, Textarea } from './FormField'
 import '@/components/InquiryForm.css'
+import { createErrorSignal, ErrorMessage } from './ErrorMessage'
 
 interface InquiryFormProps {
 	listingId: number
@@ -27,7 +27,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 	const [formState, setFormState] = createSignal<FormState>('initial')
 	const [email, setEmail] = createSignal('')
 	const [note, setNote] = createSignal('')
-	const [error, setError] = createSignal<string | null>(null)
+	const [error, setError] = createErrorSignal()
 
 	const isAuthenticated = () => Boolean(context().session?.user)
 
@@ -46,13 +46,12 @@ export default function InquiryForm(props: InquiryFormProps) {
 			setFormState('success')
 			sessionStorage.removeItem(PENDING_INQUIRY_KEY)
 		} catch (err) {
-			const message =
-				err instanceof Error ? err.message : 'Failed to submit inquiry'
+			const message = err instanceof Error ? err.message : ''
 			if (message.includes('already contacted') || message.includes('24 hours')) {
 				setFormState('rate-limited')
 				return
 			}
-			setError(message)
+			setError(err)
 			setFormState('error')
 		}
 	}
@@ -89,11 +88,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 			})
 
 			if (error) {
-				Sentry.captureException(new Error('Failed to send magic link'), {
-					extra: { cause: error, context: 'InquiryForm' },
-				})
-				setError("Failed to send sign-in link. We've been notified of the problem.")
-				setFormState('error')
+				setError(error)
 			} else {
 				setFormState('awaiting-magic-link')
 			}
@@ -217,9 +212,11 @@ export default function InquiryForm(props: InquiryFormProps) {
 						value={note()}
 					/>
 
-					<Show when={error()}>
-						<div class="inquiry-error">{error()}</div>
-					</Show>
+					<ErrorMessage
+						class="inquiry-error"
+						defaultMessage="Failed to submit inquiry"
+						error={error()}
+					/>
 
 					<button
 						type="submit"

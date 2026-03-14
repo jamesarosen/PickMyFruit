@@ -1,0 +1,11 @@
+@layer components {
+	.error-message {
+		display: block;
+		padding: 10px 12px;
+		background: oklch(from var(--color-error) l c h / 0.1);
+		color: var(--color-error);
+		border-radius: 6px;
+		font-size: 14px;
+		margin: 0;
+	}
+}

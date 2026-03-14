@@ -11,7 +11,7 @@ import Layout from '@/components/Layout'
 import ListingsMap from '@/components/ListingsMap'
 import { getNearbyListings } from '@/api/listings'
 import { normalizeArea, listingMatchesArea } from '@/lib/h3-area'
-import { performSignOut } from '@/lib/auth-client'
+import { authClient } from '@/lib/auth-client'
 import '@/routes/index.css'
 
 // Napa City Hall — will be replaced with geolocation later
@@ -49,7 +49,7 @@ function HomePage() {
 	}
 
 	async function handleSignOut() {
-		await performSignOut(router)
+		await authClient.signOut(router)
 	}
 
 	const visibleListings = () => {

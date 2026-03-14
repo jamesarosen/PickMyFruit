@@ -49,10 +49,9 @@ describe('InquiryForm error handling', () => {
 		// Unauthenticated context.
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		mockSession.mockReturnValue({ session: null } as any)
-		// authClient.signIn.magicLink returns { data, error } — it does not throw.
 		mockSendMagicLink.mockResolvedValue({
 			data: undefined,
-			error: { status: 500, message: 'validation_error — API key is invalid' },
+			error: new Error('Failed to send sign-in link'),
 		})
 
 		const { getByRole, getByLabelText, getByText } = render(() => (

@@ -125,7 +125,9 @@ describe('MagicLinkWaiting', () => {
 		})
 
 		it('displays error message on verification failure', async () => {
-			mockVerify.mockResolvedValue({ error: { message: 'Token expired' } })
+			mockVerify.mockResolvedValue({
+				error: new Error('Invalid or expired token'),
+			})
 
 			const { getByLabelText, getByRole, getByText } = render(() => (
 				<MagicLinkWaiting
@@ -142,7 +144,7 @@ describe('MagicLinkWaiting', () => {
 			fireEvent.click(getByRole('button', { name: /verify/i }))
 
 			await waitFor(() => {
-				expect(getByText('Token expired')).toBeInTheDocument()
+				expect(getByText('Invalid or expired token')).toBeInTheDocument()
 			})
 		})
 

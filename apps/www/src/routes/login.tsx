@@ -12,8 +12,8 @@ import Layout from '@/components/Layout'
 import SiteHeader from '@/components/SiteHeader'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import { authClient } from '@/lib/auth-client'
-import { Sentry } from '@/lib/sentry'
 import './login.css'
+import { createErrorSignal, ErrorMessage } from '@/components/ErrorMessage'
 
 const loginSearchSchema = z.object({
 	returnTo: z
@@ -50,7 +50,7 @@ function LoginPage() {
 	const returnTo = () => search().returnTo || '/listings/mine'
 	const [email, setEmail] = createSignal('')
 	const [isSubmitting, setIsSubmitting] = createSignal(false)
-	const [error, setError] = createSignal<string | null>(null)
+	const [error, setError] = createErrorSignal()
 	const [emailSent, setEmailSent] = createSignal(false)
 
 	async function handleSubmit(event: SubmitEvent) {
@@ -68,18 +68,10 @@ function LoginPage() {
 			email: emailValue,
 			callbackURL: returnTo(),
 		})
-
 		setIsSubmitting(false)
 
 		if (error) {
-			setError(
-				error instanceof Error
-					? error.message
-					: "Failed to send sign-in link. We've been notified of the problem."
-			)
-			Sentry.captureException(new Error('Failed to send magic link'), {
-				extra: { cause: error, context: 'Login' },
-			})
+			setError(error)
 		} else {
 			setEmailSent(true)
 		}
@@ -125,9 +117,7 @@ function LoginPage() {
 							</Show>
 
 							<form class="login-form" onSubmit={handleSubmit}>
-								<Show when={error()}>
-									<div class="form-error">{error()}</div>
-								</Show>
+								<ErrorMessage error={error()} />
 
 								<Input
 									autocomplete="on"
