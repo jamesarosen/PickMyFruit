@@ -211,12 +211,7 @@
 		}
 
 		& .visibility-error {
-			font-size: 13px;
-			color: var(--color-primary);
 			margin: 8px 0 0;
-			padding: 8px 12px;
-			background: oklch(from var(--color-primary) l c h / 0.1);
-			border-radius: 6px;
 		}
 
 		@media (max-width: 600px) {

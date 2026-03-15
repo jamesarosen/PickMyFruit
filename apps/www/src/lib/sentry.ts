@@ -1,11 +1,12 @@
 import * as Sentry from '@sentry/solidstart'
 import { clientEnv } from './env.client'
+import isNetworkError from 'is-network-error'
+
+const isServer = typeof window === 'undefined'
+const environment = isServer ? 'server' : 'client'
 
 function logError(error: unknown, context?: Record<string, unknown>): void {
 	const timestamp = new Date().toISOString()
-	const isServer = typeof window === 'undefined'
-	const environment = isServer ? 'server' : 'client'
-
 	// console.error is intentional here — this module runs on both client and server
 	// and cannot depend on Pino (a Node.js-only library). This is the designated
 	// exception handler; all other code should use Sentry.captureException instead.
@@ -38,6 +39,18 @@ if (clientEnv.sentryDsn) {
 		beforeSend(event, hint) {
 			const err = hint.originalException
 			if (isControlFlow(err)) return null
+
+			// Mark network errors
+			if (isNetworkError(err)) {
+				event.extra = event.extra ?? {}
+				event.extra.network = true
+
+				// Downgrade network errors from the browser, where connectivity
+				// is unreliable.
+				if (!isServer) {
+					event.level = 'info'
+				}
+			}
 
 			logError(err, { sentryEventId: event.event_id })
 			return event

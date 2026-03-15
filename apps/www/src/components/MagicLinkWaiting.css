@@ -84,8 +84,6 @@
 
 	.magic-link-waiting .token-error {
 		margin-top: 8px;
-		font-size: 13px;
-		color: var(--color-primary);
 	}
 
 	/* Action buttons */
@@ -108,8 +106,17 @@
 		transition: background-color 0.2s;
 	}
 
-	.magic-link-waiting .resend-button:hover {
+	.magic-link-waiting .resend-button:hover:not(:disabled) {
 		background: oklch(from var(--color-accent) calc(l - 0.08) c h);
+	}
+
+	.magic-link-waiting .resend-button:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.magic-link-waiting .resend-error {
+		text-align: center;
 	}
 
 	.magic-link-waiting .cancel-button {

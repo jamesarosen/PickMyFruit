@@ -1,19 +1,7 @@
 import { createMiddleware } from '@tanstack/solid-start'
 import { Sentry } from './sentry'
-
-/**
- * A user-safe error that can be thrown from server functions.
- * The message will be shown to the user.
- */
-export class UserError extends Error {
-	public readonly code: string
-
-	constructor(code: string, message: string) {
-		super(message)
-		this.name = 'UserError'
-		this.code = code
-	}
-}
+export { UserError } from './user-error'
+import { UserError } from './user-error'
 
 /**
  * Middleware that captures exceptions server-side and converts them

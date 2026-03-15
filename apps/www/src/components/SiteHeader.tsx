@@ -5,7 +5,7 @@ import {
 	useRouter,
 } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
-import { performSignOut } from '@/lib/auth-client'
+import { authClient } from '@/lib/auth-client'
 import './SiteHeader.css'
 
 export type Breadcrumb = { label: string; to?: string }
@@ -17,7 +17,7 @@ export default function SiteHeader(props: { breadcrumbs?: Breadcrumb[] }) {
 	const context = useRouteContext({ from: '__root__' })
 
 	async function handleSignOut() {
-		await performSignOut(router)
+		await authClient.signOut(router)
 		navigate({ to: '/', replace: true })
 	}
 

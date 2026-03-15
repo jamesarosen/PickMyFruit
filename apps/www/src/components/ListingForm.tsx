@@ -2,6 +2,7 @@ import { createEffect, createSignal, on, Show } from 'solid-js'
 import { Link, useNavigate, useRouteContext } from '@tanstack/solid-router'
 import { z } from 'zod'
 import { Input, Textarea } from '@/components/FormField'
+import { createErrorSignal, ErrorMessage } from '@/components/ErrorMessage'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import ProduceTypeSelector from '@/components/ProduceTypeSelector'
 import type { AddressFields } from '@/data/schema'
@@ -32,7 +33,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 	const context = useRouteContext({ from: '__root__' })
 	const navigate = useNavigate()
 	const [formState, setFormState] = createSignal<FormState>('initial')
-	const [submitError, setSubmitError] = createSignal<string | null>(null)
+	const [submitError, setSubmitError] = createErrorSignal()
 	const [fieldErrors, setFieldErrors] = createSignal<FieldErrors>({ errors: [] })
 	const [selectedType, setSelectedType] = createSignal<string>('')
 	const [email, setEmail] = createSignal('')
@@ -128,12 +129,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 			})
 
 			if (error) {
-				Sentry.captureException(new Error('Failed to send magic link'), {
-					extra: { cause: error, context: 'ListingForm' },
-				})
-				setSubmitError(
-					"Failed to send sign-in link. We've been notified of the problem."
-				)
+				setSubmitError(error)
 				setFormState('error')
 			} else {
 				setFormState('awaiting-magic-link')
@@ -220,11 +216,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 			}
 		>
 			<form class="listing-form" onSubmit={handleSubmit}>
-				<Show when={submitError()}>
-					<div role="alert" class="form-message error">
-						{submitError()}
-					</div>
-				</Show>
+				<ErrorMessage class="form-message error" error={submitError()} />
 
 				<Show when={context().session?.user}>
 					{(user) => (

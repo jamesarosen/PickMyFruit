@@ -51,11 +51,6 @@
 	}
 
 	.inquiry-error {
-		padding: 12px;
-		background: oklch(from var(--color-primary) l c h / 0.1);
-		color: var(--color-primary);
-		border-radius: 8px;
-		font-size: 14px;
 		margin-bottom: 16px;
 	}
 

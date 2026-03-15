@@ -1,6 +1,7 @@
-import { createSignal, Show } from 'solid-js'
+import { createSignal } from 'solid-js'
 import { authClient } from '@/lib/auth-client'
 import '@/components/MagicLinkWaiting.css'
+import { createErrorSignal, ErrorMessage } from './ErrorMessage'
 
 interface MagicLinkWaitingProps {
 	email: string
@@ -15,37 +16,30 @@ interface MagicLinkWaitingProps {
 export default function MagicLinkWaiting(props: MagicLinkWaitingProps) {
 	const [token, setToken] = createSignal('')
 	const [isVerifying, setIsVerifying] = createSignal(false)
-	const [error, setError] = createSignal<string | null>(null)
+	const [isSending, setIsSending] = createSignal(false)
+	const [error, setError] = createErrorSignal()
+	const [resendError, setResendError] = createErrorSignal()
 
 	async function handleVerifyToken(e: SubmitEvent) {
 		e.preventDefault()
 		const tokenValue = token().trim()
-		if (!tokenValue) {
-			return
-		}
+		if (!tokenValue) return
 
 		setIsVerifying(true)
 		setError(null)
 
 		try {
 			const result = await authClient.magicLink.verify({
-				query: {
-					token: tokenValue,
-				},
-				fetchOptions: {
-					redirect: 'manual',
-				},
+				query: { token: tokenValue },
+				fetchOptions: { redirect: 'manual' },
 			})
 
 			if (result.error) {
-				setError(result.error.message || 'Invalid or expired token')
+				setError(result.error)
 				return
 			}
 
-			// Verification successful
 			await props.onVerified()
-		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to verify token')
 		} finally {
 			setIsVerifying(false)
 		}
@@ -75,24 +69,38 @@ export default function MagicLinkWaiting(props: MagicLinkWaitingProps) {
 						{isVerifying() ? 'Verifying…' : 'Verify'}
 					</button>
 				</div>
-				<Show when={error()}>
-					<div class="token-error">{error()}</div>
-				</Show>
+				<ErrorMessage
+					class="token-error"
+					defaultMessage="Invalid or expired token"
+					error={error()}
+				/>
 			</form>
 
 			<div class="actions">
 				<button
 					type="button"
 					class="resend-button"
+					disabled={isSending()}
 					onClick={async () => {
-						await authClient.signIn.magicLink({
+						setResendError(null)
+						setIsSending(true)
+						const { error } = await authClient.signIn.magicLink({
 							email: props.email,
 							callbackURL: props.callbackURL,
 						})
+						if (error) {
+							setResendError(error)
+						}
+						setIsSending(false)
 					}}
 				>
-					Resend email
+					{isSending() ? 'Sending…' : 'Resend email'}
 				</button>
+				<ErrorMessage
+					class="resend-error"
+					defaultMessage="Failed to resend. Please try again."
+					error={resendError()}
+				/>
 				<button type="button" class="cancel-button" onClick={props.onCancel}>
 					Use different email
 				</button>

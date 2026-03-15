@@ -31,6 +31,10 @@
 		"eslint/no-inline-comments": "off",
 		"eslint/no-warning-comments": "off",
 
+		// Personal preferences
+		"eslint/max-classes-per-file": ["error", 5],
+		"eslint/eqeqeq": ["error", "always", { "null": "ignore" }],
+
 		// Modern best practice prefers named exports over default exports
 		"import/no-named-export": "off",
 		"import/prefer-default-export": "off",
