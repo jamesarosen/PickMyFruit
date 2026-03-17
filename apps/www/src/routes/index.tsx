@@ -1,17 +1,11 @@
-import {
-	createFileRoute,
-	Link,
-	useNavigate,
-	useRouteContext,
-	useRouter,
-} from '@tanstack/solid-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 import { z } from 'zod'
 import Layout from '@/components/Layout'
+import PageHeader from '@/components/PageHeader'
 import ListingsMap from '@/components/ListingsMap'
 import { getNearbyListings } from '@/api/listings'
 import { normalizeArea, listingMatchesArea } from '@/lib/h3-area'
-import { authClient } from '@/lib/auth-client'
 import '@/routes/index.css'
 
 // Napa City Hall — will be replaced with geolocation later
@@ -32,9 +26,7 @@ export const Route = createFileRoute('/')({
 
 function HomePage() {
 	const listings = Route.useLoaderData()
-	const router = useRouter()
 	const navigate = useNavigate()
-	const context = useRouteContext({ from: '__root__' })
 	const search = Route.useSearch()
 
 	const selectedH3 = () => normalizeArea(search().area ?? null)
@@ -48,10 +40,6 @@ function HomePage() {
 		})
 	}
 
-	async function handleSignOut() {
-		await authClient.signOut(router)
-	}
-
 	const visibleListings = () => {
 		const area = selectedH3()
 		if (!area) return listings()
@@ -63,33 +51,9 @@ function HomePage() {
 	return (
 		<Layout title="Pick My Fruit - Turn your backyard abundance into community food">
 			<div class="home-page">
-				<header>
-					<div class="container">
-						<div class="logo">
-							<span class="logo-icon">🍑</span>
-							<span class="logo-text">Pick My Fruit</span>
-						</div>
-						<nav class="header-nav">
-							<Show
-								when={context().session?.user}
-								fallback={
-									<Link to="/login" class="nav-link">
-										Sign In
-									</Link>
-								}
-							>
-								<Link to="/listings/mine" class="nav-link">
-									My Garden
-								</Link>
-								<button type="button" class="nav-link sign-out" onClick={handleSignOut}>
-									Sign Out
-								</button>
-							</Show>
-						</nav>
-					</div>
-				</header>
+				<PageHeader />
 
-				<main>
+				<main id="main-content">
 					<section class="hero surface-subtle">
 						<div class="container">
 							<h1>Stop Watching Your Fruit Rot</h1>

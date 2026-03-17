@@ -1,44 +1,13 @@
-import type { Page } from '@playwright/test'
 import { test, expect } from './helpers/fixtures'
-import { type TestUser, getMagicLinkToken } from './helpers/test-db'
-
-/** Signs in via magic link and waits for redirect to /listings/mine. */
-async function signIn(page: Page, testUser: TestUser) {
-	await page.goto('/login')
-	await expect(
-		page.getByRole('heading', { name: 'Sign in to Pick My Fruit' })
-	).toBeVisible()
-
-	const emailInput = page.getByLabel(/email/i)
-	await expect(emailInput).toBeVisible()
-	await emailInput.pressSequentially(testUser.email, { delay: 30 })
-	await expect(emailInput).toHaveValue(testUser.email)
-
-	const responsePromise = page.waitForResponse((resp) =>
-		resp.url().includes('/api/auth/sign-in/magic-link')
-	)
-	await page.locator('button.submit-button').click()
-	await responsePromise
-
-	await expect(
-		page.getByRole('heading', { name: 'Check your email' })
-	).toBeVisible({ timeout: 10000 })
-
-	const token = await getMagicLinkToken(testUser.email)
-	await page
-		.locator('input#magic-link-token')
-		.pressSequentially(token, { delay: 20 })
-	await page.getByRole('button', { name: 'Verify' }).click()
-
-	await expect(page).toHaveURL('/listings/mine')
-}
+import { loginViaUI } from './helpers/login'
+import { pageHeader } from './helpers/page-header'
 
 test.describe('Authentication', () => {
 	// Run serially to avoid SQLite lock conflicts from parallel DB writes
 	test.describe.configure({ mode: 'serial' })
 
 	test('magic link sign-in flow', async ({ page, testUser }) => {
-		await signIn(page, testUser)
+		await loginViaUI(page, testUser)
 	})
 
 	test('protected route redirects to login', async ({ page }) => {
@@ -91,23 +60,24 @@ test.describe('Authentication', () => {
 	})
 
 	test('session survives page refresh', async ({ page, testUser }) => {
-		await signIn(page, testUser)
+		await loginViaUI(page, testUser)
 
-		await expect(page.getByRole('link', { name: 'My Garden' })).toBeVisible()
+		const nav = pageHeader(page)
+		expect(await nav.isSignedIn()).toBeTruthy()
 
 		await page.reload()
 
-		await expect(page.getByRole('link', { name: 'My Garden' })).toBeVisible()
-		await expect(page.getByRole('link', { name: 'Sign In' })).not.toBeVisible()
+		await expect(page).toHaveURL('/listings/mine')
+		expect(await nav.isSignedIn()).toBeTruthy()
 	})
 
 	test('sign-out redirects from protected page', async ({ page, testUser }) => {
-		await signIn(page, testUser)
+		await loginViaUI(page, testUser)
 
-		await page.getByRole('button', { name: 'Sign Out' }).click()
+		const nav = pageHeader(page)
+		await nav.signOut()
 
 		await expect(page).toHaveURL('/')
-		await expect(page.getByRole('link', { name: 'Sign In' })).toBeVisible()
-		await expect(page.getByRole('link', { name: 'My Garden' })).not.toBeVisible()
+		expect(await nav.isSignedIn()).toBeFalsy()
 	})
 })

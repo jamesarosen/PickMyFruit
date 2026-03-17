@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/solid-router'
 import Layout from '@/components/Layout'
-import SiteHeader from '@/components/SiteHeader'
+import PageHeader from '@/components/PageHeader'
 import './terms.css'
 import { SupportEmail } from '@/components/SupportEmail'
 
@@ -11,8 +11,8 @@ export const Route = createFileRoute('/terms')({
 function TermsPage() {
 	return (
 		<Layout title="Terms of Service - Pick My Fruit">
-			<SiteHeader breadcrumbs={[{ label: 'Terms of Service' }]} />
-			<main>
+			<PageHeader breadcrumbs={[{ label: 'Terms of Service' }]} />
+			<main id="main-content">
 				<div class="container terms-of-service">
 					<h1>Terms of Service</h1>
 					<p class="effective-date">Effective date: March 8, 2026</p>

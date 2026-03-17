@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/solid-router'
 import Layout from '@/components/Layout'
-import SiteHeader from '@/components/SiteHeader'
+import PageHeader from '@/components/PageHeader'
 import ListingForm from '@/components/ListingForm'
 import { getMyLastAddress } from '@/api/listings'
 import '@/routes/listings/new.css'
@@ -24,14 +24,14 @@ function NewListingPage() {
 
 	return (
 		<Layout title="List My Fruit Tree - Pick My Fruit">
-			<SiteHeader
+			<PageHeader
 				breadcrumbs={[
 					{ label: 'My Garden', to: '/listings/mine' },
 					{ label: 'New Listing' },
 				]}
 			/>
-			<main class="listing-new">
-				<header class="page-header">
+			<main id="main-content" class="listing-new">
+				<header class="new-listing-header">
 					<h1>List Your Fruit Tree</h1>
 					<p>Share your surplus with the community. Takes about 30 seconds.</p>
 				</header>

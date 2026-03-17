@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouteContext } from '@tanstack/solid-router'
 import { createSignal, For, onCleanup, Show } from 'solid-js'
 import { z } from 'zod'
 import Layout from '@/components/Layout'
-import SiteHeader from '@/components/SiteHeader'
+import PageHeader from '@/components/PageHeader'
 import Banner from '@/components/Banner'
 import InquiryForm from '@/components/InquiryForm'
 import ListingMap from '@/components/ListingMap'
@@ -147,8 +147,8 @@ function ListingDetailPage() {
 			when={listing()}
 			fallback={
 				<Layout title="Listing Not Found - Pick My Fruit">
-					<SiteHeader breadcrumbs={[{ label: 'Listing' }]} />
-					<main class="listing-show">
+					<PageHeader breadcrumbs={[{ label: 'Listing' }]} />
+					<main id="main-content" class="listing-show">
 						<div class="listing-not-found">
 							<h1>Listing Not Found</h1>
 							<p>This listing may have been removed or doesn't exist.</p>
@@ -162,8 +162,8 @@ function ListingDetailPage() {
 		>
 			{(l) => (
 				<Layout title={`${l().name} - Pick My Fruit`}>
-					<SiteHeader breadcrumbs={[{ label: l().name }]} />
-					<main class="listing-show">
+					<PageHeader breadcrumbs={[{ label: l().name }]} />
+					<main id="main-content" class="listing-show">
 						<Show when={justCreated() && isOwner()}>
 							<Banner variant="success" dismissible>
 								Your fruit is listed! Share it with your neighbors.

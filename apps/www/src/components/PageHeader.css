@@ -1,0 +1,186 @@
+@layer components {
+	/* ── Outer header ──────────────────────────────────────────────────── */
+
+	.page-header {
+		background-color: var(--color-background);
+		/* Desktop (≥768px) and home route: full header sticks */
+		position: sticky;
+		top: 0;
+		z-index: 40;
+	}
+
+	/* On mobile interior pages, offset the sticky header so row 1 scrolls above
+	 * the viewport while row 2 (breadcrumbs) stays pinned at top: 0.
+	 * The variable matches the computed height of .page-header__site-nav:
+	 * 2 × 12px padding + ~32px content (trigger is tallest element). */
+	@media (max-width: 767px) {
+		.page-header--has-breadcrumbs {
+			top: calc(-1 * var(--page-header-site-nav-height, 56px));
+		}
+	}
+
+	/* ── Row 1: site nav ───────────────────────────────────────────────── */
+
+	.page-header__site-nav {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 12px 20px;
+	}
+
+	.page-header__logo {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		text-decoration: none;
+		color: var(--color-foreground);
+		font-size: 18px;
+		font-weight: 600;
+		flex-shrink: 0;
+	}
+
+	.page-header__logo:hover {
+		color: var(--color-foreground);
+		text-decoration: none;
+	}
+
+	.page-header__logo-icon {
+		font-size: 22px;
+		line-height: 1;
+	}
+
+	/* ── Menu trigger ──────────────────────────────────────────────────── */
+
+	.page-header__menu-trigger {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: none;
+		border: 1px solid transparent;
+		padding: 6px;
+		border-radius: 6px;
+		cursor: pointer;
+		color: var(--color-foreground);
+		transition: background-color 0.15s;
+		flex-shrink: 0;
+	}
+
+	.page-header__menu-trigger:hover {
+		background-color: oklch(from var(--color-foreground) l c h / 0.08);
+	}
+
+	/* ── Avatar ────────────────────────────────────────────────────────── */
+
+	.page-header__avatar-img {
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		object-fit: cover;
+	}
+
+	.page-header__avatar-initials {
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		background: var(--color-secondary);
+		color: var(--color-background);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.02em;
+	}
+
+	/* ── Row 2: breadcrumbs ────────────────────────────────────────────── */
+
+	.page-header__breadcrumb {
+		background-color: var(--color-background);
+		border-top: 1px solid oklch(from var(--color-quiet) l c h / 0.2);
+	}
+
+	.page-header__breadcrumb ol {
+		list-style: none;
+		margin: 0;
+		padding: 8px 20px;
+		max-width: 1200px;
+		margin-inline: auto;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0;
+		font-size: 14px;
+		color: var(--color-quiet);
+	}
+
+	.page-header__breadcrumb li + li::before {
+		content: '/';
+		margin: 0 8px;
+		color: oklch(from var(--color-quiet) l calc(c * 0.5) h);
+	}
+
+	.page-header__breadcrumb a {
+		color: var(--color-primary);
+		text-decoration: none;
+	}
+
+	.page-header__breadcrumb a:hover {
+		text-decoration: underline;
+	}
+
+	/* ── Dropdown menu panel ───────────────────────────────────────────── */
+
+	.page-header__menu-content {
+		min-width: 160px;
+		background-color: var(--color-background);
+		border: 1px solid oklch(from var(--color-quiet) l c h / 0.25);
+		border-radius: 8px;
+		padding: 4px;
+		box-shadow: 0 4px 16px oklch(from var(--color-foreground) l c h / 0.12);
+		z-index: 50;
+		/* Animate open/close — zeroed out by base.css for prefers-reduced-motion */
+		transform-origin: top right;
+		transition:
+			opacity 0.12s,
+			transform 0.12s;
+	}
+
+	.page-header__menu-content[data-closed] {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+
+	.page-header__menu-item {
+		display: block;
+		width: 100%;
+		padding: 8px 12px;
+		border-radius: 4px;
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--color-foreground);
+		cursor: pointer;
+		background: none;
+		border: none;
+		text-align: left;
+		text-decoration: none;
+		transition: background-color 0.1s;
+	}
+
+	.page-header__menu-item:hover,
+	.page-header__menu-item[data-highlighted] {
+		background-color: oklch(from var(--color-foreground) l c h / 0.06);
+	}
+
+	.page-header__menu-item--danger {
+		color: var(--color-accent);
+	}
+
+	.page-header__menu-separator {
+		height: 1px;
+		background-color: oklch(from var(--color-quiet) l c h / 0.2);
+		margin: 4px 0;
+		border: none;
+	}
+}

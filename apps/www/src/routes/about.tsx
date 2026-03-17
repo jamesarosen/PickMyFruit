@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/solid-router'
 import Layout from '@/components/Layout'
-import SiteHeader from '@/components/SiteHeader'
+import PageHeader from '@/components/PageHeader'
 import './about.css'
 import { SupportEmail } from '@/components/SupportEmail'
 
@@ -11,8 +11,8 @@ export const Route = createFileRoute('/about')({
 function AboutPage() {
 	return (
 		<Layout title="About - Pick My Fruit">
-			<SiteHeader breadcrumbs={[{ label: 'About' }]} />
-			<main class="about-page">
+			<PageHeader breadcrumbs={[{ label: 'About' }]} />
+			<main id="main-content" class="about-page">
 				<div class="container">
 					<h1>About Pick My Fruit</h1>
 

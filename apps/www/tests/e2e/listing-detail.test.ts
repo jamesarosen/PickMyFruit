@@ -64,7 +64,9 @@ test.describe('Listing Detail Page', () => {
 	test('breadcrumb links back to home', async ({ page, testListing }) => {
 		await page.goto(`/listings/${testListing.id}`)
 
-		const homeLink = page.locator('.breadcrumb a', { hasText: 'Home' })
+		const homeLink = page.locator('[aria-label="Breadcrumb"] a', {
+			hasText: 'Home',
+		})
 		await expect(homeLink).toBeVisible()
 		await homeLink.click()
 		await expect(page).toHaveURL('/')

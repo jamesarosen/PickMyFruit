@@ -82,6 +82,9 @@ function RootShell(props: { children: Solid.JSX.Element }) {
 				<style>@layer base, components, page, utilities;</style>
 			</head>
 			<body>
+				<a href="#main-content" class="skip-link">
+					Skip to main content
+				</a>
 				<HeadContent />
 				<Solid.Suspense>{props.children}</Solid.Suspense>
 				<Scripts />
@@ -105,7 +108,7 @@ function RootError({ error, reset }: ErrorComponentProps) {
 	})
 
 	return (
-		<div style={{ padding: '40px', 'text-align': 'center' }}>
+		<div id="main-content" style={{ padding: '40px', 'text-align': 'center' }}>
 			<h1>Something went wrong</h1>
 			<p style={{ color: 'var(--color-text-muted)', margin: '16px 0' }}>
 				{error.message}
@@ -129,7 +132,7 @@ function RootError({ error, reset }: ErrorComponentProps) {
 
 function NotFound() {
 	return (
-		<div style={{ padding: '40px', 'text-align': 'center' }}>
+		<div id="main-content" style={{ padding: '40px', 'text-align': 'center' }}>
 			<h1>Page Not Found</h1>
 			<p>The page you're looking for doesn't exist.</p>
 			<Link to="/">Go Home</Link>
