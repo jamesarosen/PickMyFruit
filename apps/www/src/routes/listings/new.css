@@ -4,19 +4,19 @@
 		margin: 0 auto;
 		padding: 40px 20px 80px;
 
-		& .page-header {
+		& .new-listing-header {
 			text-align: center;
 			margin-bottom: 48px;
 		}
 
-		& .page-header h1 {
+		& .new-listing-header h1 {
 			font-size: 36px;
 			font-weight: 700;
 			color: var(--color-foreground);
 			margin: 0 0 12px 0;
 		}
 
-		& .page-header p {
+		& .new-listing-header p {
 			font-size: 18px;
 			color: var(--color-quiet);
 			margin: 0;
@@ -27,11 +27,11 @@
 				padding: 24px 16px 60px;
 			}
 
-			& .page-header h1 {
+			& .new-listing-header h1 {
 				font-size: 28px;
 			}
 
-			& .page-header p {
+			& .new-listing-header p {
 				font-size: 16px;
 			}
 		}

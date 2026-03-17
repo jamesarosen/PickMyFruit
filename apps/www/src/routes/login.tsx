@@ -9,7 +9,7 @@ import { createSignal, Show } from 'solid-js'
 import { z } from 'zod'
 import { Input } from '@/components/FormField'
 import Layout from '@/components/Layout'
-import SiteHeader from '@/components/SiteHeader'
+import PageHeader from '@/components/PageHeader'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import { authClient } from '@/lib/auth-client'
 import './login.css'
@@ -79,8 +79,8 @@ function LoginPage() {
 
 	return (
 		<Layout title="Sign In - Pick My Fruit">
-			<SiteHeader breadcrumbs={[{ label: 'Sign In' }]} />
-			<main class="login-page">
+			<PageHeader breadcrumbs={[{ label: 'Sign In' }]} />
+			<main id="main-content" class="login-page">
 				<div class="login-container">
 					<Show
 						when={!emailSent()}

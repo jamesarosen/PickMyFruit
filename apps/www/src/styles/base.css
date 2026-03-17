@@ -243,4 +243,27 @@
 	dialog::backdrop {
 		background: var(--color-backdrop, rgba(0, 0, 0, 0.5));
 	}
+
+	/* Skip link — visually hidden until focused; first focusable element in <body> */
+	.skip-link {
+		position: absolute;
+		top: -100%;
+		left: 8px;
+		background: var(--color-background);
+		color: var(--color-foreground);
+		padding: 8px 16px;
+		border-radius: 0 0 6px 6px;
+		border: 1px solid var(--color-accent);
+		font-weight: 600;
+		font-size: 14px;
+		text-decoration: none;
+		z-index: 100;
+		transition: top 0.1s;
+	}
+
+	.skip-link:focus {
+		top: 0;
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
 }

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useRouteContext } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
-import SiteHeader from '@/components/SiteHeader'
+import PageHeader from '@/components/PageHeader'
 import { authMiddleware } from '@/middleware/auth'
 import { getStatusClass } from '@/lib/listing-status'
 import type { Listing } from '@/data/schema'
@@ -12,8 +12,8 @@ export const Route = createFileRoute('/listings/mine')({
 	loader: () => getMyListings(),
 	pendingComponent: () => (
 		<Layout title="My Garden - Pick My Fruit">
-			<SiteHeader breadcrumbs={[{ label: 'My Garden' }]} />
-			<main class="listings-mine">
+			<PageHeader breadcrumbs={[{ label: 'My Garden' }]} />
+			<main id="main-content" class="listings-mine">
 				<p>Loading…</p>
 			</main>
 		</Layout>
@@ -67,9 +67,9 @@ function MyGardenPage() {
 
 	return (
 		<Layout title="My Garden - Pick My Fruit">
-			<SiteHeader breadcrumbs={[{ label: 'My Garden' }]} />
-			<main class="listings-mine">
-				<header class="page-header">
+			<PageHeader breadcrumbs={[{ label: 'My Garden' }]} />
+			<main id="main-content" class="listings-mine">
+				<header class="my-garden-header">
 					<h1>My Garden</h1>
 					<Show when={context().session?.user}>
 						{(user) => <p>Welcome back, {user().name || 'friend'}!</p>}

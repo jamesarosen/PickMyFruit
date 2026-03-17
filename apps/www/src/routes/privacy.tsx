@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/solid-router'
 import Layout from '@/components/Layout'
-import SiteHeader from '@/components/SiteHeader'
+import PageHeader from '@/components/PageHeader'
 import './privacy.css'
 import { SupportEmail } from '@/components/SupportEmail'
 
@@ -11,8 +11,8 @@ export const Route = createFileRoute('/privacy')({
 function PrivacyPage() {
 	return (
 		<Layout title="Privacy Policy - Pick My Fruit">
-			<SiteHeader breadcrumbs={[{ label: 'Privacy Policy' }]} />
-			<main>
+			<PageHeader breadcrumbs={[{ label: 'Privacy Policy' }]} />
+			<main id="main-content">
 				<div class="container privacy-policy">
 					<h1>Privacy Policy</h1>
 					<p class="effective-date">Effective date: March 7, 2026</p>
