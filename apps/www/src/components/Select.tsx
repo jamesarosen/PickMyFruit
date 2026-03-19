@@ -105,9 +105,21 @@ export function Select<
 	}
 	let hiddenSelect: HTMLSelectElement | undefined
 	onMount(() => {
-		hiddenSelect?.addEventListener('change', syncHiddenInputOnChange)
+		if (!hiddenSelect) return
+
+		// Sync initial value to the hidden <input> for constraint validation.
+		// The <input required> needs a non-empty value on first render so the
+		// browser knows the field is already filled. The change listener below
+		// handles subsequent updates; this covers the initial case.
+		const input = hiddenSelect.parentElement?.querySelector('input')
+		if (input) {
+			input.value = hiddenSelect.value
+		}
+
+		hiddenSelect.addEventListener('change', syncHiddenInputOnChange)
+
 		onCleanup(() => {
-			hiddenSelect?.removeEventListener('change', syncHiddenInputOnChange)
+			hiddenSelect.removeEventListener('change', syncHiddenInputOnChange)
 		})
 	})
 
