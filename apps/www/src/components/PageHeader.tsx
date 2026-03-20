@@ -5,7 +5,8 @@ import {
 	useRouteContext,
 	useRouter,
 } from '@tanstack/solid-router'
-import { For, Show } from 'solid-js'
+import { clsx } from 'clsx'
+import { For, Show, type ParentProps } from 'solid-js'
 import { authClient } from '@/lib/auth-client'
 import './PageHeader.css'
 
@@ -68,6 +69,19 @@ function getInitials(name: string): string {
 		.slice(0, 2)
 }
 
+/** A dropdown menu item rendered as a router link with aria-current support. */
+function DropdownMenuLink(props: ParentProps<{ to: string; class?: string }>) {
+	return (
+		<DropdownMenu.Item
+			as={Link}
+			to={props.to}
+			class={clsx('page-header__menu-item', props.class)}
+		>
+			{props.children}
+		</DropdownMenu.Item>
+	)
+}
+
 /** Unified page header with logo, nav menu, and optional breadcrumbs. */
 export default function PageHeader(props: PageHeaderProps) {
 	const router = useRouter()
@@ -128,12 +142,7 @@ export default function PageHeader(props: PageHeaderProps) {
 					<DropdownMenu.Portal>
 						<DropdownMenu.Content class="page-header__menu-content">
 							<Show when={user()}>
-								<DropdownMenu.Item
-									class="page-header__menu-item"
-									onSelect={() => navigate({ to: '/listings/mine' })}
-								>
-									My Garden
-								</DropdownMenu.Item>
+								<DropdownMenuLink to="/listings/mine">My Garden</DropdownMenuLink>
 								<DropdownMenu.Separator class="page-header__menu-separator" />
 								<DropdownMenu.Item
 									class="page-header__menu-item page-header__menu-item--danger"
@@ -143,12 +152,7 @@ export default function PageHeader(props: PageHeaderProps) {
 								</DropdownMenu.Item>
 							</Show>
 							<Show when={!user()}>
-								<DropdownMenu.Item
-									class="page-header__menu-item"
-									onSelect={() => navigate({ to: '/login' })}
-								>
-									Sign In
-								</DropdownMenu.Item>
+								<DropdownMenuLink to="/login">Sign In</DropdownMenuLink>
 							</Show>
 						</DropdownMenu.Content>
 					</DropdownMenu.Portal>
