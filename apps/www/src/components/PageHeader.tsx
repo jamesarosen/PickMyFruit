@@ -143,6 +143,7 @@ export default function PageHeader(props: PageHeaderProps) {
 						<DropdownMenu.Content class="page-header__menu-content">
 							<Show when={user()}>
 								<DropdownMenuLink to="/listings/mine">My Garden</DropdownMenuLink>
+								<DropdownMenuLink to="/notifications">Notifications</DropdownMenuLink>
 								<DropdownMenu.Separator class="page-header__menu-separator" />
 								<DropdownMenu.Item
 									class="page-header__menu-item page-header__menu-item--danger"

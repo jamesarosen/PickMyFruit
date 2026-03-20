@@ -1,0 +1,72 @@
+.subscription-form {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+	max-width: 480px;
+}
+
+.subscription-form__address-row {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.subscription-form__address-row .form-field__control {
+	flex: 1;
+}
+
+.subscription-form__search-button {
+	padding: 0.5rem 1rem;
+	background: var(--color-accent);
+	color: white;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.subscription-form__geocode-result {
+	font-size: 0.875rem;
+	color: var(--color-text-muted, #666);
+	margin-top: 0.25rem;
+}
+
+.subscription-form__submit {
+	padding: 0.75rem 1.5rem;
+	background: var(--color-accent);
+	color: white;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 1rem;
+	align-self: flex-start;
+}
+
+.subscription-form__submit:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.subscription-form__range-row {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.subscription-form__range-row input[type='range'] {
+	flex: 1;
+	accent-color: var(--color-accent);
+}
+
+.subscription-form__range-label {
+	display: block;
+	margin-top: 0.25rem;
+	font-size: 0.875rem;
+	color: var(--color-text-muted, #666);
+}
+
+.subscription-coverage-map {
+	height: 240px;
+	border-radius: 8px;
+	overflow: hidden;
+	border: 1px solid var(--color-border, #e5e7eb);
+}

@@ -1,4 +1,4 @@
-import { buildUnavailableUrl } from './hmac'
+import { buildUnavailableUrl, buildUnsubscribeUrl } from './hmac'
 import { serverEnv } from './env.server'
 import { logger } from './logger.server'
 
@@ -81,7 +81,7 @@ export function buildInquiryEmailHtml(data: InquiryEmailData): string {
 </html>`
 }
 
-function escapeHtml(text: string): string {
+export function escapeHtml(text: string): string {
 	return text
 		.replace(/&/g, '&amp;')
 		.replace(/</g, '&lt;')
@@ -132,6 +132,154 @@ export async function sendInquiryEmail(
 	}
 
 	// All EMAIL_PROVIDER values are handled above; this is unreachable.
+	throw new Error(
+		`Unhandled EMAIL_PROVIDER: ${(serverEnv as { EMAIL_PROVIDER: string }).EMAIL_PROVIDER}`
+	)
+}
+
+// ============================================================================
+// Notification Email Templates
+// ============================================================================
+
+interface NotificationEmailListing {
+	id: number
+	type: string
+	quantity: string | null
+	harvestWindow: string | null
+	city: string
+	state: string
+}
+
+interface NotificationEmailData {
+	baseUrl: string
+	subscriber: {
+		name: string
+		email: string
+	}
+	subscriptionId: number
+	userId: string
+	throttlePeriod: 'hourly' | 'daily' | 'weekly'
+	listings: NotificationEmailListing[]
+	unsubscribeUrl: string
+}
+
+export function buildNotificationEmailSubject(
+	data: Pick<NotificationEmailData, 'listings'>
+): string {
+	const count = data.listings.length
+	const typeWord = count === 1 ? 'listing' : 'listings'
+	return `${count} new ${typeWord} near you`
+}
+
+export function buildNotificationEmailHtml(
+	data: NotificationEmailData
+): string {
+	const listingItems = data.listings
+		.map((listing) => {
+			const harvestSection = listing.harvestWindow
+				? `<p style="margin: 0 0 4px 0;"><strong>Harvest window:</strong> ${escapeHtml(listing.harvestWindow)}</p>`
+				: ''
+			const quantitySection = listing.quantity
+				? `<p style="margin: 0 0 4px 0;"><strong>Quantity:</strong> ${escapeHtml(listing.quantity)}</p>`
+				: ''
+			const listingUrl = `${data.baseUrl}/listings/${listing.id}`
+			return `
+  <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin: 16px 0;">
+    <p style="margin: 0 0 8px 0;"><strong>${escapeHtml(listing.type)}</strong> in ${escapeHtml(listing.city)}, ${escapeHtml(listing.state)}</p>
+    ${quantitySection}
+    ${harvestSection}
+    <a href="${listingUrl}" style="color: #4a7c23;">View listing</a>
+  </div>`
+		})
+		.join('\n')
+
+	return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h1 style="color: #2d5016; margin-bottom: 24px;">Fresh produce near you</h1>
+
+  <p>Hi ${escapeHtml(data.subscriber.name)},</p>
+
+  <p>Here are the produce listings that match your area subscription:</p>
+
+  ${listingItems}
+
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
+
+  <p style="color: #666; font-size: 14px;">
+    <a href="${new URL('/notifications', data.baseUrl)}" style="color: #4a7c23;">Manage your notification settings</a>
+  </p>
+</body>
+</html>`
+}
+
+/**
+ * Builds RFC 2369 / RFC 8058 unsubscribe headers for notification emails.
+ * Email clients (Gmail, Yahoo, Apple Mail) display a native unsubscribe button
+ * when these headers are present. The POST variant enables one-click unsubscribe
+ * without redirecting the user to a browser.
+ */
+export function buildNotificationEmailHeaders(
+	unsubscribeUrl: string
+): Record<string, string> {
+	return {
+		'List-Unsubscribe': `<${unsubscribeUrl}>`,
+		'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+	}
+}
+
+/** Sends a notification email to a subscriber. Throws on failure. */
+export async function sendNotificationEmail(
+	data: Omit<NotificationEmailData, 'unsubscribeUrl'> & {
+		idempotencyKey: string
+	}
+): Promise<void> {
+	const fullData: NotificationEmailData = {
+		...data,
+		unsubscribeUrl: buildUnsubscribeUrl(
+			data.baseUrl,
+			data.subscriptionId,
+			data.userId
+		),
+	}
+
+	if (serverEnv.EMAIL_PROVIDER === 'silent') {
+		return
+	}
+
+	if (serverEnv.EMAIL_PROVIDER === 'console') {
+		logger.info(
+			{ subscriber: fullData.subscriber.email, count: fullData.listings.length },
+			'Notification email (EMAIL_PROVIDER=console)'
+		)
+		return
+	}
+
+	if (serverEnv.EMAIL_PROVIDER === 'resend') {
+		const { Resend } = await import('resend')
+		const resend = new Resend(serverEnv.RESEND_API_KEY)
+
+		const { error } = await resend.emails.send(
+			{
+				from: serverEnv.EMAIL_FROM,
+				to: fullData.subscriber.email,
+				subject: buildNotificationEmailSubject(fullData),
+				html: buildNotificationEmailHtml(fullData),
+				headers: buildNotificationEmailHeaders(fullData.unsubscribeUrl),
+			},
+			{ idempotencyKey: data.idempotencyKey }
+		)
+
+		if (error) {
+			throw new Error(`Email send failed: ${error.name} — ${error.message}`)
+		}
+		return
+	}
+
 	throw new Error(
 		`Unhandled EMAIL_PROVIDER: ${(serverEnv as { EMAIL_PROVIDER: string }).EMAIL_PROVIDER}`
 	)

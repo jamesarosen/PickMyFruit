@@ -49,3 +49,41 @@ export function buildUnavailableUrl(
 	const { nonce, ts, sig } = signUrl(listingId)
 	return `${baseUrl}/api/listings/${listingId}/unavailable?nonce=${nonce}&ts=${ts}&sig=${sig}`
 }
+
+/**
+ * Signs a subscription unsubscribe link. Unlike signUrl, these links do not
+ * expire — an unsubscribe is low-risk and reversible, and expiring links in
+ * weekly notification emails would make them stop working before the next batch.
+ */
+export function signUnsubscribeUrl(
+	subscriptionId: number,
+	userId: string
+): string {
+	const message = `unsubscribe:${subscriptionId}:${userId}`
+	return createHmac('sha256', serverEnv.HMAC_SECRET)
+		.update(message)
+		.digest('hex')
+}
+
+/** Verifies an unsubscribe link signature. */
+export function verifyUnsubscribeSignature(
+	subscriptionId: number,
+	userId: string,
+	sig: string
+): boolean {
+	const expected = signUnsubscribeUrl(subscriptionId, userId)
+	if (sig.length !== expected.length) {
+		return false
+	}
+	return timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
+}
+
+/** Builds a signed one-click unsubscribe URL for notification emails. */
+export function buildUnsubscribeUrl(
+	baseUrl: string,
+	subscriptionId: number,
+	userId: string
+): string {
+	const sig = signUnsubscribeUrl(subscriptionId, userId)
+	return `${baseUrl}/api/notifications/${subscriptionId}/unsubscribe?userId=${encodeURIComponent(userId)}&sig=${sig}`
+}

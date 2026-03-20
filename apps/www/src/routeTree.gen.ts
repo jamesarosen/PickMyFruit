@@ -16,14 +16,19 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as CssTestRouteImport } from './routes/css-test'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as NotificationsIndexRouteImport } from './routes/notifications/index'
+import { Route as NotificationsUnsubscribedRouteImport } from './routes/notifications/unsubscribed'
+import { Route as NotificationsNewRouteImport } from './routes/notifications/new'
 import { Route as ListingsNewRouteImport } from './routes/listings/new'
 import { Route as ListingsMineRouteImport } from './routes/listings/mine'
 import { Route as ListingsIdRouteImport } from './routes/listings.$id'
 import { Route as ApiListingsRouteImport } from './routes/api/listings'
 import { Route as ApiInquiriesRouteImport } from './routes/api/inquiries'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as NotificationsIdEditRouteImport } from './routes/notifications/$id.edit'
 import { Route as ApiListingsIdRouteImport } from './routes/api/listings.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiNotificationsIdUnsubscribeRouteImport } from './routes/api/notifications.$id.unsubscribe'
 import { Route as ApiListingsIdUnavailableRouteImport } from './routes/api/listings.$id.unavailable'
 
 const TermsRoute = TermsRouteImport.update({
@@ -61,6 +66,22 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotificationsIndexRoute = NotificationsIndexRouteImport.update({
+  id: '/notifications/',
+  path: '/notifications/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsUnsubscribedRoute =
+  NotificationsUnsubscribedRouteImport.update({
+    id: '/notifications/unsubscribed',
+    path: '/notifications/unsubscribed',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const NotificationsNewRoute = NotificationsNewRouteImport.update({
+  id: '/notifications/new',
+  path: '/notifications/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ListingsNewRoute = ListingsNewRouteImport.update({
   id: '/listings/new',
   path: '/listings/new',
@@ -91,6 +112,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotificationsIdEditRoute = NotificationsIdEditRouteImport.update({
+  id: '/notifications/$id/edit',
+  path: '/notifications/$id/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiListingsIdRoute = ApiListingsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -101,6 +127,12 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiNotificationsIdUnsubscribeRoute =
+  ApiNotificationsIdUnsubscribeRouteImport.update({
+    id: '/api/notifications/$id/unsubscribe',
+    path: '/api/notifications/$id/unsubscribe',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiListingsIdUnavailableRoute =
   ApiListingsIdUnavailableRouteImport.update({
     id: '/unavailable',
@@ -122,9 +154,14 @@ export interface FileRoutesByFullPath {
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
+  '/notifications/new': typeof NotificationsNewRoute
+  '/notifications/unsubscribed': typeof NotificationsUnsubscribedRoute
+  '/notifications/': typeof NotificationsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/listings/$id': typeof ApiListingsIdRouteWithChildren
+  '/notifications/$id/edit': typeof NotificationsIdEditRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
+  '/api/notifications/$id/unsubscribe': typeof ApiNotificationsIdUnsubscribeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -140,9 +177,14 @@ export interface FileRoutesByTo {
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
+  '/notifications/new': typeof NotificationsNewRoute
+  '/notifications/unsubscribed': typeof NotificationsUnsubscribedRoute
+  '/notifications': typeof NotificationsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/listings/$id': typeof ApiListingsIdRouteWithChildren
+  '/notifications/$id/edit': typeof NotificationsIdEditRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
+  '/api/notifications/$id/unsubscribe': typeof ApiNotificationsIdUnsubscribeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -159,9 +201,14 @@ export interface FileRoutesById {
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
+  '/notifications/new': typeof NotificationsNewRoute
+  '/notifications/unsubscribed': typeof NotificationsUnsubscribedRoute
+  '/notifications/': typeof NotificationsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/listings/$id': typeof ApiListingsIdRouteWithChildren
+  '/notifications/$id/edit': typeof NotificationsIdEditRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
+  '/api/notifications/$id/unsubscribe': typeof ApiNotificationsIdUnsubscribeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -179,9 +226,14 @@ export interface FileRouteTypes {
     | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
+    | '/notifications/new'
+    | '/notifications/unsubscribed'
+    | '/notifications/'
     | '/api/auth/$'
     | '/api/listings/$id'
+    | '/notifications/$id/edit'
     | '/api/listings/$id/unavailable'
+    | '/api/notifications/$id/unsubscribe'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -197,9 +249,14 @@ export interface FileRouteTypes {
     | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
+    | '/notifications/new'
+    | '/notifications/unsubscribed'
+    | '/notifications'
     | '/api/auth/$'
     | '/api/listings/$id'
+    | '/notifications/$id/edit'
     | '/api/listings/$id/unavailable'
+    | '/api/notifications/$id/unsubscribe'
   id:
     | '__root__'
     | '/'
@@ -215,9 +272,14 @@ export interface FileRouteTypes {
     | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
+    | '/notifications/new'
+    | '/notifications/unsubscribed'
+    | '/notifications/'
     | '/api/auth/$'
     | '/api/listings/$id'
+    | '/notifications/$id/edit'
     | '/api/listings/$id/unavailable'
+    | '/api/notifications/$id/unsubscribe'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -234,7 +296,12 @@ export interface RootRouteChildren {
   ListingsIdRoute: typeof ListingsIdRoute
   ListingsMineRoute: typeof ListingsMineRoute
   ListingsNewRoute: typeof ListingsNewRoute
+  NotificationsNewRoute: typeof NotificationsNewRoute
+  NotificationsUnsubscribedRoute: typeof NotificationsUnsubscribedRoute
+  NotificationsIndexRoute: typeof NotificationsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  NotificationsIdEditRoute: typeof NotificationsIdEditRoute
+  ApiNotificationsIdUnsubscribeRoute: typeof ApiNotificationsIdUnsubscribeRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -288,6 +355,27 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notifications/': {
+      id: '/notifications/'
+      path: '/notifications'
+      fullPath: '/notifications/'
+      preLoaderRoute: typeof NotificationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications/unsubscribed': {
+      id: '/notifications/unsubscribed'
+      path: '/notifications/unsubscribed'
+      fullPath: '/notifications/unsubscribed'
+      preLoaderRoute: typeof NotificationsUnsubscribedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications/new': {
+      id: '/notifications/new'
+      path: '/notifications/new'
+      fullPath: '/notifications/new'
+      preLoaderRoute: typeof NotificationsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/listings/new': {
       id: '/listings/new'
       path: '/listings/new'
@@ -330,6 +418,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notifications/$id/edit': {
+      id: '/notifications/$id/edit'
+      path: '/notifications/$id/edit'
+      fullPath: '/notifications/$id/edit'
+      preLoaderRoute: typeof NotificationsIdEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/listings/$id': {
       id: '/api/listings/$id'
       path: '/$id'
@@ -342,6 +437,13 @@ declare module '@tanstack/solid-router' {
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/notifications/$id/unsubscribe': {
+      id: '/api/notifications/$id/unsubscribe'
+      path: '/api/notifications/$id/unsubscribe'
+      fullPath: '/api/notifications/$id/unsubscribe'
+      preLoaderRoute: typeof ApiNotificationsIdUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/listings/$id/unavailable': {
@@ -392,7 +494,12 @@ const rootRouteChildren: RootRouteChildren = {
   ListingsIdRoute: ListingsIdRoute,
   ListingsMineRoute: ListingsMineRoute,
   ListingsNewRoute: ListingsNewRoute,
+  NotificationsNewRoute: NotificationsNewRoute,
+  NotificationsUnsubscribedRoute: NotificationsUnsubscribedRoute,
+  NotificationsIndexRoute: NotificationsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  NotificationsIdEditRoute: NotificationsIdEditRoute,
+  ApiNotificationsIdUnsubscribeRoute: ApiNotificationsIdUnsubscribeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

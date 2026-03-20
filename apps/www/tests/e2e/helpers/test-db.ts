@@ -7,6 +7,7 @@ import {
 	verification,
 	listings,
 	inquiries,
+	notificationSubscriptions,
 	type NewListing,
 } from '../../../src/data/schema'
 import { eq, desc, like } from 'drizzle-orm'
@@ -132,6 +133,42 @@ export async function createTestListing(
 		...overrides,
 	}
 	const result = await db.insert(listings).values(data).returning()
+	return result[0]
+}
+
+export interface TestSubscription {
+	id: number
+	userId: string
+	throttlePeriod: string
+	centerH3: string
+	resolution: number
+	ringSize: number
+}
+
+/** Inserts a notification subscription into the test DB. */
+export async function createTestSubscription(
+	userId: string,
+	overrides: Partial<typeof notificationSubscriptions.$inferInsert> = {}
+): Promise<TestSubscription> {
+	const lat = 38.2966234
+	const lng = -122.2893688
+	const resolution = 7
+	const data = {
+		userId,
+		locationName: 'Test subscription',
+		throttlePeriod: 'daily',
+		produceTypes: null,
+		centerH3: latLngToCell(lat, lng, resolution),
+		resolution,
+		ringSize: 0,
+		createdAt: new Date(),
+		updatedAt: new Date(),
+		...overrides,
+	}
+	const result = await db
+		.insert(notificationSubscriptions)
+		.values(data)
+		.returning()
 	return result[0]
 }
 

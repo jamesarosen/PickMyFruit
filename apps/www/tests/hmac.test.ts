@@ -6,6 +6,9 @@ import {
 	verifySignature,
 	buildUnavailableUrl,
 	SIGNATURE_MAX_AGE_MS,
+	signUnsubscribeUrl,
+	verifyUnsubscribeSignature,
+	buildUnsubscribeUrl,
 } from '../src/lib/hmac'
 
 describe('signUrl', () => {
@@ -90,6 +93,73 @@ describe('buildUnavailableUrl', () => {
 		expect(parsed.pathname).toBe(`/api/listings/${id}/unavailable`)
 		expect(parsed.searchParams.get('nonce')).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}/)
 		expect(parsed.searchParams.get('ts')).toMatch(/^\d+$/)
+		expect(parsed.searchParams.get('sig')).toMatch(/^[0-9a-f]{64}$/)
+	})
+})
+
+describe(signUnsubscribeUrl, () => {
+	it('returns a hex signature', () => {
+		const sig = signUnsubscribeUrl(42, faker.string.uuid())
+		expect(sig).toMatch(/^[0-9a-f]{64}$/)
+	})
+
+	it('produces distinct signatures for different subscriptions', () => {
+		const userId = faker.string.uuid()
+		const a = signUnsubscribeUrl(1, userId)
+		const b = signUnsubscribeUrl(2, userId)
+		expect(a).not.toBe(b)
+	})
+
+	it('produces distinct signatures for different users', () => {
+		const a = signUnsubscribeUrl(1, faker.string.uuid())
+		const b = signUnsubscribeUrl(1, faker.string.uuid())
+		expect(a).not.toBe(b)
+	})
+})
+
+describe(verifyUnsubscribeSignature, () => {
+	it('accepts a valid signature', () => {
+		const subscriptionId = faker.number.int({ min: 1, max: 9999 })
+		const userId = faker.string.uuid()
+		const sig = signUnsubscribeUrl(subscriptionId, userId)
+		expect(verifyUnsubscribeSignature(subscriptionId, userId, sig)).toBeTruthy()
+	})
+
+	it('rejects a tampered subscription ID', () => {
+		const subscriptionId = faker.number.int({ min: 1, max: 4999 })
+		const userId = faker.string.uuid()
+		const sig = signUnsubscribeUrl(subscriptionId, userId)
+		expect(
+			verifyUnsubscribeSignature(subscriptionId + 1, userId, sig)
+		).toBeFalsy()
+	})
+
+	it('rejects a tampered user ID', () => {
+		const subscriptionId = faker.number.int({ min: 1, max: 9999 })
+		const sig = signUnsubscribeUrl(subscriptionId, faker.string.uuid())
+		expect(
+			verifyUnsubscribeSignature(subscriptionId, faker.string.uuid(), sig)
+		).toBeFalsy()
+	})
+
+	it('rejects a tampered signature', () => {
+		const subscriptionId = faker.number.int({ min: 1, max: 9999 })
+		const userId = faker.string.uuid()
+		const otherSig = signUnsubscribeUrl(subscriptionId + 1, userId)
+		expect(
+			verifyUnsubscribeSignature(subscriptionId, userId, otherSig)
+		).toBeFalsy()
+	})
+})
+
+describe(buildUnsubscribeUrl, () => {
+	it('includes subscription ID, user ID, and sig in the URL', () => {
+		const id = faker.number.int({ min: 1, max: 9999 })
+		const userId = faker.string.uuid()
+		const url = buildUnsubscribeUrl('https://example.com', id, userId)
+		const parsed = new URL(url)
+		expect(parsed.pathname).toBe(`/api/notifications/${id}/unsubscribe`)
+		expect(parsed.searchParams.get('userId')).toBe(userId)
 		expect(parsed.searchParams.get('sig')).toMatch(/^[0-9a-f]{64}$/)
 	})
 })

@@ -1,0 +1,10 @@
+@layer page {
+	.notification-new {
+		max-width: 600px;
+		padding: 1.5rem;
+	}
+
+	.notification-new h1 {
+		margin-bottom: 1.5rem;
+	}
+}

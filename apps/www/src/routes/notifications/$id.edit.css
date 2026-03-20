@@ -1,0 +1,61 @@
+@layer page {
+	.notification-edit {
+		max-width: 600px;
+		padding: 1.5rem;
+	}
+
+	.notification-edit h1 {
+		margin-bottom: 1.5rem;
+	}
+
+	.notification-edit__delete {
+		margin-top: 2rem;
+		color: var(--color-error);
+		background: none;
+		border: 1px solid var(--color-error);
+		border-radius: 4px;
+		padding: 0.5rem 1rem;
+		cursor: pointer;
+	}
+
+	.notification-edit__delete:hover {
+		background: oklch(from var(--color-error) l c h / 0.1);
+	}
+
+	.notification-edit__delete-confirm {
+		margin-top: 2rem;
+		padding: 1rem;
+		border: 1px solid var(--color-error);
+		border-radius: 4px;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.notification-edit__delete-confirm p {
+		margin: 0;
+	}
+
+	.notification-edit__delete-confirm-yes {
+		color: var(--color-error);
+		background: none;
+		border: 1px solid var(--color-error);
+		border-radius: 4px;
+		padding: 0.5rem 1rem;
+		cursor: pointer;
+		align-self: flex-start;
+	}
+
+	.notification-edit__delete-confirm-yes:hover {
+		background: oklch(from var(--color-error) l c h / 0.1);
+	}
+
+	.notification-edit__delete-confirm-cancel {
+		background: none;
+		border: 1px solid var(--color-border, #ccc);
+		border-radius: 4px;
+		padding: 0.5rem 1rem;
+		cursor: pointer;
+		align-self: flex-start;
+	}
+}

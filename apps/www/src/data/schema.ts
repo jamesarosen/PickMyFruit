@@ -176,3 +176,51 @@ export const inquiries = sqliteTable(
 
 export type Inquiry = typeof inquiries.$inferSelect
 export type NewInquiry = typeof inquiries.$inferInsert
+
+// ============================================================================
+// Notification Subscriptions Table
+// ============================================================================
+
+export const ThrottlePeriod = {
+	hourly: 'hourly',
+	daily: 'daily',
+	weekly: 'weekly',
+} as const
+
+export type ThrottlePeriodValue =
+	(typeof ThrottlePeriod)[keyof typeof ThrottlePeriod]
+
+export const notificationSubscriptions = sqliteTable(
+	'notification_subscriptions',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		throttlePeriod: text('throttle_period').notNull(), // 'hourly' | 'daily' | 'weekly'
+		// JSON array of produce type slugs, or NULL meaning "all types"
+		produceTypes: text('produce_types'),
+		centerH3: text('center_h3').notNull(), // H3 index at subscription resolution
+		resolution: integer('resolution').notNull(), // H3 resolution 5–8
+		ringSize: integer('ring_size').notNull().default(0), // 0–6
+		locationName: text('location_name').notNull().default(''),
+		lastNotifiedAt: integer('last_notified_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+	},
+	(table) => [
+		index('notification_subscriptions_user_id_idx').on(table.userId),
+		index('notification_subscriptions_throttle_period_idx').on(
+			table.throttlePeriod
+		),
+	]
+)
+
+export type NotificationSubscription =
+	typeof notificationSubscriptions.$inferSelect
+export type NewNotificationSubscription =
+	typeof notificationSubscriptions.$inferInsert

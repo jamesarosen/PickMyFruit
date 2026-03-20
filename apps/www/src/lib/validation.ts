@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isValidCell, getResolution } from 'h3-js'
 import { produceTypeSlugs } from '@/lib/produce-types'
 
 const optionalZip = z.preprocess(
@@ -83,3 +84,63 @@ const listingStatusValues = Object.values(ListingStatus) as [
 export const updateListingStatusSchema = z.object({
 	status: z.enum(listingStatusValues, { message: 'Invalid status' }),
 })
+
+// ============================================================================
+// Notification Subscription Schemas
+// ============================================================================
+
+/** Maximum number of notification subscriptions a single user may create. */
+export const MAX_SUBSCRIPTIONS_PER_USER = 10
+
+const throttlePeriodValues = ['hourly', 'daily', 'weekly'] as const
+
+/** Validates that both centerH3 and resolution are present and consistent. */
+const h3ResolutionConsistent = (d: {
+	centerH3?: string
+	resolution?: number
+}) =>
+	d.centerH3 === undefined ||
+	d.resolution === undefined ||
+	getResolution(d.centerH3) === d.resolution
+
+const subscriptionBaseSchema = z.object({
+	locationName: z.string().max(200).default(''),
+	throttlePeriod: z.enum(throttlePeriodValues, {
+		message: 'Please select a notification frequency',
+	}),
+	produceTypes: z
+		.array(
+			z
+				.string()
+				.refine((v) => produceTypeSlugs.has(v), { message: 'Invalid produce type' })
+		)
+		.optional(), // undefined = all types
+	centerH3: z
+		.string()
+		.min(1, 'Location is required')
+		.refine((v) => isValidCell(v), { message: 'Invalid H3 cell' }),
+	resolution: z.number().int().min(5).max(8),
+	ringSize: z.number().int().min(0).max(6).default(0),
+})
+
+export const createSubscriptionSchema = subscriptionBaseSchema.refine(
+	h3ResolutionConsistent,
+	{
+		message: 'centerH3 resolution does not match resolution field',
+		path: ['centerH3'],
+	}
+)
+
+export type CreateSubscriptionData = z.infer<typeof createSubscriptionSchema>
+
+export const updateSubscriptionSchema = subscriptionBaseSchema
+	.partial()
+	.extend({
+		id: z.number().int().positive(),
+	})
+	.refine(h3ResolutionConsistent, {
+		message: 'centerH3 resolution does not match resolution field',
+		path: ['centerH3'],
+	})
+
+export type UpdateSubscriptionData = z.infer<typeof updateSubscriptionSchema>

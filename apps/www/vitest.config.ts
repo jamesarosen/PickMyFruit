@@ -34,7 +34,7 @@ export default defineConfig({
 		},
 		server: {
 			deps: {
-				inline: [/@tanstack\/solid-router/, /solid/],
+				inline: [/@tanstack\/solid-router/, /solid/, /@libsql/, /ws/],
 			},
 		},
 	},

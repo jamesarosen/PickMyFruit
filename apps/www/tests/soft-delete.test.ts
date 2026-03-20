@@ -54,11 +54,15 @@ function wireDeleteChain() {
 
 function wireSelectChain(returnedRows: unknown[]) {
 	mockSelectFrom.mockReturnValue({ where: mockSelectWhere })
-	mockSelectWhere.mockReturnValue({
-		orderBy: vi.fn().mockReturnValue({ limit: mockSelectLimit }),
+	mockSelectLimit.mockResolvedValue(returnedRows)
+	// orderBy() must be both awaitable (for unlimited queries) and have .limit()
+	const orderByResult = Object.assign(Promise.resolve(returnedRows), {
 		limit: mockSelectLimit,
 	})
-	mockSelectLimit.mockResolvedValue(returnedRows)
+	mockSelectWhere.mockReturnValue({
+		orderBy: vi.fn().mockReturnValue(orderByResult),
+		limit: mockSelectLimit, // for queries that chain .where().limit() directly
+	})
 }
 
 describe('deleteListingById', () => {
