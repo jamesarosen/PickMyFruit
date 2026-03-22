@@ -28,6 +28,10 @@
 			var(--color-morning-cream),
 			var(--color-warm-charcoal)
 		);
+		--color-secondary: light-dark(
+			oklch(from var(--color-fig) calc(l + 0.2) c h),
+			var(--color-fig)
+		);
 		--color-quiet: light-dark(
 			oklch(from var(--color-medium-slate) 0.75 c h),
 			var(--color-medium-slate)

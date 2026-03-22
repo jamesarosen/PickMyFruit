@@ -51,6 +51,11 @@ export async function createTestUser(testUser?: TestUser): Promise<TestUser> {
 	return userToCreate
 }
 
+export async function getUserByEmail(email: string): Promise<TestUser | null> {
+	const rows = await db.select().from(user).where(eq(user.email, email)).limit(1)
+	return rows.length ? (rows[0] as TestUser) : null
+}
+
 export async function cleanupTestUser(testUser: TestUser): Promise<void> {
 	// verification has no FK cascade to user, so clean up manually
 	const valuePattern = `%"email":"${testUser.email}"%`

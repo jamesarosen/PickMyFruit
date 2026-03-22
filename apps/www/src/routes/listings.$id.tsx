@@ -281,6 +281,7 @@ function ListingDetailPage() {
 							<Show when={canInquire()}>
 								<InquiryForm
 									listingId={l().id}
+									listingType={l().type}
 									callbackURL={`/listings/${params().id}`}
 								/>
 							</Show>

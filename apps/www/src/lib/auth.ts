@@ -1,10 +1,12 @@
 import { betterAuth } from 'better-auth'
+import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { magicLink } from 'better-auth/plugins'
 import { tanstackStartCookies } from 'better-auth/tanstack-start/solid'
 import { db } from '../data/db'
 import { serverEnv } from './env.server'
 import { logger } from './logger.server'
+import { profileNameSchema } from './validation'
 
 const sendMagicLinkEmail = async ({
 	email,
@@ -59,6 +61,19 @@ export const auth = betterAuth({
 	}),
 	baseURL: serverEnv.BETTER_AUTH_URL,
 	secret: serverEnv.BETTER_AUTH_SECRET,
+	hooks: {
+		before: createAuthMiddleware(async (ctx) => {
+			// Enforce server-side name length — HTML maxlength is bypassable
+			if (ctx.path === '/update-user' && ctx.body?.name != null) {
+				const result = profileNameSchema.safeParse(ctx.body.name)
+				if (!result.success) {
+					throw new APIError('BAD_REQUEST', {
+						message: result.error.issues[0]?.message ?? 'Invalid name',
+					})
+				}
+			}
+		}),
+	},
 	plugins: [
 		magicLink({
 			sendMagicLink: sendMagicLinkEmail,

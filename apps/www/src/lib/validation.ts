@@ -65,6 +65,11 @@ export const inquiryFormSchema = z.object({
 
 export type InquiryFormData = z.infer<typeof inquiryFormSchema>
 
+/** Validates the user's display name as set via the profile page or inquiry interstitial. */
+export const profileNameSchema = z
+	.string()
+	.max(100, 'Name must be 100 characters or fewer')
+
 export const ListingStatus = {
 	available: 'available',
 	unavailable: 'unavailable',

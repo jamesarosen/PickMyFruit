@@ -6,6 +6,7 @@ import { authMiddleware } from '@/middleware/auth'
 import { getStatusClass } from '@/lib/listing-status'
 import type { Listing } from '@/data/schema'
 import { getMyListings } from '@/api/listings'
+import { displayName } from '@/lib/display-name'
 import '@/routes/listings/mine.css'
 
 export const Route = createFileRoute('/listings/mine')({
@@ -72,7 +73,7 @@ function MyGardenPage() {
 				<header class="my-garden-header">
 					<h1>My Garden</h1>
 					<Show when={context().session?.user}>
-						{(user) => <p>Welcome back, {user().name || 'friend'}!</p>}
+						{(user) => <p>Welcome back, {displayName(user())}!</p>}
 					</Show>
 				</header>
 

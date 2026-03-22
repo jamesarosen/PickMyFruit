@@ -1,9 +1,12 @@
+import { faker } from '@faker-js/faker'
 import { test, expect } from './helpers/fixtures'
 import {
 	createTestUser,
 	cleanupTestUser,
 	createTestListing,
 	getInquiriesForListing,
+	getMagicLinkToken,
+	getUserByEmail,
 } from './helpers/test-db'
 import { loginViaUI } from './helpers/login'
 
@@ -100,6 +103,109 @@ test.describe('Inquiry Flow', () => {
 		await expect(
 			page.getByRole('heading', { name: 'Interested in this fruit?' })
 		).not.toBeVisible()
+	})
+
+	test('shows name interstitial for new user, saves name on send', async ({
+		page,
+	}) => {
+		const owner = await createTestUser()
+		const listing = await createTestListing(owner.id)
+		// Use an email not in the DB — Better Auth creates the user on magic-link send
+		const gleanerEmail = `e2e-new-${faker.string.uuid()}@test.local`
+
+		try {
+			await page.goto(`/listings/${listing.id}`)
+			await page.waitForLoadState('networkidle')
+
+			await page.getByLabel(/Your email/i).fill(gleanerEmail)
+			await page.getByRole('button', { name: 'Put me in touch' }).click()
+
+			await expect(
+				page.getByRole('heading', { name: 'Check your email' })
+			).toBeVisible({ timeout: 10000 })
+
+			const token = await getMagicLinkToken(gleanerEmail)
+			await page
+				.locator('input#magic-link-token')
+				.pressSequentially(token, { delay: 20 })
+			await page.getByRole('button', { name: 'Verify' }).click()
+
+			// Name interstitial should appear (new user has no name)
+			await expect(
+				page.getByRole('heading', { name: 'Before we send your inquiry…' })
+			).toBeVisible({ timeout: 10000 })
+
+			// Field is empty — the preview shows the email local-part fallback
+			await expect(page.getByLabel(/Your name/i)).toHaveValue('')
+
+			// Fill in a real name and send
+			await page.getByLabel(/Your name/i).fill('Jane Gleaner')
+			await page.getByRole('button', { name: 'Send inquiry' }).click()
+
+			await expect(
+				page.getByRole('heading', { name: 'Request sent!' })
+			).toBeVisible()
+
+			// Inquiry recorded in DB
+			const rows = await getInquiriesForListing(listing.id)
+			expect(rows).toHaveLength(1)
+
+			// Name persisted for the gleaner
+			const gleaner = await getUserByEmail(gleanerEmail)
+			expect(gleaner?.name).toBe('Jane Gleaner')
+		} finally {
+			await cleanupTestUser(owner)
+			const gleaner = await getUserByEmail(gleanerEmail)
+			if (gleaner) await cleanupTestUser(gleaner)
+		}
+	})
+
+	test('skip on name interstitial sends inquiry without saving name', async ({
+		page,
+	}) => {
+		const owner = await createTestUser()
+		const listing = await createTestListing(owner.id)
+		const gleanerEmail = `e2e-new-${faker.string.uuid()}@test.local`
+
+		try {
+			await page.goto(`/listings/${listing.id}`)
+			await page.waitForLoadState('networkidle')
+
+			await page.getByLabel(/Your email/i).fill(gleanerEmail)
+			await page.getByRole('button', { name: 'Put me in touch' }).click()
+
+			await expect(
+				page.getByRole('heading', { name: 'Check your email' })
+			).toBeVisible({ timeout: 10000 })
+
+			const token = await getMagicLinkToken(gleanerEmail)
+			await page
+				.locator('input#magic-link-token')
+				.pressSequentially(token, { delay: 20 })
+			await page.getByRole('button', { name: 'Verify' }).click()
+
+			await expect(
+				page.getByRole('heading', { name: 'Before we send your inquiry…' })
+			).toBeVisible({ timeout: 10000 })
+
+			await page.getByRole('button', { name: 'Skip' }).click()
+
+			await expect(
+				page.getByRole('heading', { name: 'Request sent!' })
+			).toBeVisible()
+
+			// Inquiry recorded
+			const rows = await getInquiriesForListing(listing.id)
+			expect(rows).toHaveLength(1)
+
+			// Name was not saved
+			const gleaner = await getUserByEmail(gleanerEmail)
+			expect(gleaner?.name ?? '').toBe('')
+		} finally {
+			await cleanupTestUser(owner)
+			const gleaner = await getUserByEmail(gleanerEmail)
+			if (gleaner) await cleanupTestUser(gleaner)
+		}
 	})
 
 	test('inquiry form is hidden on unavailable listings', async ({

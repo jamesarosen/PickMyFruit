@@ -1,20 +1,24 @@
 import { createEffect, createSignal, on, Show } from 'solid-js'
-import { useRouteContext } from '@tanstack/solid-router'
+import { useRouteContext, useRouter } from '@tanstack/solid-router'
 import { submitInquiry as submitInquiryFn } from '@/api/inquiries'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import { authClient } from '@/lib/auth-client'
+import { displayName } from '@/lib/display-name'
+import { Sentry } from '@/lib/sentry'
 import { Input, Textarea } from './FormField'
 import '@/components/InquiryForm.css'
 import { createErrorSignal, ErrorMessage } from './ErrorMessage'
 
 interface InquiryFormProps {
 	listingId: number
+	listingType: string
 	callbackURL: string
 }
 
 type FormState =
 	| 'initial'
 	| 'awaiting-magic-link'
+	| 'awaiting-name'
 	| 'submitting'
 	| 'success'
 	| 'rate-limited'
@@ -23,10 +27,12 @@ type FormState =
 const PENDING_INQUIRY_KEY = 'pendingInquiry'
 
 export default function InquiryForm(props: InquiryFormProps) {
+	const router = useRouter()
 	const context = useRouteContext({ from: '__root__' })
 	const [formState, setFormState] = createSignal<FormState>('initial')
 	const [email, setEmail] = createSignal('')
 	const [note, setNote] = createSignal('')
+	const [nameValue, setNameValue] = createSignal('')
 	const [error, setError] = createErrorSignal()
 
 	const isAuthenticated = () => Boolean(context().session?.user)
@@ -56,11 +62,25 @@ export default function InquiryForm(props: InquiryFormProps) {
 		}
 	}
 
+	/**
+	 * After authentication, check if the user has a name. If not, pause to show
+	 * the name interstitial before submitting the inquiry.
+	 */
+	function transitionAfterAuth(user: { name: string; email: string }) {
+		if (!user.name.trim()) {
+			setNameValue('')
+			setFormState('awaiting-name')
+		} else {
+			void submitInquiry()
+		}
+	}
+
 	async function handleSubmit(e: SubmitEvent) {
 		e.preventDefault()
 
 		if (isAuthenticated()) {
-			await submitInquiry()
+			// transitionAfterAuth checks user.name — shows interstitial for blank-name users
+			transitionAfterAuth(context().session!.user!)
 		} else {
 			// Store pending inquiry data
 			try {
@@ -101,12 +121,43 @@ export default function InquiryForm(props: InquiryFormProps) {
 	}
 
 	async function handleMagicLinkVerified() {
-		// Auto-submit the stored inquiry
+		// Invalidate the router so the session is populated before we check user.name.
+		// (The session cookie is set during verify but context() may not have updated yet.)
+		await router.invalidate()
+		const user = context().session?.user
+		if (user) {
+			transitionAfterAuth(user)
+		} else {
+			await submitInquiry()
+		}
+	}
+
+	async function handleNameInterstitialSubmit(e: SubmitEvent) {
+		e.preventDefault()
+		const trimmed = nameValue().trim()
+		const currentName = context().session?.user?.name ?? ''
+		if (trimmed && trimmed !== currentName) {
+			const { error: nameError } = await authClient.updateUser({ name: trimmed })
+			// Non-fatal: a name save failure doesn't block the inquiry
+			if (nameError) {
+				Sentry.captureException(nameError, {
+					extra: { context: 'name-interstitial' },
+				})
+			}
+		}
 		await submitInquiry()
 	}
 
-	// Auto-submit pending inquiry when returning from magic link authentication.
-	// Clear the URL param after triggering to prevent re-submission on remount.
+	// Move focus to the name interstitial form when it appears so keyboard and
+	// screen reader users land on the new step automatically.
+	let nameInterstitialRef: HTMLFormElement | undefined
+	createEffect(() => {
+		if (formState() === 'awaiting-name') nameInterstitialRef?.focus()
+	})
+
+	// Auto-submit pending inquiry when returning from magic link authentication
+	// via the email link (inquiry_complete=true in URL). Clears the URL param after
+	// triggering to prevent re-submission on remount — hasAutoSubmitted is defence-in-depth.
 	let hasAutoSubmitted = false
 	createEffect(
 		on(
@@ -143,7 +194,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 				const url = new URL(window.location.href)
 				url.searchParams.delete('inquiry_complete')
 				window.history.replaceState({}, '', url.toString())
-				submitInquiry()
+				transitionAfterAuth(user)
 			}
 		)
 	)
@@ -157,6 +208,53 @@ export default function InquiryForm(props: InquiryFormProps) {
 					onCancel={handleMagicLinkCancel}
 					onVerified={handleMagicLinkVerified}
 				/>
+			</Show>
+
+			<Show when={formState() === 'awaiting-name'}>
+				<Show when={context().session?.user}>
+					{(user) => {
+						const previewName = () => nameValue().trim() || displayName(user())
+						return (
+							<form
+								class="name-interstitial"
+								tabindex="-1"
+								ref={nameInterstitialRef}
+								onSubmit={handleNameInterstitialSubmit}
+							>
+								<h3>Before we send your inquiry…</h3>
+								<p class="name-interstitial-preview">
+									The owner will receive:{' '}
+									<strong>
+										"{previewName()} wants your {props.listingType}"
+									</strong>
+								</p>
+								<Input
+									name="name"
+									label={
+										<>
+											Your name <span class="optional">(optional)</span>
+										</>
+									}
+									value={nameValue()}
+									onChange={setNameValue}
+									maxlength={100}
+								/>
+								<div class="name-interstitial-actions">
+									<button type="submit" class="inquiry-submit">
+										Send inquiry
+									</button>
+									<button
+										type="button"
+										class="name-interstitial-skip"
+										onClick={submitInquiry}
+									>
+										Skip
+									</button>
+								</div>
+							</form>
+						)
+					}}
+				</Show>
 			</Show>
 
 			<Show when={formState() === 'success'}>

@@ -50,6 +50,57 @@
 		cursor: not-allowed;
 	}
 
+	.name-interstitial h3 {
+		font-size: 20px;
+		font-weight: 600;
+		color: var(--color-foreground);
+		margin: 0 0 8px 0;
+	}
+
+	.name-interstitial-preview {
+		color: var(--color-quiet);
+		margin: 0 0 20px 0;
+		font-size: 14px;
+
+		& strong {
+			color: var(--color-foreground);
+		}
+	}
+
+	.name-interstitial .form-field {
+		margin-bottom: 20px;
+	}
+
+	.name-interstitial .optional {
+		font-weight: 400;
+		color: var(--color-quiet);
+	}
+
+	.name-interstitial-actions {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		align-items: flex-start;
+	}
+
+	.name-interstitial-actions .inquiry-submit {
+		width: 100%;
+	}
+
+	.name-interstitial-skip {
+		background: none;
+		border: none;
+		color: var(--color-quiet);
+		font-size: 14px;
+		cursor: pointer;
+		padding: 0;
+		text-decoration: underline;
+
+		&:hover {
+			color: var(--color-foreground);
+		}
+	}
+
 	.inquiry-error {
 		margin-bottom: 16px;
 	}
