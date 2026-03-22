@@ -227,6 +227,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 									<strong>
 										"{previewName()} wants your {props.listingType}"
 									</strong>
+									. Do you want to customize your name?
 								</p>
 								<Input
 									name="name"
@@ -241,14 +242,14 @@ export default function InquiryForm(props: InquiryFormProps) {
 								/>
 								<div class="name-interstitial-actions">
 									<button type="submit" class="inquiry-submit">
-										Send inquiry
+										Update name &amp; send inquiry
 									</button>
 									<button
 										type="button"
 										class="name-interstitial-skip"
 										onClick={submitInquiry}
 									>
-										Skip
+										No thanks. Send the email as-is
 									</button>
 								</div>
 							</form>
