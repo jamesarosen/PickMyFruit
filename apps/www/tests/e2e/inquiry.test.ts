@@ -140,7 +140,9 @@ test.describe('Inquiry Flow', () => {
 
 			// Fill in a real name and send
 			await page.getByLabel(/Your name/i).fill('Jane Gleaner')
-			await page.getByRole('button', { name: 'Send inquiry' }).click()
+			await page
+				.getByRole('button', { name: 'Update name & send inquiry' })
+				.click()
 
 			await expect(
 				page.getByRole('heading', { name: 'Request sent!' })
@@ -188,7 +190,9 @@ test.describe('Inquiry Flow', () => {
 				page.getByRole('heading', { name: 'Before we send your inquiry…' })
 			).toBeVisible({ timeout: 10000 })
 
-			await page.getByRole('button', { name: 'Skip' }).click()
+			await page
+				.getByRole('button', { name: 'No thanks. Send the email as-is' })
+				.click()
 
 			await expect(
 				page.getByRole('heading', { name: 'Request sent!' })

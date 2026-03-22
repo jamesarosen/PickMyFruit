@@ -175,7 +175,7 @@ describe('InquiryForm name interstitial', () => {
 
 		const nameInput = getByRole('textbox', { name: /Your name/i })
 		fireEvent.input(nameInput, { target: { value: 'Jane Gleaner' } })
-		fireEvent.click(getByRole('button', { name: 'Send inquiry' }))
+		fireEvent.click(getByRole('button', { name: 'Update name & send inquiry' }))
 
 		await waitFor(() => {
 			expect(mockUpdateUser).toHaveBeenCalledWith({ name: 'Jane Gleaner' })
@@ -194,7 +194,9 @@ describe('InquiryForm name interstitial', () => {
 			).toBeInTheDocument()
 		})
 
-		fireEvent.click(getByRole('button', { name: 'Skip' }))
+		fireEvent.click(
+			getByRole('button', { name: 'No thanks. Send the email as-is' })
+		)
 
 		await waitFor(() => {
 			expect(mockSubmitInquiry).toHaveBeenCalled()
@@ -214,7 +216,7 @@ describe('InquiryForm name interstitial', () => {
 		})
 
 		// Click Send without typing anything
-		fireEvent.click(getByRole('button', { name: 'Send inquiry' }))
+		fireEvent.click(getByRole('button', { name: 'Update name & send inquiry' }))
 
 		await waitFor(() => {
 			expect(mockSubmitInquiry).toHaveBeenCalled()
@@ -239,7 +241,7 @@ describe('InquiryForm name interstitial', () => {
 
 		const nameInput = getByRole('textbox', { name: /Your name/i })
 		fireEvent.input(nameInput, { target: { value: 'Jane Gleaner' } })
-		fireEvent.click(getByRole('button', { name: 'Send inquiry' }))
+		fireEvent.click(getByRole('button', { name: 'Update name & send inquiry' }))
 
 		// Inquiry still submits despite the name save failing
 		await waitFor(() => {

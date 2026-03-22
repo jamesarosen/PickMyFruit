@@ -84,96 +84,97 @@ export default function PageHeader(props: PageHeaderProps) {
 	}
 
 	return (
-		<header
-			class="page-header"
-			classList={{ 'page-header--has-breadcrumbs': hasBreadcrumbs() }}
-		>
-			<nav class="page-header__site-nav" aria-label="Site">
-				<Link to="/" class="page-header__logo">
-					<span class="page-header__logo-icon" aria-hidden="true">
-						🍑
-					</span>
-					<span class="page-header__logo-text">Pick My Fruit</span>
-				</Link>
+		<>
+			<header
+				class="page-header"
+				classList={{ 'page-header--has-breadcrumbs': hasBreadcrumbs() }}
+			>
+				<nav class="page-header__site-nav" aria-label="Site">
+					<Link to="/" class="page-header__logo">
+						<span class="page-header__logo-icon" aria-hidden="true">
+							🍑
+						</span>
+						<span class="page-header__logo-text">Pick My Fruit</span>
+					</Link>
 
-				<DropdownMenu>
-					{/* aria-label is stable; Kobalte manages aria-expanded and aria-haspopup */}
-					<DropdownMenu.Trigger
-						class="page-header__menu-trigger"
-						aria-label="Navigation menu"
-					>
-						<Show when={user()} fallback={<HamburgerIcon />}>
-							{(u) => (
-								<Show
-									when={u().image}
-									fallback={
-										<span class="page-header__avatar-initials" aria-hidden="true">
-											{getInitials(displayName(u()))}
-										</span>
-									}
-								>
-									{(image) => (
-										// Avatar is decorative: the button's aria-label already names the trigger
-										<img src={image()} alt="" class="page-header__avatar-img" />
-									)}
-								</Show>
-							)}
-						</Show>
-					</DropdownMenu.Trigger>
-
-					<DropdownMenu.Portal>
-						<DropdownMenu.Content class="page-header__menu-content">
-							<Show when={user()}>
-								<DropdownMenuLink to="/listings/mine">My Garden</DropdownMenuLink>
-								<DropdownMenuLink to="/profile">Profile</DropdownMenuLink>
-								<DropdownMenu.Separator class="page-header__menu-separator" />
-								<DropdownMenu.Item
-									class="page-header__menu-item page-header__menu-item--danger"
-									onSelect={handleSignOut}
-								>
-									Sign Out
-								</DropdownMenu.Item>
-							</Show>
-							<Show when={!user()}>
-								<DropdownMenuLink to="/login">Sign In</DropdownMenuLink>
-							</Show>
-						</DropdownMenu.Content>
-					</DropdownMenu.Portal>
-				</DropdownMenu>
-			</nav>
-
-			<Show when={hasBreadcrumbs()}>
-				<nav class="page-header__breadcrumb" aria-label="Breadcrumb">
-					<ol>
-						<li>
-							<Link to="/">Home</Link>
-						</li>
-						<For each={props.breadcrumbs}>
-							{(crumb, index) => (
-								<li>
+					<DropdownMenu>
+						{/* aria-label is stable; Kobalte manages aria-expanded and aria-haspopup */}
+						<DropdownMenu.Trigger
+							class="page-header__menu-trigger"
+							aria-label="Navigation menu"
+						>
+							<Show when={user()} fallback={<HamburgerIcon />}>
+								{(u) => (
 									<Show
-										when={crumb.to}
+										when={u().image}
 										fallback={
-											// aria-current only on the last crumb, regardless of whether to is absent
-											<span
-												aria-current={
-													index() === props.breadcrumbs!.length - 1 ? 'page' : undefined
-												}
-											>
-												{crumb.label}
+											<span class="page-header__avatar-initials" aria-hidden="true">
+												{getInitials(displayName(u()))}
 											</span>
 										}
 									>
-										{(to) => <Link to={to()}>{crumb.label}</Link>}
+										{(image) => (
+											// Avatar is decorative: the button's aria-label already names the trigger
+											<img src={image()} alt="" class="page-header__avatar-img" />
+										)}
 									</Show>
-								</li>
-							)}
-						</For>
-					</ol>
-				</nav>
-			</Show>
+								)}
+							</Show>
+						</DropdownMenu.Trigger>
 
+						<DropdownMenu.Portal>
+							<DropdownMenu.Content class="page-header__menu-content">
+								<Show when={user()}>
+									<DropdownMenuLink to="/listings/mine">My Garden</DropdownMenuLink>
+									<DropdownMenuLink to="/profile">Profile</DropdownMenuLink>
+									<DropdownMenu.Separator class="page-header__menu-separator" />
+									<DropdownMenu.Item
+										class="page-header__menu-item page-header__menu-item--danger"
+										onSelect={handleSignOut}
+									>
+										Sign Out
+									</DropdownMenu.Item>
+								</Show>
+								<Show when={!user()}>
+									<DropdownMenuLink to="/login">Sign In</DropdownMenuLink>
+								</Show>
+							</DropdownMenu.Content>
+						</DropdownMenu.Portal>
+					</DropdownMenu>
+				</nav>
+
+				<Show when={hasBreadcrumbs()}>
+					<nav class="page-header__breadcrumb" aria-label="Breadcrumb">
+						<ol>
+							<li>
+								<Link to="/">Home</Link>
+							</li>
+							<For each={props.breadcrumbs}>
+								{(crumb, index) => (
+									<li>
+										<Show
+											when={crumb.to}
+											fallback={
+												// aria-current only on the last crumb, regardless of whether to is absent
+												<span
+													aria-current={
+														index() === props.breadcrumbs!.length - 1 ? 'page' : undefined
+													}
+												>
+													{crumb.label}
+												</span>
+											}
+										>
+											{(to) => <Link to={to()}>{crumb.label}</Link>}
+										</Show>
+									</li>
+								)}
+							</For>
+						</ol>
+					</nav>
+				</Show>
+			</header>
 			<NamePromptBanner />
-		</header>
+		</>
 	)
 }
