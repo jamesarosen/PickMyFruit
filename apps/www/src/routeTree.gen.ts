@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
@@ -20,7 +21,6 @@ import { Route as ListingsNewRouteImport } from './routes/listings/new'
 import { Route as ListingsMineRouteImport } from './routes/listings/mine'
 import { Route as ListingsIdRouteImport } from './routes/listings.$id'
 import { Route as ApiListingsRouteImport } from './routes/api/listings'
-import { Route as ApiInquiriesRouteImport } from './routes/api/inquiries'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiListingsIdRouteImport } from './routes/api/listings.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -29,6 +29,11 @@ import { Route as ApiListingsIdUnavailableRouteImport } from './routes/api/listi
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
@@ -81,11 +86,6 @@ const ApiListingsRoute = ApiListingsRouteImport.update({
   path: '/api/listings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiInquiriesRoute = ApiInquiriesRouteImport.update({
-  id: '/api/inquiries',
-  path: '/api/inquiries',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
@@ -115,9 +115,9 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/profile': typeof ProfileRoute
   '/terms': typeof TermsRoute
   '/api/health': typeof ApiHealthRoute
-  '/api/inquiries': typeof ApiInquiriesRoute
   '/api/listings': typeof ApiListingsRouteWithChildren
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
@@ -133,9 +133,9 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/profile': typeof ProfileRoute
   '/terms': typeof TermsRoute
   '/api/health': typeof ApiHealthRoute
-  '/api/inquiries': typeof ApiInquiriesRoute
   '/api/listings': typeof ApiListingsRouteWithChildren
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
@@ -152,9 +152,9 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/profile': typeof ProfileRoute
   '/terms': typeof TermsRoute
   '/api/health': typeof ApiHealthRoute
-  '/api/inquiries': typeof ApiInquiriesRoute
   '/api/listings': typeof ApiListingsRouteWithChildren
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
@@ -172,9 +172,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/privacy-policy'
+    | '/profile'
     | '/terms'
     | '/api/health'
-    | '/api/inquiries'
     | '/api/listings'
     | '/listings/$id'
     | '/listings/mine'
@@ -190,9 +190,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/privacy-policy'
+    | '/profile'
     | '/terms'
     | '/api/health'
-    | '/api/inquiries'
     | '/api/listings'
     | '/listings/$id'
     | '/listings/mine'
@@ -208,9 +208,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/privacy-policy'
+    | '/profile'
     | '/terms'
     | '/api/health'
-    | '/api/inquiries'
     | '/api/listings'
     | '/listings/$id'
     | '/listings/mine'
@@ -227,9 +227,9 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
+  ProfileRoute: typeof ProfileRoute
   TermsRoute: typeof TermsRoute
   ApiHealthRoute: typeof ApiHealthRoute
-  ApiInquiriesRoute: typeof ApiInquiriesRoute
   ApiListingsRoute: typeof ApiListingsRouteWithChildren
   ListingsIdRoute: typeof ListingsIdRoute
   ListingsMineRoute: typeof ListingsMineRoute
@@ -244,6 +244,13 @@ declare module '@tanstack/solid-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy-policy': {
@@ -316,13 +323,6 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ApiListingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/inquiries': {
-      id: '/api/inquiries'
-      path: '/api/inquiries'
-      fullPath: '/api/inquiries'
-      preLoaderRoute: typeof ApiInquiriesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/health': {
       id: '/api/health'
       path: '/api/health'
@@ -385,9 +385,9 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
+  ProfileRoute: ProfileRoute,
   TermsRoute: TermsRoute,
   ApiHealthRoute: ApiHealthRoute,
-  ApiInquiriesRoute: ApiInquiriesRoute,
   ApiListingsRoute: ApiListingsRouteWithChildren,
   ListingsIdRoute: ListingsIdRoute,
   ListingsMineRoute: ListingsMineRoute,

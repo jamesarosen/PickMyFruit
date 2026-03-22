@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/solid-start'
 import { inquiryFormSchema, ListingStatus } from '@/lib/validation'
 import { errorMiddleware, UserError } from '@/lib/server-error-middleware'
+import { displayName } from '@/lib/display-name'
 
 export const submitInquiry = createServerFn({ method: 'POST' })
 	.middleware([errorMiddleware])
@@ -62,10 +63,10 @@ export const submitInquiry = createServerFn({ method: 'POST' })
 		try {
 			await sendInquiryEmail({
 				baseUrl,
-				gleaner,
+				gleaner: { ...gleaner, name: displayName(gleaner) },
 				gleanerNote: note,
 				listing,
-				owner,
+				owner: { ...owner, name: displayName(owner) },
 			})
 		} catch (error) {
 			const { Sentry } = await import('@/lib/sentry')

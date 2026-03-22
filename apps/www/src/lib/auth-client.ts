@@ -122,6 +122,12 @@ export const authClient = {
 		),
 	},
 
+	updateUser: withNetworkErrorHandling(
+		betterAuthClient,
+		'updateUser',
+		'Failed to update profile'
+	),
+
 	/** Signs out and refreshes route data so UI reflects logged-out state. */
 	async signOut(router: { invalidate: () => Promise<void> }) {
 		const result = await withNetworkErrorHandling(

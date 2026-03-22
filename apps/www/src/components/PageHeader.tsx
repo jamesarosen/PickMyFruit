@@ -8,7 +8,9 @@ import {
 import { clsx } from 'clsx'
 import { For, Show, type ParentProps } from 'solid-js'
 import { authClient } from '@/lib/auth-client'
+import { displayName } from '@/lib/display-name'
 import './PageHeader.css'
+import NamePromptBanner from './NamePromptBanner'
 
 export type Breadcrumb = {
 	/** Visible text for this crumb. */
@@ -41,21 +43,6 @@ function HamburgerIcon() {
 			<rect x="2" y="4" width="16" height="2" rx="1" fill="currentColor" />
 			<rect x="2" y="9" width="16" height="2" rx="1" fill="currentColor" />
 			<rect x="2" y="14" width="16" height="2" rx="1" fill="currentColor" />
-		</svg>
-	)
-}
-
-function PersonIcon() {
-	return (
-		<svg
-			width="20"
-			height="20"
-			viewBox="0 0 20 20"
-			fill="none"
-			aria-hidden="true"
-		>
-			<circle cx="10" cy="7" r="4" fill="currentColor" />
-			<path d="M2 17c0-3.866 3.582-7 8-7s8 3.134 8 7" fill="currentColor" />
 		</svg>
 	)
 }
@@ -120,14 +107,9 @@ export default function PageHeader(props: PageHeaderProps) {
 								<Show
 									when={u().image}
 									fallback={
-										// Guard with .trim() so whitespace-only names fall through to PersonIcon
-										<Show when={u().name?.trim()} fallback={<PersonIcon />}>
-											{(name) => (
-												<span class="page-header__avatar-initials" aria-hidden="true">
-													{getInitials(name())}
-												</span>
-											)}
-										</Show>
+										<span class="page-header__avatar-initials" aria-hidden="true">
+											{getInitials(displayName(u()))}
+										</span>
 									}
 								>
 									{(image) => (
@@ -143,6 +125,7 @@ export default function PageHeader(props: PageHeaderProps) {
 						<DropdownMenu.Content class="page-header__menu-content">
 							<Show when={user()}>
 								<DropdownMenuLink to="/listings/mine">My Garden</DropdownMenuLink>
+								<DropdownMenuLink to="/profile">Profile</DropdownMenuLink>
 								<DropdownMenu.Separator class="page-header__menu-separator" />
 								<DropdownMenu.Item
 									class="page-header__menu-item page-header__menu-item--danger"
@@ -189,6 +172,8 @@ export default function PageHeader(props: PageHeaderProps) {
 					</ol>
 				</nav>
 			</Show>
+
+			<NamePromptBanner />
 		</header>
 	)
 }

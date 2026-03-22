@@ -218,14 +218,6 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 			<form class="listing-form" onSubmit={handleSubmit}>
 				<ErrorMessage class="form-message error" error={submitError()} />
 
-				<Show when={context().session?.user}>
-					{(user) => (
-						<p class="form-identity">
-							Posting as {user().name} ({user().email})
-						</p>
-					)}
-				</Show>
-
 				<Show when={!isAuthenticated()}>
 					<Input
 						disabled={isSubmitting()}
