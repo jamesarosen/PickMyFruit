@@ -28,12 +28,12 @@ describe('produceTypes', () => {
 	it('parses to a non-empty array with the expected shape', () => {
 		expect(produceTypes.length).toBeGreaterThan(0)
 		for (const t of produceTypes) {
-			expect(t).toHaveProperty('slug')
-			expect(t).toHaveProperty('commonName')
-			expect(t).toHaveProperty('category')
 			expect(typeof t.slug).toBe('string')
-			expect(typeof t.commonName).toBe('string')
 			expect(typeof t.category).toBe('string')
+			expect(typeof t.nameSingularTitleCase).toBe('string')
+			expect(typeof t.namePluralTitleCase).toBe('string')
+			expect(typeof t.nameSingularSentenceCase).toBe('string')
+			expect(typeof t.namePluralSentenceCase).toBe('string')
 		}
 	})
 
@@ -69,6 +69,37 @@ describe('produceTypes', () => {
 			expect(allowed.has(t.category)).toBe(true)
 		}
 	})
+})
+
+describe('name variants', () => {
+	it.each([
+		// slug                nSTC                  nPTC                  nSSC                  nPSC
+		['apple', 'Apple', 'Apples', 'apple', 'apples'],
+		['orange', 'Orange', 'Oranges', 'orange', 'oranges'],
+		['cherry', 'Cherry', 'Cherries', 'cherry', 'cherries'],
+		['raspberry', 'Raspberry', 'Raspberries', 'raspberry', 'raspberries'],
+		['thyme', 'Thyme', 'Thyme', 'thyme', 'thyme'],
+		['garlic', 'Garlic', 'Garlic', 'garlic', 'garlic'],
+		['chives', 'Chives', 'Chives', 'chives', 'chives'],
+		['mushrooms', 'Mushrooms', 'Mushrooms', 'mushrooms', 'mushrooms'],
+		['asparagus', 'Asparagus', 'Asparagus', 'asparagus', 'asparagus'],
+		[
+			'brussels-sprouts',
+			'Brussels Sprouts',
+			'Brussels Sprouts',
+			'brussels sprouts',
+			'brussels sprouts',
+		],
+	] as const)(
+		'%s: nSTC=%s nPTC=%s nSSC=%s nPSC=%s',
+		(slug, nSTC, nPTC, nSSC, nPSC) => {
+			const type = produceTypes.find((t) => t.slug === slug)
+			expect(type?.nameSingularTitleCase).toBe(nSTC)
+			expect(type?.namePluralTitleCase).toBe(nPTC)
+			expect(type?.nameSingularSentenceCase).toBe(nSSC)
+			expect(type?.namePluralSentenceCase).toBe(nPSC)
+		}
+	)
 })
 
 describe('produceTypeSlugs', () => {
