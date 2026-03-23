@@ -54,7 +54,9 @@ export default function ProduceTypeSelector(props: ProduceTypeSelectorProps) {
 	const hasResults = createMemo(() => {
 		const q = searchQuery().toLowerCase()
 		if (!q) return true
-		return produceTypes.some((t) => t.commonName.toLowerCase().includes(q))
+		return produceTypes.some((t) =>
+			t.nameSingularTitleCase.toLowerCase().includes(q)
+		)
 	})
 
 	function handleChange(item: ProduceType | null) {
@@ -91,8 +93,8 @@ export default function ProduceTypeSelector(props: ProduceTypeSelectorProps) {
 				/* See https://github.com/orgs/kobaltedev/discussions/648 */
 				options={allCategories as Category[]}
 				optionValue="slug"
-				optionTextValue="commonName"
-				optionLabel="commonName"
+				optionTextValue="nameSingularTitleCase"
+				optionLabel="nameSingularTitleCase"
 				optionGroupChildren="options"
 				value={selectedItem()}
 				onChange={handleChange}
@@ -104,7 +106,7 @@ export default function ProduceTypeSelector(props: ProduceTypeSelectorProps) {
 				itemComponent={(itemProps) => (
 					<Combobox.Item item={itemProps.item} class="combobox__item">
 						<Combobox.ItemLabel>
-							{itemProps.item.rawValue.commonName}
+							{itemProps.item.rawValue.nameSingularTitleCase}
 						</Combobox.ItemLabel>
 						<Combobox.ItemIndicator class="combobox__item-check">
 							✓

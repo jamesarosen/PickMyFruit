@@ -5,6 +5,7 @@ import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import { authClient } from '@/lib/auth-client'
 import { displayName } from '@/lib/display-name'
 import { Sentry } from '@/lib/sentry'
+import { produceTypes } from '@/lib/produce-types'
 import { Input, Textarea } from './FormField'
 import '@/components/InquiryForm.css'
 import { createErrorSignal, ErrorMessage } from './ErrorMessage'
@@ -27,6 +28,10 @@ type FormState =
 const PENDING_INQUIRY_KEY = 'pendingInquiry'
 
 export default function InquiryForm(props: InquiryFormProps) {
+	const plural = () =>
+		produceTypes.find((t) => t.slug === props.listingType)
+			?.namePluralSentenceCase ?? props.listingType
+
 	const router = useRouter()
 	const context = useRouteContext({ from: '__root__' })
 	const [formState, setFormState] = createSignal<FormState>('initial')
@@ -283,7 +288,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 				}
 			>
 				<form class="inquiry-form" onSubmit={handleSubmit}>
-					<h3>Interested in this fruit?</h3>
+					<h3>Interested in this produce?</h3>
 
 					<Show when={!isAuthenticated()}>
 						<Input
@@ -306,7 +311,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 						}
 						maxLength={500}
 						onChange={setNote}
-						placeholder="Hi! I'd love to pick some of your fruit..."
+						placeholder={`Hi! I'd love to pick some of your ${plural()}…`}
 						rows={3}
 						value={note()}
 					/>
@@ -322,7 +327,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 						class="inquiry-submit"
 						disabled={formState() === 'submitting'}
 					>
-						{formState() === 'submitting' ? 'Sending...' : 'Put me in touch'}
+						{formState() === 'submitting' ? 'Sending…' : 'Put me in touch'}
 					</button>
 				</form>
 			</Show>
