@@ -27,7 +27,7 @@ test.describe('Inquiry Flow', () => {
 
 			// Verify the inquiry form is visible
 			await expect(
-				page.getByRole('heading', { name: 'Interested in this fruit?' })
+				page.getByRole('heading', { name: 'Interested in this produce?' })
 			).toBeVisible()
 
 			// Fill in the note and submit
@@ -101,7 +101,7 @@ test.describe('Inquiry Flow', () => {
 		// Owner sees "This is your listing" instead of the inquiry form
 		await expect(page.getByText('This is your listing.')).toBeVisible()
 		await expect(
-			page.getByRole('heading', { name: 'Interested in this fruit?' })
+			page.getByRole('heading', { name: 'Interested in this produce?' })
 		).not.toBeVisible()
 	})
 
@@ -227,7 +227,7 @@ test.describe('Inquiry Flow', () => {
 			page.getByText('This listing is currently unavailable')
 		).toBeVisible()
 		await expect(
-			page.getByRole('heading', { name: 'Interested in this fruit?' })
+			page.getByRole('heading', { name: 'Interested in this produce?' })
 		).not.toBeVisible()
 	})
 })

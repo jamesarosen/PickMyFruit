@@ -54,9 +54,9 @@ function EmptyState() {
 	return (
 		<div class="empty-state">
 			<h2>No listings yet</h2>
-			<p>Share your first fruit tree with the community!</p>
+			<p>Share something from your garden with the community!</p>
 			<Link to="/listings/new" class="add-button">
-				List My Fruit Tree
+				Add a Listing
 			</Link>
 		</div>
 	)

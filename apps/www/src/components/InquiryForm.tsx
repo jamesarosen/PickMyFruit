@@ -283,7 +283,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 				}
 			>
 				<form class="inquiry-form" onSubmit={handleSubmit}>
-					<h3>Interested in this fruit?</h3>
+					<h3>Interested in this produce?</h3>
 
 					<Show when={!isAuthenticated()}>
 						<Input

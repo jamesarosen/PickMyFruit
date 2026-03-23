@@ -65,7 +65,7 @@ function HomePage() {
 								Starting in Napa and available everywhere.
 							</p>
 							<Link to="/listings/new" class="cta-button">
-								List My Fruit Tree
+								Share What I'm Growing
 							</Link>
 						</div>
 					</section>
@@ -91,7 +91,7 @@ function HomePage() {
 								</div>
 							</div>
 							<Link to="/listings/new" class="cta-button">
-								List My Fruit Tree
+								Add a Listing
 							</Link>
 						</div>
 					</section>

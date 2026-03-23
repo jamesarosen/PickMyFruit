@@ -311,7 +311,7 @@ export default function ListingsMap(props: Props) {
 	return (
 		<MapLibreGL
 			class="listings-map"
-			aria-label="Map of nearby fruit listings"
+			aria-label="Map of nearby produce listings"
 			onReady={setupMap}
 		/>
 	)
