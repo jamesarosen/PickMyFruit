@@ -144,6 +144,10 @@ The `(listingId, order)` composite index makes the cover-photo join fast:
    photo (`ORDER BY order LIMIT 1`) and includes `coverPhotoUrl` in the public listing
    shape. Covered by the composite index above.
 3. **Required vs. optional** — photos are optional.
+4. **Initial UI limit** — the UI exposes a single-file input for MVP. The API and DB
+   are already N-photo capable; a one-photo UI is simply a client that calls
+   `POST /api/listings/:id/photos` once. No bespoke single-photo endpoint or component
+   needed. Raising the limit later (e.g. for garden stands) only requires a UI change.
 
 ---
 
@@ -222,10 +226,11 @@ pub file, confirm `GET /api/uploads/pub/...` serves the clean image.
 **Risk:** Medium — form changes, CSP change visible to all users.
 **Depends on:** PR 3 merged.
 
-- **Listing detail** (`listings.$id.tsx`): for the listing owner, show a photo upload
-  section below the listing details (file input + upload button). On successful upload,
-  refresh listing data to display the new photo. Render a photo gallery for all visitors
-  if `listing.photos` is non-empty; show nothing if empty.
+- **Listing detail** (`listings.$id.tsx`): for the listing owner, show a single-file
+  input + upload button below the listing details. On successful upload, refresh listing
+  data to display the new photo. For all visitors, render the first photo (`listing.photos[0]`)
+  if present; show nothing if empty. No gallery component needed for MVP — the N-photo
+  infrastructure is in place whenever the limit is raised.
 - **Home / map page**: listing cards show `coverPhotoUrl` as a thumbnail if present.
 - **CSP** (`security-headers.ts`): add `https://*.fly.storage.tigris.dev` to `img-src`.
   Update `security-headers.test.ts` to assert the new entry.
