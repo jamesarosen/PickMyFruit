@@ -115,13 +115,15 @@ jobs:
       - name: Start container
         run: |
           docker run -d --name web -p 3000:3000 \
-            -e DATABASE_URL=file:/app/data/ci.db \
             -e BETTER_AUTH_SECRET=test-secret-for-ci-minimum-32-characters \
             -e BETTER_AUTH_URL=http://localhost:3000 \
+            -e DATA_DIR=./data \
+            -e DATABASE_URL=file:/app/data/ci.db \
+            -e EMAIL_FROM="CI <ci@test.example>" \
             -e EMAIL_PROVIDER=console \
             -e HMAC_SECRET=test-hmac-secret-for-ci-minimum-32-characters \
-            -e EMAIL_FROM="CI <ci@test.example>" \
             -e NODE_ENV=development \
+            -e STORAGE_PROVIDER=local \
             pickmyfruit-web
 
       - name: Wait for health check

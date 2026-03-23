@@ -10,14 +10,46 @@ const emailSchema = z.discriminatedUnion('PROVIDER', [
 	}),
 ])
 
+const storageSchema = z.discriminatedUnion('PROVIDER', [
+	z.object({
+		DATA_DIR: z.string().min(1),
+		PROVIDER: z.literal('local'),
+	}),
+	z.object({
+		AWS_ACCESS_KEY_ID: z.string().min(1),
+		AWS_ENDPOINT_URL_S3: z.string().min(1),
+		AWS_SECRET_ACCESS_KEY: z.string().min(1),
+		BUCKET_NAME: z.string().min(1),
+		PROVIDER: z.literal('tigris'),
+	}),
+])
+
 /** Restructures flat env vars into namespaced sub-objects before schema validation. */
 function preprocessEnv(raw: unknown): unknown {
 	if (typeof raw !== 'object' || !raw) return raw
 	const env = raw as Record<string, unknown>
-	const { EMAIL_PROVIDER = 'console', RESEND_API_KEY, ...rest } = env
+	const {
+		AWS_ENDPOINT_URL_S3,
+		AWS_ACCESS_KEY_ID,
+		AWS_SECRET_ACCESS_KEY,
+		BUCKET_NAME,
+		DATA_DIR,
+		EMAIL_PROVIDER = 'console',
+		RESEND_API_KEY,
+		STORAGE_PROVIDER = 'local',
+		...rest
+	} = env
 	return {
 		...rest,
 		email: { PROVIDER: EMAIL_PROVIDER, RESEND_API_KEY },
+		storage: {
+			PROVIDER: STORAGE_PROVIDER,
+			AWS_ACCESS_KEY_ID,
+			AWS_SECRET_ACCESS_KEY,
+			AWS_ENDPOINT_URL_S3,
+			BUCKET_NAME,
+			DATA_DIR,
+		},
 	}
 }
 
@@ -34,6 +66,7 @@ const outputSchema = z
 		MIGRATE_ON_REQUEST: z.stringbool().prefault('false'),
 		NODE_ENV: z.string().prefault('development'),
 		email: emailSchema,
+		storage: storageSchema,
 	})
 	.superRefine((env, ctx) => {
 		// Sending real emails is required in production; the console stub must not be used.
@@ -42,6 +75,15 @@ const outputSchema = z
 				code: 'custom',
 				path: ['EMAIL_PROVIDER'],
 				message: 'Must be "resend" in production',
+			})
+		}
+
+		// Local file is insufficiently robust for storage in production.
+		if (env.NODE_ENV === 'production' && env.storage.PROVIDER !== 'tigris') {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ['STORAGE_PROVIDER'],
+				message: 'Must be "tigris" in production',
 			})
 		}
 	})

@@ -6,6 +6,7 @@ describe('env.server schema', () => {
 		BETTER_AUTH_SECRET: 'abcdefghijklmnopqrstuvwxyz0123456789',
 		BETTER_AUTH_URL: 'http://localhost:3001',
 		DATABASE_URL: 'file:local.db',
+		DATA_DIR: '/tmp/test',
 		EMAIL_FROM: 'Hello <hello@example.com>',
 		HMAC_SECRET: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
 		NODE_ENV: 'development',

@@ -32,9 +32,9 @@ signup from a photo) while serving a clean copy to the public.
 
 On upload we store two objects:
 
-| Key prefix | ACL | Contents |
-|------------|-----|----------|
-| `raw/listings/:id/:uuid.ext` | private | Original file; full EXIF intact |
+| Key prefix                   | ACL         | Contents                                            |
+| ---------------------------- | ----------- | --------------------------------------------------- |
+| `raw/listings/:id/:uuid.ext` | private     | Original file; full EXIF intact                     |
 | `pub/listings/:id/:uuid.ext` | public-read | EXIF-stripped copy; served directly from Tigris CDN |
 
 **Will the raw copy be publicly readable?**
@@ -75,7 +75,7 @@ implementation at startup; callers receive a typed interface.
 
 export interface StorageAdapter {
   /** Store a file. 'private' objects are never publicly accessible. */
-  upload(key: string, buffer: Buffer, mimeType: string, access: 'private' | 'public'): Promise<void>
+  upload(key: string, buffer: Buffer, opts: { mimeType: string, access: 'private' | 'public' }): Promise<void>
   /** Read a file server-side (for private objects). */
   read(key: string): Promise<Buffer>
   /** Return the public URL for a 'public' key. Throws if access was 'private'. */
@@ -95,11 +95,13 @@ export const storage: StorageAdapter = createStorageAdapter(serverEnv)
 checked again in application code.
 
 Local adapter (`STORAGE_PROVIDER=local`):
+
 - `upload(..., 'public')` — writes to `<DATA_DIR>/uploads/pub/...`; `publicUrl` returns `/api/uploads/pub/:key`
 - `upload(..., 'private')` — writes to `<DATA_DIR>/uploads/raw/...`; never exposed over HTTP
 - `read` — reads from `<DATA_DIR>/uploads/raw/...`
 
 Tigris adapter (`STORAGE_PROVIDER=tigris`, required in production):
+
 - `upload(..., 'public')` — `PutObjectCommand` with `ACL: 'public-read'`
 - `upload(..., 'private')` — `PutObjectCommand` with no ACL (default private)
 - `publicUrl` — returns `https://${BUCKET_NAME}.fly.storage.tigris.dev/${key}`
@@ -117,20 +119,21 @@ A separate table rather than a JSON column on `listings`:
 ```typescript
 // schema.ts addition
 export const listingPhotos = sqliteTable(
-  'listing_photos',
-  {
-    id:        integer('id').primaryKey({ autoIncrement: true }),
-    listingId: integer('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
-    rawKey:    text('raw_key').notNull(),  // private storage key; never sent to clients
-    pubUrl:    text('pub_url').notNull(),  // public CDN URL of EXIF-stripped copy
-    order:     integer('order').notNull().default(0),
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-  },
-  (t) => [
-    index('listing_photos_listing_id_idx').on(t.listingId),
-    index('listing_photos_listing_order_idx').on(t.listingId, t.order),
-  ]
-)
+	"listing_photos",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		listingId: integer("listing_id")
+			.notNull()
+			.references(() => listings.id, { onDelete: "cascade" }),
+		rawKey: text("raw_key").notNull(), // private storage key; never sent to clients
+		pubUrl: text("pub_url").notNull(), // public CDN URL of EXIF-stripped copy
+		order: integer("order").notNull().default(0),
+		createdAt: integer("created_at", { mode: "timestamp" })
+			.notNull()
+			.default(sql`(unixepoch())`),
+	},
+	(t) => [index("listing_photos_listing_id_idx").on(t.listingId), index("listing_photos_listing_order_idx").on(t.listingId, t.order)],
+);
 ```
 
 The `(listingId, order)` composite index makes the cover-photo join fast:
@@ -238,16 +241,14 @@ pub file, confirm `GET /api/uploads/pub/...` serves the clean image.
 E2E test (`tests/e2e/listing-photos.test.ts`):
 
 ```typescript
-test('owner can upload a photo that appears on the listing detail', async ({
-  page, testUser, testListing,
-}) => {
-  await loginUser(page, testUser)
-  await page.goto(`/listings/${testListing.id}`)
-  await page.getByLabel(/Add photos/i).setInputFiles('tests/fixtures/test-photo.png')
-  await page.getByRole('button', { name: /Upload/i }).click()
-  await page.waitForResponse((r) => r.url().includes('/api/listings/') && r.status() === 201)
-  await expect(page.getByRole('img', { name: /listing photo/i })).toBeVisible()
-})
+test("owner can upload a photo that appears on the listing detail", async ({ page, testUser, testListing }) => {
+	await loginUser(page, testUser);
+	await page.goto(`/listings/${testListing.id}`);
+	await page.getByLabel(/Add photos/i).setInputFiles("tests/fixtures/test-photo.png");
+	await page.getByRole("button", { name: /Upload/i }).click();
+	await page.waitForResponse((r) => r.url().includes("/api/listings/") && r.status() === 201);
+	await expect(page.getByRole("img", { name: /listing photo/i })).toBeVisible();
+});
 ```
 
 Add `tests/fixtures/test-photo.png` — a 1×1 white PNG checked into the repo.
