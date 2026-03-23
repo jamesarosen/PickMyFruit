@@ -10,11 +10,13 @@ export default defineConfig({
 		globals: true,
 		// loadEnv doesn't work in vitest's jsdom environment, so we
 		// duplicate .env.test values here for test-time injection.
+		// Must stay in sync with baseSchema in env.server.ts and webserver.env in
+		// playwright.config.ts
 		env: {
 			BETTER_AUTH_SECRET: 'test-secret-do-not-use-in-production-min32chars',
 			BETTER_AUTH_URL: 'http://localhost:5174',
 			DATABASE_URL: 'file:local.db',
-			EMAIL_FROM: 'test@example.com',
+			EMAIL_FROM: 'Test <test@example.com>',
 			EMAIL_PROVIDER: 'silent',
 			HMAC_SECRET: 'test-secret-do-not-use-in-production-min32chars',
 		},

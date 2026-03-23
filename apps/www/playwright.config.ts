@@ -28,11 +28,13 @@ export default defineConfig({
 		timeout: 120000,
 		stdout: 'pipe',
 		stderr: 'pipe',
+		// Must stay in sync with baseSchema in env.server.ts and test.env in
+		// vitest.config.ts
 		env: {
 			BETTER_AUTH_SECRET: 'test-secret-for-e2e-minimum-32-characters',
 			BETTER_AUTH_URL: 'http://localhost:5174',
 			DATABASE_URL: `file:${testDbPath}`,
-			EMAIL_FROM: 'test@example.com',
+			EMAIL_FROM: 'Test <test@example.com>',
 			EMAIL_PROVIDER: 'silent',
 			HMAC_SECRET: 'test-secret-for-e2e-minimum-32-characters',
 			PORT: '5174',

@@ -120,7 +120,7 @@ jobs:
             -e BETTER_AUTH_URL=http://localhost:3000 \
             -e EMAIL_PROVIDER=console \
             -e HMAC_SECRET=test-hmac-secret-for-ci-minimum-32-characters \
-            -e EMAIL_FROM=ci@test.example \
+            -e EMAIL_FROM="CI <ci@test.example>" \
             -e NODE_ENV=development \
             pickmyfruit-web
 
