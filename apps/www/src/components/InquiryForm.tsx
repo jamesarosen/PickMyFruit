@@ -306,7 +306,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 						}
 						maxLength={500}
 						onChange={setNote}
-						placeholder="Hi! I'd love to pick some of your fruit..."
+						placeholder="Hi! I'd love to pick some of your fruit…"
 						rows={3}
 						value={note()}
 					/>
@@ -322,7 +322,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 						class="inquiry-submit"
 						disabled={formState() === 'submitting'}
 					>
-						{formState() === 'submitting' ? 'Sending...' : 'Put me in touch'}
+						{formState() === 'submitting' ? 'Sending…' : 'Put me in touch'}
 					</button>
 				</form>
 			</Show>

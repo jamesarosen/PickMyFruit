@@ -45,6 +45,10 @@ A site for gardeners to share surplus produce with their community.
 - Use CSS relative color syntax to create modifications, e.g. `oklch(from var(--color-accent) 0.65 c h)` to darken the accent color.
 - Route CSS must use `@layer page` and scope all rules under a route-specific namespace class (e.g. `.home-page`, `.listing-new`, `.listings-mine`) applied to the route's root element; this prevents styles from bleeding into other routes during SPA navigation.
 
+### Copywriting
+
+- Use Unicode ellipsis (`…`), not three-dots (`...`)
+
 ### Testing
 
 - Use E2E tests to cover the most important flows
