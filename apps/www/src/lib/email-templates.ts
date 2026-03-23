@@ -99,9 +99,9 @@ export async function sendInquiryEmail(
 		unavailableUrl: buildUnavailableUrl(input.baseUrl, input.listing.id),
 	}
 
-	if (serverEnv.EMAIL_PROVIDER === 'silent') return
+	if (serverEnv.email.PROVIDER === 'silent') return
 
-	if (serverEnv.EMAIL_PROVIDER === 'console') {
+	if (serverEnv.email.PROVIDER === 'console') {
 		/**
 		 * `data` contains sensitive information, only some of which is covered by
 		 * our centralized redaction policy. This is intentional. We need the
@@ -113,9 +113,9 @@ export async function sendInquiryEmail(
 		return
 	}
 
-	if (serverEnv.EMAIL_PROVIDER === 'resend') {
+	if (serverEnv.email.PROVIDER === 'resend') {
 		const { Resend } = await import('resend')
-		const resend = new Resend(serverEnv.RESEND_API_KEY)
+		const resend = new Resend(serverEnv.email.RESEND_API_KEY)
 
 		const { error } = await resend.emails.send({
 			from: serverEnv.EMAIL_FROM,
@@ -132,7 +132,5 @@ export async function sendInquiryEmail(
 	}
 
 	// All EMAIL_PROVIDER values are handled above; this is unreachable.
-	throw new Error(
-		`Unhandled EMAIL_PROVIDER: ${(serverEnv as { EMAIL_PROVIDER: string }).EMAIL_PROVIDER}`
-	)
+	throw new Error(`Unhandled EMAIL_PROVIDER: ${serverEnv.email.PROVIDER}`)
 }

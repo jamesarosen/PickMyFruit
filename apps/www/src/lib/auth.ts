@@ -17,16 +17,16 @@ const sendMagicLinkEmail = async ({
 	url: string
 	token: string
 }) => {
-	if (serverEnv.EMAIL_PROVIDER === 'silent') return
+	if (serverEnv.email.PROVIDER === 'silent') return
 
-	if (serverEnv.EMAIL_PROVIDER === 'console') {
+	if (serverEnv.email.PROVIDER === 'console') {
 		logger.info({ email, token, url }, 'Magic link (EMAIL_PROVIDER=console)')
 		return
 	}
 
-	if (serverEnv.EMAIL_PROVIDER === 'resend') {
+	if (serverEnv.email.PROVIDER === 'resend') {
 		const { Resend } = await import('resend')
-		const resend = new Resend(serverEnv.RESEND_API_KEY)
+		const resend = new Resend(serverEnv.email.RESEND_API_KEY)
 
 		const { error } = await resend.emails.send({
 			from: serverEnv.EMAIL_FROM,

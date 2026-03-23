@@ -1,44 +1,52 @@
 import { z } from 'zod'
 
-const baseSchema = z.object({
-	BETTER_AUTH_SECRET: z.string().min(32),
-	BETTER_AUTH_URL: z.string(),
-	DATABASE_AUTH_TOKEN: z.string().optional(),
-	DATABASE_URL: z.string().min(1),
-	EMAIL_FROM: z.string(),
-	EMAIL_PROVIDER: z.string(),
-	HMAC_SECRET: z.string().min(32),
-	MIGRATE_ON_REQUEST: z.stringbool().default(false),
-	NODE_ENV: z.string(),
-})
-
-const schema = z.preprocess(
-	(raw) => ({
-		NODE_ENV: 'development',
-		EMAIL_PROVIDER: 'console',
-		...(raw as object),
+const emailSchema = z.discriminatedUnion('PROVIDER', [
+	z.object({
+		PROVIDER: z.literal('resend'),
+		RESEND_API_KEY: z.string().min(1),
 	}),
-	z
-		.discriminatedUnion('EMAIL_PROVIDER', [
-			baseSchema.extend({
-				EMAIL_PROVIDER: z.literal('resend'),
-				RESEND_API_KEY: z.string().min(1),
-			}),
-			baseSchema.extend({
-				EMAIL_PROVIDER: z.enum(['console', 'silent']),
-			}),
-		])
-		.superRefine((data, ctx) => {
-			// Sending real emails is required in production; the console stub must not be used.
-			if (data.NODE_ENV === 'production' && data.EMAIL_PROVIDER !== 'resend') {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ['EMAIL_PROVIDER'],
-					message: 'Must be "resend" in production',
-				})
-			}
-		})
-)
+	z.object({
+		PROVIDER: z.enum(['console', 'silent']),
+	}),
+])
+
+/** Restructures flat env vars into namespaced sub-objects before schema validation. */
+function preprocessEnv(raw: unknown): unknown {
+	if (typeof raw !== 'object' || !raw) return raw
+	const env = raw as Record<string, unknown>
+	const { EMAIL_PROVIDER = 'console', RESEND_API_KEY, ...rest } = env
+	return {
+		...rest,
+		email: { PROVIDER: EMAIL_PROVIDER, RESEND_API_KEY },
+	}
+}
+
+const outputSchema = z
+	.object({
+		BETTER_AUTH_SECRET: z.string().min(32),
+		BETTER_AUTH_URL: z.string(),
+		DATABASE_AUTH_TOKEN: z.string().optional(),
+		DATABASE_URL: z.string().min(1),
+		EMAIL_FROM: z
+			.string()
+			.regex(/^.+\s<[^@]+@[^>]+>$/, 'Must be in "Display Name <email>" format'),
+		HMAC_SECRET: z.string().min(32),
+		MIGRATE_ON_REQUEST: z.stringbool().prefault('false'),
+		NODE_ENV: z.string().prefault('development'),
+		email: emailSchema,
+	})
+	.superRefine((env, ctx) => {
+		// Sending real emails is required in production; the console stub must not be used.
+		if (env.NODE_ENV === 'production' && env.email.PROVIDER !== 'resend') {
+			ctx.addIssue({
+				code: 'custom',
+				path: ['EMAIL_PROVIDER'],
+				message: 'Must be "resend" in production',
+			})
+		}
+	})
+
+export const schema = z.preprocess(preprocessEnv, outputSchema)
 
 const result = schema.safeParse(process.env)
 if (!result.success) {
