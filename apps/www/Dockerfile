@@ -89,6 +89,22 @@ RUN set -e && \
 RUN find apps/www/.output/server/node_modules/@libsql -name '*.node' | grep -q . || \
   (echo "ERROR: no @libsql .node binaries found in .output" && exit 1)
 
+# Copy all Linux sharp platform packages from pnpm's virtual store so the image
+# runs on both x64 and arm64 hosts. Mirrors the @libsql pattern above.
+RUN set -e && \
+  mkdir -p apps/www/.output/server/node_modules/@img && \
+  for pkg_dir in node_modules/.pnpm/@img+sharp-linux-*; do \
+    [ -d "$pkg_dir" ] || continue; \
+    name=$(basename "$pkg_dir"); name=${name#@img+}; name=${name%@*}; \
+    src="$pkg_dir/node_modules/@img/$name"; \
+    [ -d "$src" ] || continue; \
+    dest="apps/www/.output/server/node_modules/@img/$name"; \
+    [ -d "$dest" ] || cp -rL "$src" "apps/www/.output/server/node_modules/@img/"; \
+  done
+
+RUN find apps/www/.output/server/node_modules/@img -name '*.node' | grep -q . || \
+  (echo "ERROR: no @img/sharp .node binaries found in .output" && exit 1)
+
 # Production stage
 FROM node:24-slim AS runner
 

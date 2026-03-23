@@ -22,6 +22,7 @@ import { Route as ListingsMineRouteImport } from './routes/listings/mine'
 import { Route as ListingsIdRouteImport } from './routes/listings.$id'
 import { Route as ApiListingsRouteImport } from './routes/api/listings'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiUploadsSplatRouteImport } from './routes/api/uploads/$'
 import { Route as ApiListingsIdRouteImport } from './routes/api/listings.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiListingsIdUnavailableRouteImport } from './routes/api/listings.$id.unavailable'
@@ -91,6 +92,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUploadsSplatRoute = ApiUploadsSplatRouteImport.update({
+  id: '/api/uploads/$',
+  path: '/api/uploads/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiListingsIdRoute = ApiListingsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/listings/new': typeof ListingsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/listings/$id': typeof ApiListingsIdRouteWithChildren
+  '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
 }
 export interface FileRoutesByTo {
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/listings/new': typeof ListingsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/listings/$id': typeof ApiListingsIdRouteWithChildren
+  '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
 }
 export interface FileRoutesById {
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/listings/new': typeof ListingsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/listings/$id': typeof ApiListingsIdRouteWithChildren
+  '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
 }
 export interface FileRouteTypes {
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/listings/new'
     | '/api/auth/$'
     | '/api/listings/$id'
+    | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/listings/new'
     | '/api/auth/$'
     | '/api/listings/$id'
+    | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
   id:
     | '__root__'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/listings/new'
     | '/api/auth/$'
     | '/api/listings/$id'
+    | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
   fileRoutesById: FileRoutesById
 }
@@ -235,6 +247,7 @@ export interface RootRouteChildren {
   ListingsMineRoute: typeof ListingsMineRoute
   ListingsNewRoute: typeof ListingsNewRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiUploadsSplatRoute: typeof ApiUploadsSplatRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -330,6 +343,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/uploads/$': {
+      id: '/api/uploads/$'
+      path: '/api/uploads/$'
+      fullPath: '/api/uploads/$'
+      preLoaderRoute: typeof ApiUploadsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/listings/$id': {
       id: '/api/listings/$id'
       path: '/$id'
@@ -393,6 +413,7 @@ const rootRouteChildren: RootRouteChildren = {
   ListingsMineRoute: ListingsMineRoute,
   ListingsNewRoute: ListingsNewRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiUploadsSplatRoute: ApiUploadsSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

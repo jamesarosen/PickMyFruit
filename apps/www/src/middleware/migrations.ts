@@ -1,3 +1,4 @@
+import { Sentry } from '@/lib/sentry'
 import { createMiddleware } from '@tanstack/solid-start'
 
 /**
@@ -10,7 +11,8 @@ export const migrationsMiddleware = createMiddleware().server(
 		try {
 			const { runMigrations } = await import('@/lib/migrations.server')
 			await runMigrations()
-		} catch {
+		} catch (e) {
+			Sentry.captureException(e)
 			return Response.json(
 				{ status: 'error', error: 'Service temporarily unavailable' },
 				{ status: 503 }

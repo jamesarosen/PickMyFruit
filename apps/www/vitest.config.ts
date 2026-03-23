@@ -43,11 +43,13 @@ export default defineConfig({
 					env: {
 						BETTER_AUTH_SECRET: 'test-secret-do-not-use-in-production-min32chars',
 						BETTER_AUTH_URL: 'http://localhost:5174',
+						DATA_DIR: '/tmp/pmf-test',
 						DATABASE_URL: 'file:local.db',
 						EMAIL_FROM: 'Test <test@example.com>',
 						EMAIL_PROVIDER: 'silent',
 						HMAC_SECRET: 'test-secret-do-not-use-in-production-min32chars',
 						NODE_ENV: 'test',
+						STORAGE_PROVIDER: 'local',
 					},
 				},
 			},
