@@ -24,34 +24,86 @@ on the old volume become inaccessible. Tigris avoids that failure mode at neglig
 We are **not** moving SQLite to a hosted provider — there is no reason to couple that migration
 to this feature.
 
-### Serving: public Tigris bucket, direct from CDN
+### EXIF handling: two copies per photo
 
-Listing photos are public data — there is nothing sensitive about a picture of an apple tree.
-Signed URLs would add latency, expiry complexity, and caching friction without benefit.
+Phone photos embed GPS coordinates, device identifiers, and other metadata in EXIF. We want
+to preserve the raw EXIF for potential future features (e.g. pre-filling a location during
+signup from a photo) while serving a clean copy to the public.
 
-Photos are served directly from Tigris at:
+On upload we store two objects:
+
+| Key prefix | ACL | Contents |
+|------------|-----|----------|
+| `raw/listings/:id/:uuid.ext` | private | Original file; full EXIF intact |
+| `pub/listings/:id/:uuid.ext` | public-read | EXIF-stripped copy; served directly from Tigris CDN |
+
+**Will the raw copy be publicly readable?**
+No. S3 objects default to private. A direct GET request to the raw key URL returns 403.
+Only server-side code that holds AWS credentials can call `GetObject` on a private key.
+
+**Can a user enumerate raw URLs?**
+With the defaults, `ListObjectsV2` on a bucket requires authentication — unauthenticated
+callers cannot list object keys. To be explicit, set a bucket policy that denies
+`s3:ListBucket` to `*` (the public). Even if listing were somehow enabled, UUID-based keys
+(2¹²² entropy) make guessing infeasible. Between private ACL, disabled listing, and UUID
+keys, the raw copy is inaccessible to anyone without AWS credentials.
+
+The DB stores both `rawKey` (server-side only) and `pubUrl` (returned to clients).
+
+EXIF stripping is done server-side with `sharp` — a single
+`.withMetadata(false).toBuffer()` pass, no resizing needed.
+
+### Serving: public Tigris CDN for cleaned copies
+
+`pub/listings/:id/:uuid.ext` is `ACL: public-read` and served from:
 
 ```
-https://<bucket>.fly.storage.tigris.dev/<key>
+https://<bucket>.fly.storage.tigris.dev/pub/listings/:id/:uuid.ext
 ```
 
+This URL is stored in `listing_photos.pubUrl` and returned in listing API responses.
 The CSP `img-src` directive needs one new entry for this host (see PR 4).
 
-We are **not** adding `sharp` or any server-side image pipeline for MVP. Instead, enforce
-limits at the boundary: JPEG / PNG / WEBP only, ≤ 5 MB per file, ≤ 3 photos per listing.
-Modern phone cameras produce images well under 5 MB in JPEG format. We can add resizing
-later if storage costs or page-weight become a concern.
+### Storage adapter pattern
 
-### Dev / test: `STORAGE_PROVIDER=local`
+The storage provider is injected as an adapter rather than checked inline at call sites.
+This mirrors the direction we plan to take `EMAIL_PROVIDER` — env config selects the
+implementation at startup; callers receive a typed interface.
 
-Following the `EMAIL_PROVIDER` discriminated-union pattern in `env.server.ts`:
+```typescript
+// src/lib/storage.server.ts
 
-| `STORAGE_PROVIDER` | Behavior |
-|--------------------|----------|
-| `local` (default in dev/test) | Write to `/app/data/uploads/`; serve from `GET /api/uploads/:key` |
-| `tigris` (required in production) | Upload via `@aws-sdk/client-s3`; serve from Tigris CDN URL |
+export interface StorageAdapter {
+  /** Store a file. 'private' objects are never publicly accessible. */
+  upload(key: string, buffer: Buffer, mimeType: string, access: 'private' | 'public'): Promise<void>
+  /** Read a file server-side (for private objects). */
+  read(key: string): Promise<Buffer>
+  /** Return the public URL for a 'public' key. Throws if access was 'private'. */
+  publicUrl(key: string): string
+  /** Delete a file. */
+  delete(key: string): Promise<void>
+}
 
-This keeps E2E tests fully offline — no Tigris credentials needed in CI or local dev.
+export function createStorageAdapter(env: ServerEnv): StorageAdapter { ... }
+
+/** Singleton — import this in route handlers and server fns. */
+export const storage: StorageAdapter = createStorageAdapter(serverEnv)
+```
+
+`STORAGE_PROVIDER` is still a discriminated union in `env.server.ts` (same Zod pattern as
+`EMAIL_PROVIDER`), but the union is consumed once in `createStorageAdapter` and never
+checked again in application code.
+
+Local adapter (`STORAGE_PROVIDER=local`):
+- `upload(..., 'public')` — writes to `<DATA_DIR>/uploads/pub/...`; `publicUrl` returns `/api/uploads/pub/:key`
+- `upload(..., 'private')` — writes to `<DATA_DIR>/uploads/raw/...`; never exposed over HTTP
+- `read` — reads from `<DATA_DIR>/uploads/raw/...`
+
+Tigris adapter (`STORAGE_PROVIDER=tigris`, required in production):
+- `upload(..., 'public')` — `PutObjectCommand` with `ACL: 'public-read'`
+- `upload(..., 'private')` — `PutObjectCommand` with no ACL (default private)
+- `publicUrl` — returns `https://${BUCKET_NAME}.fly.storage.tigris.dev/${key}`
+- `read` — `GetObjectCommand` (credentials required; server-side only)
 
 ### DB schema: `listing_photos` table
 
@@ -59,7 +111,8 @@ A separate table rather than a JSON column on `listings`:
 
 - Supports ordering and per-photo metadata (alt text, caption) later
 - Clean foreign key with cascade delete — deleting a listing removes its photo rows
-- Storage key stored alongside URL so we can delete from Tigris on row removal
+- Both `rawKey` and `pubUrl` stored so the server can read raw EXIF and clients see the
+  clean URL
 
 ```typescript
 // schema.ts addition
@@ -68,57 +121,54 @@ export const listingPhotos = sqliteTable(
   {
     id:        integer('id').primaryKey({ autoIncrement: true }),
     listingId: integer('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
-    key:       text('key').notNull(),   // storage key, e.g. listings/42/uuid.jpg
-    url:       text('url').notNull(),   // full public URL
+    rawKey:    text('raw_key').notNull(),  // private storage key; never sent to clients
+    pubUrl:    text('pub_url').notNull(),  // public CDN URL of EXIF-stripped copy
     order:     integer('order').notNull().default(0),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
   },
-  (t) => [index('listing_photos_listing_id_idx').on(t.listingId)]
+  (t) => [
+    index('listing_photos_listing_id_idx').on(t.listingId),
+    index('listing_photos_listing_order_idx').on(t.listingId, t.order),
+  ]
 )
 ```
 
-### Open questions (decide before PR 3)
+The `(listingId, order)` composite index makes the cover-photo join fast:
+`SELECT pub_url FROM listing_photos WHERE listing_id = ? ORDER BY order LIMIT 1`.
 
-1. **Upload timing** — during listing creation (file selected before submit, uploaded as a
-   separate request after the listing is created) or as a post-creation edit step? The
-   "after create" flow is simpler: the listing ID is known, and there is no risk of orphaned
-   uploads. Recommended: upload after redirect to the new listing's detail page.
+### Resolved design questions
 
-2. **Cover photo** — do listing cards on the home/map page show the first photo? If yes, the
-   public listing query needs to join `listing_photos` with `ORDER BY order LIMIT 1`. Flag
-   this for PR 3 scope.
-
-3. **Required vs. optional** — at MVP, photos should be optional. The listing form already
-   works without them.
+1. **Upload timing** — after redirect to the listing detail page. Listing ID is known,
+   UX is simple, no risk of orphaned uploads.
+2. **Cover photo** — yes. `getAvailableListings` joins `listing_photos` for the first
+   photo (`ORDER BY order LIMIT 1`) and includes `coverPhotoUrl` in the public listing
+   shape. Covered by the composite index above.
+3. **Required vs. optional** — photos are optional.
 
 ---
 
 ## Pull Requests
 
-### PR 1 — Storage infrastructure
+### PR 1 — Storage adapter
 
 **Risk:** Low — no UI changes, nothing user-visible.
 **Depends on:** nothing.
 
 - Add `STORAGE_PROVIDER` to `env.server.ts` as a discriminated union; require `tigris` in
-  production (mirror the `EMAIL_PROVIDER` superRefine check).
+  production (mirror the `EMAIL_PROVIDER` `superRefine` check).
 - Add `BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3`
   to the `tigris` branch.
-- Create `src/lib/storage.server.ts` exposing:
-  ```typescript
-  uploadFile(key: string, buffer: Buffer, mimeType: string): Promise<string> // returns public URL
-  deleteFile(key: string): Promise<void>
-  ```
-- `local` provider: write to `<DATA_DIR>/uploads/`, return `/api/uploads/${key}`.
-- `tigris` provider: `PutObjectCommand` with `ContentType` and `ACL: 'public-read'`, return
-  `https://${BUCKET_NAME}.fly.storage.tigris.dev/${key}`.
-- Add `GET /api/uploads/$key` route (local provider only — 404 in production; the env guard
-  keeps the route dead in prod builds).
+- Create `src/lib/storage.server.ts` with `StorageAdapter` interface,
+  `createStorageAdapter`, and the exported `storage` singleton.
+- Add `GET /api/uploads/$key` route for the local adapter's public files (404 in
+  production; env guard keeps the route dead in prod builds).
 - Add `STORAGE_PROVIDER=local` to `.env.development` and `.env.test`.
-- Unit tests: `uploadFile` + URL shape for local provider.
+- Add `sharp` to `apps/www` dependencies; verify multi-arch native binaries land
+  correctly in the Docker build (follow the `@libsql` pattern in the Dockerfile).
+- Unit tests: `upload` + `publicUrl` + `read` + `delete` roundtrip for local adapter.
 
-**Test for success:** `pnpm test` passes; `uploadFile` returns a path served by the dev
-server; `deleteFile` removes the file.
+**Test for success:** `pnpm test` passes; `upload(..., 'public')` returns a URL served
+by the dev server; `read` retrieves private file contents; `delete` removes both.
 
 ---
 
@@ -127,14 +177,14 @@ server; `deleteFile` removes the file.
 **Risk:** Low — additive migration, no breaking changes to existing queries.
 **Depends on:** nothing (can merge in parallel with PR 1).
 
-- Add `listingPhotos` table to `schema.ts`.
+- Add `listingPhotos` table to `schema.ts` (schema above, both indexes).
 - Generate and commit migration (`pnpm db:migrate`).
 - Add to `queries.ts`:
-  - `addPhotoToListing(listingId, key, url, order)` → inserted row
-  - `getPhotosForListing(listingId)` → `{ id, url, order }[]`
-  - `deleteListingPhoto(photoId)` → `{ key }` (caller handles storage deletion)
-- Update `public-listing.ts` to include `photos: { url }[]` in the public shape (join on
-  `listing_photos ORDER BY order LIMIT 3`).
+  - `addPhotoToListing(listingId, rawKey, pubUrl, order)` → inserted row
+  - `getPhotosForListing(listingId)` → `{ id, pubUrl, order }[]` (rawKey not exposed)
+  - `deleteListingPhoto(photoId)` → `{ rawKey, pubUrl }` (caller handles storage deletion)
+- Update `public-listing.ts` to include `coverPhotoUrl: string | null` (first photo by
+  order) and `photos: { id, pubUrl }[]` in the public listing shape.
 - Unit tests for new queries (follow `toPublicListing.test.ts` pattern).
 
 **Test for success:** `pnpm test` passes; migration applies cleanly on a fresh DB.
@@ -143,43 +193,42 @@ server; `deleteFile` removes the file.
 
 ### PR 3 — Upload / delete API
 
-**Risk:** Medium — new API surface, auth enforcement, file parsing.
+**Risk:** Medium — new API surface, auth enforcement, file parsing, sharp integration.
 **Depends on:** PR 1 and PR 2 merged.
 
 - `POST /api/listings/:id/photos` (listing owner only):
-  - Parse `multipart/form-data` (use `request.formData()`; no new library needed in
-    Node 22+ / WinterCG environments).
-  - Validate with Zod: MIME type in `['image/jpeg', 'image/png', 'image/webp']`, size ≤ 5 MB,
-    current photo count < 3.
-  - Generate key: `listings/${id}/${crypto.randomUUID()}.${ext}`.
-  - Upload via `storage.server.ts`.
-  - Insert into `listing_photos`.
-  - Return `201 { id, url }`.
+  - Parse `multipart/form-data` (use `request.formData()`; no new library needed).
+  - Validate with Zod: MIME type in `['image/jpeg', 'image/png', 'image/webp']`,
+    size ≤ 5 MB, current photo count < 3.
+  - Generate base key: `listings/${id}/${crypto.randomUUID()}`.
+  - `storage.upload('raw/' + baseKey + ext, rawBuffer, mimeType, 'private')`.
+  - `const cleanBuffer = await sharp(rawBuffer).withMetadata(false).toBuffer()`.
+  - `storage.upload('pub/' + baseKey + ext, cleanBuffer, mimeType, 'public')`.
+  - Insert into `listing_photos`; return `201 { id, pubUrl }`.
 - `DELETE /api/listings/:id/photos/:photoId` (listing owner only):
-  - Fetch photo row, verify `listingId` matches, delete from storage then DB.
+  - Fetch photo row; verify `listingId` matches; delete both raw and pub keys from
+    storage, then delete DB row.
   - Return `204`.
-- Unit tests for validation edge cases (wrong MIME type, oversized, fourth photo).
+- Unit tests: wrong MIME type, oversized file, fourth photo rejected, auth guard.
 
-**Test for success:** `pnpm test` passes. Manual smoke test: upload a photo via curl,
-confirm file appears in `/app/data/uploads/` in dev, confirm `GET /api/uploads/:key`
-returns the image.
+**Test for success:** `pnpm test` passes. Smoke test via curl: upload a JPEG, confirm
+raw file appears in `<DATA_DIR>/uploads/raw/`, confirm EXIF is absent from the
+pub file, confirm `GET /api/uploads/pub/...` serves the clean image.
 
 ---
 
 ### PR 4 — UI + CSP update
 
-**Risk:** Medium — form changes, CSP changes visible to all users.
+**Risk:** Medium — form changes, CSP change visible to all users.
 **Depends on:** PR 3 merged.
 
-- **Listing form** (`listings/new.tsx`): add an optional file input after the form submits
-  successfully. On redirect to the new listing page the component auto-uploads any selected
-  files via `POST /api/listings/:id/photos`, then refreshes the listing data.
-- **Listing detail** (`listings.$id.tsx`): render a photo gallery if `listing.photos` is
-  non-empty; show nothing (no placeholder) if empty.
+- **Listing detail** (`listings.$id.tsx`): for the listing owner, show a photo upload
+  section below the listing details (file input + upload button). On successful upload,
+  refresh listing data to display the new photo. Render a photo gallery for all visitors
+  if `listing.photos` is non-empty; show nothing if empty.
+- **Home / map page**: listing cards show `coverPhotoUrl` as a thumbnail if present.
 - **CSP** (`security-headers.ts`): add `https://*.fly.storage.tigris.dev` to `img-src`.
   Update `security-headers.test.ts` to assert the new entry.
-- **Permissions-Policy**: no camera permission needed — the browser file picker does not
-  require it.
 
 E2E test (`tests/e2e/listing-photos.test.ts`):
 
@@ -190,24 +239,25 @@ test('owner can upload a photo that appears on the listing detail', async ({
   await loginUser(page, testUser)
   await page.goto(`/listings/${testListing.id}`)
   await page.getByLabel(/Add photos/i).setInputFiles('tests/fixtures/test-photo.png')
+  await page.getByRole('button', { name: /Upload/i }).click()
   await page.waitForResponse((r) => r.url().includes('/api/listings/') && r.status() === 201)
   await expect(page.getByRole('img', { name: /listing photo/i })).toBeVisible()
 })
 ```
 
-Add `tests/fixtures/test-photo.png` — a 1×1 white PNG, checked into the repo.
+Add `tests/fixtures/test-photo.png` — a 1×1 white PNG checked into the repo.
 
 **Test for success:** E2E test passes with `STORAGE_PROVIDER=local`; CSP test passes;
-uploaded photo renders on the detail page.
+uploaded photo renders on the detail page; cover photo appears on a listing card.
 
 ---
 
 ## Dependency diagram
 
 ```
-PR 1 (storage infra)  ──┐
-                         ├──► PR 3 (API) ──► PR 4 (UI + CSP)
-PR 2 (DB schema)     ──┘
+PR 1 (storage adapter)  ──┐
+                            ├──► PR 3 (API) ──► PR 4 (UI + CSP)
+PR 2 (DB schema)        ──┘
 ```
 
 PRs 1 and 2 can be reviewed and merged in parallel. PR 3 needs both. PR 4 needs PR 3.
