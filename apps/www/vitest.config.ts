@@ -8,18 +8,6 @@ export default defineConfig({
 	test: {
 		environment: 'jsdom',
 		globals: true,
-		// loadEnv doesn't work in vitest's jsdom environment, so we
-		// duplicate .env.test values here for test-time injection.
-		// Must stay in sync with baseSchema in env.server.ts and webserver.env in
-		// playwright.config.ts
-		env: {
-			BETTER_AUTH_SECRET: 'test-secret-do-not-use-in-production-min32chars',
-			BETTER_AUTH_URL: 'http://localhost:5174',
-			DATABASE_URL: 'file:local.db',
-			EMAIL_FROM: 'Test <test@example.com>',
-			EMAIL_PROVIDER: 'silent',
-			HMAC_SECRET: 'test-secret-do-not-use-in-production-min32chars',
-		},
 		globalSetup: ['./tests/vitest-global-setup.ts'],
 		setupFiles: ['./tests/setup.ts'],
 		exclude: ['**/node_modules/**', '**/tests/e2e/**'],
@@ -34,6 +22,52 @@ export default defineConfig({
 				},
 			},
 		},
+		projects: [
+			{
+				// Project for server-side Node.js logic
+				extends: true,
+				test: {
+					name: 'node-tests',
+					include: [
+						'tests/**/*.server.test.ts',
+						'!tests/helpers/**',
+						'!tests/mocks/**',
+						'!tests/setup.ts',
+						'!tests/vitest-global-setup.ts',
+					],
+					environment: 'node',
+					// loadEnv doesn't work in vitest's jsdom environment, so we
+					// duplicate .env.test values here for test-time injection.
+					// Must stay in sync with baseSchema in env.server.ts and webserver.env in
+					// playwright.config.ts
+					env: {
+						BETTER_AUTH_SECRET: 'test-secret-do-not-use-in-production-min32chars',
+						BETTER_AUTH_URL: 'http://localhost:5174',
+						DATABASE_URL: 'file:local.db',
+						EMAIL_FROM: 'Test <test@example.com>',
+						EMAIL_PROVIDER: 'silent',
+						HMAC_SECRET: 'test-secret-do-not-use-in-production-min32chars',
+						NODE_ENV: 'test',
+					},
+				},
+			},
+			{
+				// Project for isomorphic or browser-only logic
+				extends: true,
+				test: {
+					name: 'browser-tests',
+					include: [
+						'tests/**/*.ts',
+						'!tests/**/*.server.test.ts',
+						'!tests/helpers/**',
+						'!tests/mocks/**',
+						'!tests/setup.ts',
+						'!tests/vitest-global-setup.ts',
+					],
+					environment: 'jsdom',
+				},
+			},
+		],
 		server: {
 			deps: {
 				inline: [/@tanstack\/solid-router/, /solid/],

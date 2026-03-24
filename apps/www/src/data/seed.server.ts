@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker'
 import { latLngToCell } from 'h3-js'
-import { db } from './db'
+import { db } from './db.server'
 import {
 	inquiries,
 	listings,

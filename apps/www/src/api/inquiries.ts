@@ -11,7 +11,7 @@ export const submitInquiry = createServerFn({ method: 'POST' })
 	.handler(async ({ data: { listingId, note } }) => {
 		const { getRequestHeaders } = await import('@tanstack/solid-start/server')
 		const headers = getRequestHeaders()
-		const { auth } = await import('@/lib/auth')
+		const { auth } = await import('@/lib/auth.server')
 		const session = await auth.api.getSession({ headers })
 
 		if (!session?.user) {
@@ -19,7 +19,7 @@ export const submitInquiry = createServerFn({ method: 'POST' })
 		}
 
 		const { createInquiry, hasRecentInquiry, getListingWithOwner, getUserById } =
-			await import('@/data/queries')
+			await import('@/data/queries.server')
 
 		const result = await getListingWithOwner(listingId)
 		if (!result) {
@@ -59,7 +59,7 @@ export const submitInquiry = createServerFn({ method: 'POST' })
 		// so the user can retry.
 		const { getRequestBaseUrl } = await import('@/lib/request-url')
 		const baseUrl = getRequestBaseUrl(headers)
-		const { sendInquiryEmail } = await import('@/lib/email-templates')
+		const { sendInquiryEmail } = await import('@/lib/email-templates.server')
 		try {
 			await sendInquiryEmail({
 				baseUrl,

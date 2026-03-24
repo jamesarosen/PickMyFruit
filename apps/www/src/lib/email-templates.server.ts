@@ -1,4 +1,4 @@
-import { buildUnavailableUrl } from './hmac'
+import { buildUnavailableUrl } from './hmac.server'
 import { serverEnv } from './env.server'
 import { logger } from './logger.server'
 

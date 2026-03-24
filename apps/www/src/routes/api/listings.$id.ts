@@ -12,8 +12,8 @@ export const Route = createFileRoute('/api/listings/$id')({
 		handlers: {
 			async PATCH({ request, params }) {
 				try {
-					const { auth } = await import('@/lib/auth')
-					const { updateListingStatus } = await import('@/data/queries')
+					const { auth } = await import('@/lib/auth.server')
+					const { updateListingStatus } = await import('@/data/queries.server')
 
 					const session = await auth.api.getSession({
 						headers: request.headers,

@@ -10,13 +10,13 @@ export const getMyListings = createServerFn({ method: 'GET' })
 	.middleware([errorMiddleware])
 	.handler(async () => {
 		const headers = getRequestHeaders()
-		const { auth } = await import('@/lib/auth')
+		const { auth } = await import('@/lib/auth.server')
 		const session = await auth.api.getSession({ headers })
 		if (!session?.user) {
 			return [] as Listing[]
 		}
 
-		const { getUserListings } = await import('@/data/queries')
+		const { getUserListings } = await import('@/data/queries.server')
 		return getUserListings(session.user.id)
 	})
 
@@ -25,13 +25,13 @@ export const getMyLastAddress = createServerFn({ method: 'GET' })
 	.middleware([errorMiddleware])
 	.handler(async (): Promise<AddressFields | undefined> => {
 		const headers = getRequestHeaders()
-		const { auth } = await import('@/lib/auth')
+		const { auth } = await import('@/lib/auth.server')
 		const session = await auth.api.getSession({ headers })
 		if (!session?.user) {
 			return undefined
 		}
 
-		const { getUserLastAddress } = await import('@/data/queries')
+		const { getUserLastAddress } = await import('@/data/queries.server')
 		return getUserLastAddress(session.user.id)
 	})
 
@@ -39,7 +39,7 @@ export const getAvailableListings = createServerFn({ method: 'GET' })
 	.middleware([errorMiddleware])
 	.inputValidator((limit: number = 3) => limit)
 	.handler(async ({ data: limit }) => {
-		const { getAvailableListings: query } = await import('@/data/queries')
+		const { getAvailableListings: query } = await import('@/data/queries.server')
 		return query(limit)
 	})
 
@@ -56,7 +56,7 @@ export const getNearbyListings = createServerFn({ method: 'GET' })
 		nearbyListingsSchema.parse(input)
 	)
 	.handler(async ({ data }) => {
-		const { getNearbyListings: query } = await import('@/data/queries')
+		const { getNearbyListings: query } = await import('@/data/queries.server')
 		return query(data.lat, data.lng, data.limit)
 	})
 
@@ -67,7 +67,7 @@ export const getPublicListingById = createServerFn({ method: 'GET' })
 	.middleware([errorMiddleware])
 	.inputValidator((id: number) => getListingByIdValidator.parse(id))
 	.handler(async ({ data: id }) => {
-		const { getPublicListingById: query } = await import('@/data/queries')
+		const { getPublicListingById: query } = await import('@/data/queries.server')
 		return query(id)
 	})
 
@@ -77,10 +77,10 @@ export const getListingForViewer = createServerFn({ method: 'GET' })
 	.inputValidator((id: number) => getListingByIdValidator.parse(id))
 	.handler(async ({ data: id }) => {
 		const headers = getRequestHeaders()
-		const { auth } = await import('@/lib/auth')
+		const { auth } = await import('@/lib/auth.server')
 		const session = await auth.api.getSession({ headers })
 		const { getPublicListingById: getPublic, getListingById } =
-			await import('@/data/queries')
+			await import('@/data/queries.server')
 
 		if (session?.user) {
 			const listing = await getListingById(id)

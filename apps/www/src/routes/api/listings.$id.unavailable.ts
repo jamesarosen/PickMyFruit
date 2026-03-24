@@ -1,7 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/solid-router'
 import { z } from 'zod'
 import { Sentry } from '@/lib/sentry'
-import { SIGNATURE_MAX_AGE_MS } from '@/lib/hmac'
 
 const paramsSchema = z.object({
 	id: z.coerce.number().int().positive(),
@@ -17,8 +16,9 @@ export const Route = createFileRoute('/api/listings/$id/unavailable')({
 	server: {
 		handlers: {
 			async GET({ request, params }) {
-				const { verifySignature } = await import('@/lib/hmac')
-				const { markListingUnavailable } = await import('@/data/queries')
+				const { SIGNATURE_MAX_AGE_MS, verifySignature } =
+					await import('@/lib/hmac.server')
+				const { markListingUnavailable } = await import('@/data/queries.server')
 
 				const parsedParams = paramsSchema.safeParse(params)
 				if (!parsedParams.success) {

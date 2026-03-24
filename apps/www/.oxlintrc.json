@@ -7,7 +7,9 @@
 		"style": "warn"
 	},
 	"plugins": ["react", "import", "vitest"],
+	"jsPlugins": ["./oxlint-plugins/no-server-static-import.js"],
 	"rules": {
+		"local/no-server-static-import": "error",
 		// Solid JS doesn't use React, so React-specific rules don't apply
 		"react/react-in-jsx-scope": "off",
 
@@ -17,6 +19,9 @@
 
 		// Allow ==null as shorthand for (===null || ===undefined)
 		"eslint/eqeqeq": ["error", "always", { "null": "ignore" }],
+
+		// Disallow Node imports by default. See overrides, below.
+		"import/no-nodejs-modules": ["error"],
 
 		// Overly opinionated style rules that don't add value
 		"eslint/sort-imports": "off",
@@ -33,7 +38,6 @@
 
 		// Personal preferences
 		"eslint/max-classes-per-file": ["error", 5],
-		"eslint/eqeqeq": ["error", "always", { "null": "ignore" }],
 
 		// Modern best practice prefers named exports over default exports
 		"import/no-named-export": "off",
@@ -87,6 +91,8 @@
 	"overrides": [
 		{
 			"files": [
+				"src/**/*.server.ts",
+				"tests/**/*.server.test.ts",
 				"tests/helpers/**/*.ts",
 				"tests/vitest-global-setup.ts",
 				"tests/e2e/**/*.ts",

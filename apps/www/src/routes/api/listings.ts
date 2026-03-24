@@ -22,7 +22,7 @@ export const Route = createFileRoute('/api/listings')({
 				}
 
 				try {
-					const { getAvailableListings } = await import('@/data/queries')
+					const { getAvailableListings } = await import('@/data/queries.server')
 					const listings = await getAvailableListings(parsed.data.limit)
 					return Response.json(listings)
 				} catch (error) {
@@ -35,8 +35,8 @@ export const Route = createFileRoute('/api/listings')({
 			},
 			async POST({ request }) {
 				// Dynamic imports to avoid bundling server-only code for browser
-				const { auth } = await import('@/lib/auth')
-				const { createListing } = await import('@/data/queries')
+				const { auth } = await import('@/lib/auth.server')
+				const { createListing } = await import('@/data/queries.server')
 
 				// Require authentication
 				const session = await auth.api.getSession({

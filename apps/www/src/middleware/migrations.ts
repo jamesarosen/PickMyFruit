@@ -1,5 +1,4 @@
 import { createMiddleware } from '@tanstack/solid-start'
-import { runMigrations } from '@/lib/migrations'
 
 /**
  * Ensures all database migrations have run before handling any request.
@@ -9,6 +8,7 @@ import { runMigrations } from '@/lib/migrations'
 export const migrationsMiddleware = createMiddleware().server(
 	async ({ next }) => {
 		try {
+			const { runMigrations } = await import('@/lib/migrations.server')
 			await runMigrations()
 		} catch {
 			return Response.json(

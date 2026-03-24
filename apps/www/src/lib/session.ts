@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/solid-start'
 import { getRequestHeaders } from '@tanstack/solid-start/server'
-import type { Session } from './auth'
+import type { Session } from './auth.server'
 import { Sentry } from './sentry'
 
 /**
@@ -13,7 +13,7 @@ export const getSession = createServerFn({ method: 'GET' }).handler(
 	async (): Promise<Session | null> => {
 		try {
 			const headers = getRequestHeaders()
-			const { auth } = await import('./auth')
+			const { auth } = await import('./auth.server')
 			return await auth.api.getSession({ headers })
 		} catch (error) {
 			// Treat auth failures as unauthenticated so pages degrade gracefully
