@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { render, cleanup } from '@solidjs/testing-library'
 import { Show } from 'solid-js'
 import { faker } from '@faker-js/faker'
-import type { PublicListing } from '../src/data/queries'
+import type { PublicListing } from '../src/data/queries.server'
 import { ListingStatus } from '../src/lib/validation'
 import { getStatusClass } from '../src/lib/listing-status'
 

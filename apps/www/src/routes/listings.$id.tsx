@@ -15,7 +15,7 @@ import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 import { Sentry } from '@/lib/sentry'
 import { getListingForViewer } from '@/api/listings'
 import type { Listing } from '@/data/schema'
-import type { PublicListing } from '@/data/queries'
+import type { PublicListing } from '@/data/queries.server'
 import '@/routes/listing-show.css'
 import { createErrorSignal, ErrorMessage } from '@/components/ErrorMessage'
 

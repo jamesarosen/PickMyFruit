@@ -6,7 +6,7 @@ import {
 	verifySignature,
 	buildUnavailableUrl,
 	SIGNATURE_MAX_AGE_MS,
-} from '../src/lib/hmac'
+} from '../src/lib/hmac.server'
 
 describe('signUrl', () => {
 	it('returns nonce, timestamp, and signature', () => {

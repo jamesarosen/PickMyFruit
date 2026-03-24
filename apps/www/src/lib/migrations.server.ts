@@ -1,5 +1,5 @@
 import { migrate } from 'drizzle-orm/libsql/migrator'
-import { db } from '@/data/db'
+import { db } from '@/data/db.server'
 import { Sentry } from '@/lib/sentry'
 import { serverEnv } from '@/lib/env.server'
 

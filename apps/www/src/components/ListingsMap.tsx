@@ -1,5 +1,5 @@
 import { createEffect, on } from 'solid-js'
-import type { PublicListing } from '@/data/queries'
+import type { PublicListing } from '@/data/queries.server'
 import { cellToLatLng, cellToBoundary, cellToParent } from 'h3-js'
 import { H3_RESOLUTIONS, zoomToH3Resolution } from '@/lib/h3-resolutions'
 import { Sentry } from '@/lib/sentry'

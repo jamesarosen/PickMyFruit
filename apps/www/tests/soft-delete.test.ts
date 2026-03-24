@@ -11,7 +11,7 @@ const mockSelectWhere = vi.fn()
 const mockSelectFrom = vi.fn()
 const mockSelect = vi.fn()
 
-vi.mock('../src/data/db', () => ({
+vi.mock('../src/data/db.server', () => ({
 	db: {
 		update: vi.fn(() => ({ set: mockUpdateSet })),
 		delete: vi.fn(() => ({ where: mockDeleteWhere })),
@@ -32,14 +32,14 @@ vi.mock('../src/lib/sentry', () => ({
 }))
 
 // Must import after mocking
-const { db } = await import('../src/data/db')
+const { db } = await import('../src/data/db.server')
 const {
 	deleteListingById,
 	getAvailableListings,
 	getListingById,
 	getPublicListingById,
 	updateListingStatus,
-} = await import('../src/data/queries')
+} = await import('../src/data/queries.server')
 
 // Wire up the full chain before each test.
 function wireUpdateChain(returnedRows: Array<{ id: number }>) {
