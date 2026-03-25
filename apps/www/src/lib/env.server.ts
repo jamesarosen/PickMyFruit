@@ -81,7 +81,7 @@ const outputSchema = z
 		// Local file is insufficiently robust for storage in production.
 		if (env.NODE_ENV === 'production' && env.storage.PROVIDER !== 'tigris') {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: 'custom',
 				path: ['STORAGE_PROVIDER'],
 				message: 'Must be "tigris" in production',
 			})
