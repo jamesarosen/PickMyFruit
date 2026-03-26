@@ -27,6 +27,29 @@ const kobalteIsTopMostLayerPatch = {
 	},
 }
 
+// require-in-the-middle (a dependency of @opentelemetry/instrumentation, used by
+// Sentry) uses `require.cache` and `require.resolve` in its ExportsCache class.
+// When Nitro bundles it as ESM, `require` is not defined in module scope.
+// `Module` is already imported in the file (`const Module = require('module')`);
+// substitute Module._cache (identical to require.cache) and
+// Module._resolveFilename (which require.resolve delegates to internally).
+// See https://github.com/open-telemetry/opentelemetry-js/issues/4744
+const requireInTheMiddlePolyfill = {
+	name: 'require-in-the-middle-polyfill',
+	transform(code: string, id: string) {
+		if (!id.includes('/require-in-the-middle/index.js')) return
+		return {
+			code: code
+				.replaceAll('require.cache', 'Module._cache')
+				.replace(
+					'require.resolve(moduleName, { paths: [basedir] })',
+					'Module._resolveFilename(moduleName, null, false, { paths: [basedir] })'
+				),
+			map: { mappings: '' },
+		}
+	},
+}
+
 // h3-js is an Emscripten-generated bundle that uses `__dirname` to locate its
 // WASM initializer. When Nitro bundles it as ESM, `__dirname` is undefined.
 // The WASM is inlined as a base64 data URI so the path is never actually used,
@@ -81,6 +104,7 @@ export default defineConfig(({ command, mode }) => {
 			nitro({ sourcemap: true, traceDeps: ['libsql'] }),
 			kobalteIsTopMostLayerPatch,
 			h3jsDirnamePolyfill,
+			requireInTheMiddlePolyfill,
 			solid({ ssr: true }),
 		],
 	}

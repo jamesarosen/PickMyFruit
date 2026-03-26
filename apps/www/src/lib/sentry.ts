@@ -1,4 +1,15 @@
-import * as Sentry from '@sentry/solidstart'
+// These have to be individual named imports so Rollup can trace specific
+// dependencies. Importantly, we want to avoid the chain
+// withSentry → sentrySolidStartVite.js → @sentry/vite-plugin → @babel/core
+import {
+	init,
+	captureException as sdkCaptureException,
+	captureMessage as sdkCaptureMessage,
+	addIntegration,
+	startSpan,
+	withScope,
+} from '@sentry/solidstart'
+import type { CaptureContext, SeverityLevel } from '@sentry/solidstart'
 import { clientEnv } from './env.client'
 import isNetworkError from 'is-network-error'
 
@@ -18,6 +29,30 @@ function logError(error: unknown, context?: Record<string, unknown>): void {
 	})
 }
 
+function logMessage(
+	message: string,
+	captureContext?: CaptureContext | SeverityLevel
+): void {
+	const level: SeverityLevel =
+		typeof captureContext === 'string'
+			? captureContext
+			: typeof captureContext === 'object' &&
+				  captureContext !== null &&
+				  'level' in captureContext
+				? ((captureContext as { level?: SeverityLevel }).level ?? 'info')
+				: 'info'
+	const logFn =
+		level === 'error' || level === 'fatal'
+			? console.error
+			: level === 'warning'
+				? console.warn
+				: console.info
+	logFn(`[${environment.toUpperCase()} ${level.toUpperCase()}]:`, {
+		message,
+		timestamp: new Date().toISOString(),
+	})
+}
+
 /**
  * Tanstack uses `throw redirect(...)` for control flow. These are control-flow,
  * not exceptions, so Sentry doesn't need to know about them.
@@ -29,7 +64,7 @@ function isControlFlow(cause: unknown): boolean {
 }
 
 if (clientEnv.sentryDsn) {
-	Sentry.init({
+	init({
 		dsn: clientEnv.sentryDsn,
 		enabled: clientEnv.sentryEnabled,
 		environment: clientEnv.mode,
@@ -58,4 +93,36 @@ if (clientEnv.sentryDsn) {
 	})
 }
 
-export { Sentry }
+/**
+ * Thin wrapper around the Sentry SDK that ensures exceptions and messages are
+ * always logged locally, even when Sentry reporting is disabled (e.g. in local
+ * dev).
+ *
+ * When Sentry is active, beforeSend handles logging (and includes the
+ * sentryEventId for correlation). When Sentry is inactive, the wrapper logs
+ * directly to console.
+ */
+export const Sentry = {
+	captureException(err: unknown, ctx?: CaptureContext): string {
+		if (!isControlFlow(err) && !clientEnv.sentryEnabled) {
+			logError(err)
+		}
+
+		return sdkCaptureException(err, ctx)
+	},
+
+	captureMessage(
+		message: string,
+		captureContext?: CaptureContext | SeverityLevel
+	): string {
+		if (!clientEnv.sentryEnabled) {
+			logMessage(message, captureContext)
+		}
+
+		return sdkCaptureMessage(message, captureContext)
+	},
+
+	addIntegration,
+	startSpan,
+	withScope,
+}
