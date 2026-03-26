@@ -38,7 +38,8 @@ set -euo pipefail
 RELEASE="${SENTRY_RELEASE:-$(git rev-parse HEAD)}"
 SHORT="${RELEASE:0:8}"
 
-echo "=== Deploying PickMyFruit (release: $SHORT) ==="
+APP_LABEL="${FLY_APP:-pickmyfruit}"
+echo "=== Deploying $APP_LABEL (release: $SHORT) ==="
 
 DEPLOY_ARGS=(
 	--remote-only
@@ -48,6 +49,13 @@ DEPLOY_ARGS=(
 	--build-arg "SENTRY_ORG=$SENTRY_ORG"
 	--build-arg "SENTRY_PROJECT=$SENTRY_PROJECT"
 )
+
+[[ -n "${FLY_APP:-}" ]]    && DEPLOY_ARGS=(--app "$FLY_APP" "${DEPLOY_ARGS[@]}")
+[[ -n "${FLY_CONFIG:-}" ]] && DEPLOY_ARGS=(--config "$FLY_CONFIG" "${DEPLOY_ARGS[@]}")
+[[ -n "${FLY_HA:-}" ]]     && DEPLOY_ARGS+=(--ha="$FLY_HA")
+
+[[ -n "${VITE_SENTRY_ENVIRONMENT:-}" ]] &&
+	DEPLOY_ARGS+=(--build-arg "VITE_SENTRY_ENVIRONMENT=$VITE_SENTRY_ENVIRONMENT")
 
 [[ -n "${VITE_SENTRY_ERROR_SAMPLE_RATE:-}" ]] &&
 	DEPLOY_ARGS+=(--build-arg "VITE_SENTRY_ERROR_SAMPLE_RATE=$VITE_SENTRY_ERROR_SAMPLE_RATE")

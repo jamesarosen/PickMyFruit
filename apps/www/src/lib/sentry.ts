@@ -67,7 +67,7 @@ if (clientEnv.sentryDsn) {
 	init({
 		dsn: clientEnv.sentryDsn,
 		enabled: clientEnv.sentryEnabled,
-		environment: clientEnv.mode,
+		environment: clientEnv.sentryEnvironment ?? clientEnv.mode,
 		release: clientEnv.sentryRelease,
 		sampleRate: clientEnv.sentrySampleRate,
 		tracesSampleRate: clientEnv.sentryTracesSampleRate,
