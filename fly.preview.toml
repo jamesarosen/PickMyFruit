@@ -1,0 +1,57 @@
+# Fly.io configuration for PR preview apps.
+# App name is set dynamically via --app when deploying.
+# See .github/workflows/preview.yml.
+
+primary_region = 'sjc'
+
+[build]
+  dockerfile = "apps/www/Dockerfile"
+  ignorefile = ".dockerignore"
+
+  [build.args]
+    VITE_SENTRY_ENABLED = "true"
+
+[http_service]
+  internal_port = 3000
+  force_https = false
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+  [http_service.concurrency]
+    type = 'requests'
+    hard_limit = 250
+    soft_limit = 200
+
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/api/health'
+    protocol = 'http'
+
+# Persistent volume for SQLite database and local file uploads.
+# Fly creates the volume automatically on first deploy if it does not exist.
+[mounts]
+  source = 'data'
+  destination = '/app/data'
+  initial_size = '1gb'
+
+[env]
+  DATA_DIR = '/app/data'
+  DATABASE_URL = 'file:/app/data/db.sqlite'
+  EMAIL_FROM = 'Pick My Fruit Preview <preview@pickmyfruit.com>'
+  EMAIL_PROVIDER = 'console'
+  MIGRATE_ON_REQUEST = 'true'
+  NODE_ENV = 'development'
+  STORAGE_PROVIDER = 'local'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '256mb'
+  cpus = 1
+
+[deploy]
+  strategy = 'immediate'

@@ -3,17 +3,42 @@ name: CI/CD Pipeline
 on:
   push:
     branches: ["**"]
+  pull_request:
+    types: [closed]
   workflow_dispatch:
 
-# Prevent concurrent deployments to the same environment
+# Prevent concurrent runs on the same ref
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # Detects whether the pushed branch has an open PR.
+  # Runs in parallel with `test`; result is consumed by `preview`.
+  context:
+    name: Detect PR
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    outputs:
+      pr-number: ${{ steps.pr.outputs.number }}
+    steps:
+      - name: Find open PR for branch
+        id: pr
+        run: |
+          NUMBER=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --head "${{ github.ref_name }}" \
+            --state open \
+            --json number \
+            --jq '.[0].number' 2>/dev/null || echo '')
+          echo "number=${NUMBER:-}" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   test:
     name: Test and Lint
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
     env:
       VITE_SENTRY_DSN: https://test@test.ingest.sentry.io/123
     steps:
@@ -53,6 +78,7 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     needs: test
+    if: github.ref == 'refs/heads/main'
     defaults:
       run:
         working-directory: apps/www
@@ -97,57 +123,56 @@ jobs:
           path: apps/www/playwright-report/
           retention-days: 7
 
-  docker:
-    name: Docker Build & Smoke Test
+  preview:
+    name: Deploy Preview
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, context]
+    if: needs.context.outputs.pr-number != ''
+    environment:
+      name: preview
+      url: https://pickmyfruit-pr-${{ needs.context.outputs.pr-number }}.fly.dev
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Build image
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Set app name
+        run: echo "APP_NAME=pickmyfruit-pr-${{ needs.context.outputs.pr-number }}" >> $GITHUB_ENV
+
+      - name: Create app (idempotent)
+        # status 1 means "name taken", which we can ignore; bubble other errors
+        run: flyctl apps create $APP_NAME --org personal || [ $? -eq 1 ]
         env:
-          DOCKER_BUILDKIT: 1
-        run: |
-          docker build -t pickmyfruit-web -f apps/www/Dockerfile . \
-            --build-arg VITE_SENTRY_DSN=https://test@test.ingest.sentry.io/123
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Start container
+      - name: Set secrets
         run: |
-          docker run -d --name web -p 3000:3000 \
-            -e BETTER_AUTH_SECRET=test-secret-for-ci-minimum-32-characters \
-            -e BETTER_AUTH_URL=http://localhost:3000 \
-            -e DATA_DIR=./data \
-            -e DATABASE_URL=file:/app/data/ci.db \
-            -e EMAIL_FROM="CI <ci@test.example>" \
-            -e EMAIL_PROVIDER=console \
-            -e HMAC_SECRET=test-hmac-secret-for-ci-minimum-32-characters \
-            -e NODE_ENV=development \
-            -e STORAGE_PROVIDER=local \
-            pickmyfruit-web
+          flyctl secrets set --app $APP_NAME \
+            BETTER_AUTH_SECRET="${{ secrets.PREVIEW_BETTER_AUTH_SECRET }}" \
+            BETTER_AUTH_URL="https://$APP_NAME.fly.dev" \
+            HMAC_SECRET="${{ secrets.PREVIEW_HMAC_SECRET }}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Wait for health check
-        run: |
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:3000/api/health > /dev/null; then
-              echo "Health check passed"
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "Timed out waiting for /api/health after 60s"
-          exit 1
-
-      - name: Dump container logs on failure
-        if: failure()
-        run: docker logs web
+      - name: Deploy
+        run: ./bin/deploy.sh
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_APP: ${{ env.APP_NAME }}
+          FLY_CONFIG: fly.preview.toml
+          FLY_HA: "false"
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          SENTRY_RELEASE: ${{ github.sha }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          VITE_SENTRY_ENVIRONMENT: preview
 
   deploy:
     name: Deploy to Fly.io
     runs-on: ubuntu-latest
-    needs: [test, e2e, docker]
-    # Only deploy on push to main branch
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [test, e2e]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     environment:
       name: production
       url: https://www.pickmyfruit.com
@@ -156,7 +181,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Fly.io CLI
-        uses: superfly/flyctl-actions/setup-flyctl@master
+        uses: superfly/flyctl-actions/setup-flyctl@v1
 
       - name: Deploy to Fly.io
         run: ./bin/deploy.sh
@@ -169,3 +194,17 @@ jobs:
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
           VITE_SENTRY_ERROR_SAMPLE_RATE: ${{ vars.VITE_SENTRY_ERROR_SAMPLE_RATE }}
           VITE_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE }}
+
+  destroy:
+    name: Destroy Preview
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Destroy app
+        run: flyctl apps destroy pickmyfruit-pr-${{ github.event.pull_request.number }} --yes
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
