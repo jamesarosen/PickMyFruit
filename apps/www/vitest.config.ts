@@ -3,6 +3,8 @@ import solid from 'vite-plugin-solid'
 import tsconfigPaths from 'vite-tsconfig-paths'
 import path from 'node:path'
 
+const dbPath = path.resolve(__dirname, 'data', 'test.db')
+
 export default defineConfig({
 	plugins: [tsconfigPaths(), solid()],
 	test: {
@@ -44,7 +46,7 @@ export default defineConfig({
 						BETTER_AUTH_SECRET: 'test-secret-do-not-use-in-production-min32chars',
 						BETTER_AUTH_URL: 'http://localhost:5174',
 						DATA_DIR: '/tmp/pmf-test',
-						DATABASE_URL: 'file:local.db',
+						DATABASE_URL: `file:${dbPath}`,
 						EMAIL_FROM: 'Test <test@example.com>',
 						EMAIL_PROVIDER: 'silent',
 						HMAC_SECRET: 'test-secret-do-not-use-in-production-min32chars',

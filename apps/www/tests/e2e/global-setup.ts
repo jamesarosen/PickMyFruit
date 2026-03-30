@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const wwwRoot = resolve(__dirname, '../..')
-const testDbPath = resolve(wwwRoot, 'test.db')
+const testDbPath = resolve(wwwRoot, 'data/test.db')
 
 export default async function globalSetup() {
 	// Truncate (don't delete!) the DB file so the inode is preserved.

@@ -4,7 +4,7 @@
 # Usage:
 #   bin/worktree.sh create <branch-name>
 #     Creates a new worktree branching off main, runs pnpm install,
-#     and copies local config files (.env, apps/www/local.db,
+#     and copies local config files (.env, apps/www/data/development.db,
 #     apps/www/.env, apps/www/.env.development.local) from the current
 #     repo root into the new worktree.
 #
@@ -56,9 +56,10 @@ worktree_create() {
 	(cd "${worktree_dir}" && pnpm install)
 
 	echo "=== Copying local config files ==="
+	mkdir -p "${worktree_dir}/apps/www/data"
 	local files=(
 		".env"
-		"apps/www/local.db"
+		"apps/www/data/development.db"
 		"apps/www/.env"
 		"apps/www/.env.development.local"
 	)

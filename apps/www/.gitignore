@@ -5,8 +5,8 @@ dist/
 # dependencies
 node_modules/
 
-# local DB
-local.db
+# local data
+/data
 
 # logs
 npm-debug.log*
@@ -31,6 +31,4 @@ pnpm-debug.log*
 /playwright/.cache/
 
 # Test databases
-test.db
-test.db-journal
 .test-dbs/

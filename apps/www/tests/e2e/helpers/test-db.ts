@@ -17,7 +17,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const wwwRoot = resolve(__dirname, '../../..')
 
 // Uses same test.db as playwright webServer - absolute path for consistency
-const TEST_DB_URL = `file:${resolve(wwwRoot, 'test.db')}`
+const TEST_DB_URL = `file:${resolve(wwwRoot, 'data/test.db')}`
 
 export interface TestUser {
 	id: string
