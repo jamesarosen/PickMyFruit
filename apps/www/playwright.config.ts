@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig, devices } from '@playwright/test'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const testDbPath = resolve(__dirname, 'test.db')
+const testDbPath = resolve(__dirname, 'data/test.db')
 
 export default defineConfig({
 	testDir: './tests/e2e',

@@ -10,7 +10,7 @@ services:
       - "3000:3000"
     volumes:
       # Mount local data directory for SQLite persistence
-      - ./data:/app/data
+      - ./apps/www/data:/app/data
     env_file:
       - path: ./apps/www/.env.development.local
         required: false

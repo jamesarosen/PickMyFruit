@@ -96,6 +96,7 @@
 				"tests/helpers/**/*.ts",
 				"tests/vitest-global-setup.ts",
 				"tests/e2e/**/*.ts",
+				"drizzle.config.ts",
 				"vitest.config.ts",
 				"playwright.config.ts"
 			],
