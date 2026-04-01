@@ -2,23 +2,69 @@ import { db } from './db.server'
 import {
 	listings,
 	inquiries,
+	listingPhotos,
 	user,
 	type Listing,
 	type NewListing,
 	type Inquiry,
 	type NewInquiry,
 	type AddressFields,
+	type ListingPhoto,
 } from './schema'
-import { eq, desc, and, ne, isNull, gt, sql } from 'drizzle-orm'
+import { eq, desc, and, ne, isNull, gt, inArray, sql } from 'drizzle-orm'
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 import { Sentry } from '@/lib/sentry'
-import { toPublicListing, type PublicListing } from './public-listing'
+import {
+	toPublicListing,
+	type PublicListing,
+	type PublicPhoto,
+} from './public-listing'
 export { type PublicListing } from './public-listing'
 
 export type { AddressFields } from './schema'
 
+/** Thrown when a DB invariant is violated — e.g. an INSERT RETURNING produces no row. */
+export class DataInvariantError extends Error {
+	constructor(message: string) {
+		super(message)
+		this.name = 'DataInvariantError'
+	}
+}
+
 function reportH3Error(listingId: number, error: unknown) {
 	Sentry.captureException(error, { extra: { listingId } })
+}
+
+/**
+ * Fetches non-deleted photos for a set of listing IDs in a single query and
+ * groups them by listing ID, ordered by `order` ascending.
+ * Capped at 100 IDs to stay within SQLite's variable limit.
+ */
+async function fetchPhotosByListingIds(
+	listingIds: number[]
+): Promise<Map<number, PublicPhoto[]>> {
+	if (listingIds.length === 0) return new Map()
+	const ids = listingIds.slice(0, 100)
+	const rows = await db
+		.select({
+			id: listingPhotos.id,
+			listingId: listingPhotos.listingId,
+			pubUrl: listingPhotos.pubUrl,
+			order: listingPhotos.order,
+		})
+		.from(listingPhotos)
+		.where(
+			and(inArray(listingPhotos.listingId, ids), isNull(listingPhotos.deletedAt))
+		)
+		.orderBy(listingPhotos.order)
+
+	const map = new Map<number, PublicPhoto[]>()
+	for (const row of rows) {
+		const existing = map.get(row.listingId) ?? []
+		existing.push({ id: row.id, pubUrl: row.pubUrl, order: row.order })
+		map.set(row.listingId, existing)
+	}
+	return map
 }
 
 /** Fetches available listings with sensitive fields stripped. */
@@ -39,8 +85,9 @@ export async function getAvailableListings(
 				)
 				.orderBy(desc(listings.createdAt))
 				.limit(limit)
+			const photoMap = await fetchPhotosByListingIds(rows.map((r) => r.id))
 			const results = rows.flatMap((row) => {
-				const pub = toPublicListing(row, reportH3Error)
+				const pub = toPublicListing(row, photoMap.get(row.id) ?? [], reportH3Error)
 				return pub ? [pub] : []
 			})
 			span.setAttribute('listing_count', results.length)
@@ -71,8 +118,9 @@ export async function getNearbyListings(
 					sql`(${listings.lat} - ${lat}) * (${listings.lat} - ${lat}) + (${listings.lng} - ${lng}) * (${listings.lng} - ${lng})`
 				)
 				.limit(limit)
+			const photoMap = await fetchPhotosByListingIds(rows.map((r) => r.id))
 			const results = rows.flatMap((row) => {
-				const pub = toPublicListing(row, reportH3Error)
+				const pub = toPublicListing(row, photoMap.get(row.id) ?? [], reportH3Error)
 				return pub ? [pub] : []
 			})
 			span.setAttribute('listing_count', results.length)
@@ -127,20 +175,25 @@ export async function getPublicListingById(
 	return Sentry.startSpan(
 		{ name: 'getPublicListingById', op: 'db.query', attributes: { id } },
 		async () => {
-			const result = await db
-				.select()
-				.from(listings)
-				.where(
-					and(
-						eq(listings.id, id),
-						ne(listings.status, ListingStatus.private),
-						isNull(listings.deletedAt)
+			const [result, photoMap] = await Promise.all([
+				db
+					.select()
+					.from(listings)
+					.where(
+						and(
+							eq(listings.id, id),
+							ne(listings.status, ListingStatus.private),
+							isNull(listings.deletedAt)
+						)
 					)
-				)
-				.limit(1)
-			return result[0]
-				? (toPublicListing(result[0], reportH3Error) ?? undefined)
-				: undefined
+					.limit(1),
+				fetchPhotosByListingIds([id]),
+			])
+			if (!result[0]) return undefined
+			return (
+				toPublicListing(result[0], photoMap.get(id) ?? [], reportH3Error) ??
+				undefined
+			)
 		}
 	)
 }
@@ -170,6 +223,105 @@ export async function deleteListingById(
 			}
 
 			return result.length > 0
+		}
+	)
+}
+
+// ============================================================================
+// Photo Functions
+// ============================================================================
+
+/** Inserts a photo record for a listing. Returns the inserted row. */
+export async function addPhotoToListing(
+	listingId: number,
+	rawKey: string,
+	pubUrl: string,
+	order: number
+): Promise<ListingPhoto> {
+	return Sentry.startSpan(
+		{
+			name: 'addPhotoToListing',
+			op: 'db.query',
+			attributes: { listingId, order },
+		},
+		async () => {
+			const result = await db
+				.insert(listingPhotos)
+				.values({ listingId, rawKey, pubUrl, order })
+				.returning()
+			if (!result[0])
+				throw new DataInvariantError('addPhotoToListing: insert returned no row')
+			return result[0]
+		}
+	)
+}
+
+/** Returns public photo data for a listing, ordered by `order`. rawKey is never exposed. */
+export async function getPhotosForListing(
+	listingId: number
+): Promise<PublicPhoto[]> {
+	return Sentry.startSpan(
+		{
+			name: 'getPhotosForListing',
+			op: 'db.query',
+			attributes: { listingId },
+		},
+		async () => {
+			return db
+				.select({
+					id: listingPhotos.id,
+					pubUrl: listingPhotos.pubUrl,
+					order: listingPhotos.order,
+				})
+				.from(listingPhotos)
+				.where(
+					and(
+						eq(listingPhotos.listingId, listingId),
+						isNull(listingPhotos.deletedAt)
+					)
+				)
+				.orderBy(listingPhotos.order)
+		}
+	)
+}
+
+/**
+ * Hard-deletes a photo record and returns its storage keys so the caller
+ * can remove the corresponding objects from storage.
+ *
+ * We use a hard delete (not soft) because the storage objects referenced
+ * by rawKey and pubUrl must be cleaned up immediately. A soft delete would
+ * leave orphaned objects in storage indefinitely.
+ *
+ * Ownership is enforced in the WHERE clause: the photo is only deleted if
+ * its listing is owned by the given user. Returns undefined if the photo
+ * does not exist or the user does not own the listing.
+ */
+export async function deleteListingPhoto(
+	photoId: number,
+	userId: string
+): Promise<{ rawKey: string; pubUrl: string } | undefined> {
+	return Sentry.startSpan(
+		{
+			name: 'deleteListingPhoto',
+			op: 'db.query',
+			attributes: { photoId },
+		},
+		async () => {
+			const result = await db
+				.delete(listingPhotos)
+				.where(
+					and(
+						eq(listingPhotos.id, photoId),
+						// Ownership check: the photo's listing must belong to userId
+						sql`listing_id IN (SELECT id FROM listings WHERE user_id = ${userId} AND deleted_at IS NULL)`
+					)
+				)
+				.returning({
+					rawKey: listingPhotos.rawKey,
+					pubUrl: listingPhotos.pubUrl,
+				})
+			return result[0]
 		}
 	)
 }

@@ -176,3 +176,31 @@ export const inquiries = sqliteTable(
 
 export type Inquiry = typeof inquiries.$inferSelect
 export type NewInquiry = typeof inquiries.$inferInsert
+
+// ============================================================================
+// Listing Photos Table
+// ============================================================================
+
+export const listingPhotos = sqliteTable(
+	'listing_photos',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		listingId: integer('listing_id')
+			.notNull()
+			.references(() => listings.id, { onDelete: 'cascade' }),
+		rawKey: text('raw_key').notNull(), // private storage key; never sent to clients
+		pubUrl: text('pub_url').notNull(), // public CDN URL of EXIF-stripped copy
+		order: integer('order').notNull().default(0),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		deletedAt: integer('deleted_at', { mode: 'timestamp' }), // soft delete
+	},
+	(table) => [
+		index('listing_photos_listing_id_idx').on(table.listingId),
+		index('listing_photos_listing_order_idx').on(table.listingId, table.order),
+	]
+)
+
+export type ListingPhoto = typeof listingPhotos.$inferSelect
+export type NewListingPhoto = typeof listingPhotos.$inferInsert

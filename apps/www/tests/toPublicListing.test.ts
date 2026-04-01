@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { faker } from '@faker-js/faker'
 import { latLngToCell, cellToParent, getResolution } from 'h3-js'
-import { toPublicListing } from '../src/data/public-listing'
+import { toPublicListing, type PublicPhoto } from '../src/data/public-listing'
 import type { Listing } from '../src/data/schema'
 
 const NAPA = { lat: 38.2975, lng: -122.2869 }
@@ -33,15 +33,29 @@ function makeListing(overrides: Partial<Listing> = {}): Listing {
 	}
 }
 
+function makePhoto(
+	listingId: number = faker.number.int({ min: 1, max: 9999 }),
+	overrides: Partial<PublicPhoto> = {}
+): PublicPhoto {
+	return {
+		id: faker.number.int({ min: 1, max: 9999 }),
+		pubUrl: `pub/listings/${listingId}/${faker.string.uuid()}.jpg`,
+		order: 0,
+		...overrides,
+	}
+}
+
 /** The exact set of keys a PublicListing should have, sorted. */
 const EXPECTED_PUBLIC_KEYS = [
 	'approximateH3Index',
 	'city',
+	'coverPhotoUrl',
 	'createdAt',
 	'harvestWindow',
 	'id',
 	'name',
 	'notes',
+	'photos',
 	'quantity',
 	'state',
 	'status',
@@ -105,7 +119,7 @@ describe('toPublicListing', () => {
 		const listing = makeListing({ h3Index: 'not-a-valid-h3' })
 		const onError = vi.fn()
 
-		const result = toPublicListing(listing, onError)
+		const result = toPublicListing(listing, [], onError)
 
 		expect(result).toBeNull()
 		expect(onError).toHaveBeenCalledWith(listing.id, expect.any(Error))
@@ -117,5 +131,48 @@ describe('toPublicListing', () => {
 		const result = toPublicListing(listing)
 
 		expect(result).toBeNull()
+	})
+
+	describe('photos', () => {
+		it('defaults to empty photos and null coverPhotoUrl when no photos are passed', () => {
+			const listing = makeListing()
+			const result = toPublicListing(listing)!
+
+			expect(result.photos).toEqual([])
+			expect(result.coverPhotoUrl).toBeNull()
+		})
+
+		it('sets coverPhotoUrl to the first photo pubUrl', () => {
+			const listing = makeListing()
+			const first = makePhoto()
+			const second = makePhoto()
+			const result = toPublicListing(listing, [first, second])!
+
+			expect(result.coverPhotoUrl).toBe(first.pubUrl)
+		})
+
+		it('includes all photos in the photos array', () => {
+			const listing = makeListing()
+			const photos = [makePhoto(), makePhoto(), makePhoto()]
+			const result = toPublicListing(listing, photos)!
+
+			expect(result.photos).toEqual(photos)
+		})
+
+		it('passes photos through verbatim — pubUrl and order are unchanged', () => {
+			const listing = makeListing()
+			// pubUrl values come from the storage layer; toPublicListing must not alter them
+			const photos = [
+				makePhoto(listing.id, { pubUrl: 'pub/listings/42/abc.jpg', order: 0 }),
+				makePhoto(listing.id, { pubUrl: 'pub/listings/42/def.jpg', order: 1 }),
+			]
+			const result = toPublicListing(listing, photos)!
+
+			expect(result.coverPhotoUrl).toBe('pub/listings/42/abc.jpg')
+			expect(result.photos[0].pubUrl).toBe('pub/listings/42/abc.jpg')
+			expect(result.photos[0].order).toBe(0)
+			expect(result.photos[1].pubUrl).toBe('pub/listings/42/def.jpg')
+			expect(result.photos[1].order).toBe(1)
+		})
 	})
 })

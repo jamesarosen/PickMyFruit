@@ -2,6 +2,9 @@ import { cellToParent } from 'h3-js'
 import type { Listing } from './schema'
 import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
 
+/** Public photo shape returned to clients. */
+export type PublicPhoto = { id: number; pubUrl: string; order: number }
+
 /** Public listing fields safe to expose to any visitor. */
 export type PublicListing = Omit<
 	Listing,
@@ -12,7 +15,13 @@ export type PublicListing = Omit<
 	| 'lng'
 	| 'h3Index'
 	| 'zip'
-> & { approximateH3Index: string }
+> & {
+	approximateH3Index: string
+	/** Public URL of the first photo by order, or null if none. */
+	coverPhotoUrl: string | null
+	/** All photos for this listing, ordered by `order`. */
+	photos: PublicPhoto[]
+}
 
 /**
  * Strips sensitive location fields and coarsens h3Index to neighborhood precision.
@@ -20,6 +29,7 @@ export type PublicListing = Omit<
  */
 export function toPublicListing(
 	listing: Listing,
+	photos: PublicPhoto[] = [],
 	onError?: (listingId: number, error: unknown) => void
 ): PublicListing | null {
 	const {
@@ -39,5 +49,10 @@ export function toPublicListing(
 		onError?.(listing.id, error)
 		return null
 	}
-	return { ...safe, approximateH3Index }
+	return {
+		...safe,
+		approximateH3Index,
+		coverPhotoUrl: photos[0]?.pubUrl ?? null,
+		photos,
+	}
 }
