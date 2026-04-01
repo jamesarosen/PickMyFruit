@@ -54,8 +54,13 @@ function wireDeleteChain() {
 
 function wireSelectChain(returnedRows: unknown[]) {
 	mockSelectFrom.mockReturnValue({ where: mockSelectWhere })
+	// fetchPhotosByListingIds awaits .orderBy() directly; getAvailableListings chains .limit().
+	// Attach .limit() to a resolved Promise so both callers work from the same mock object.
+	const orderByResult = Object.assign(Promise.resolve([]), {
+		limit: mockSelectLimit,
+	})
 	mockSelectWhere.mockReturnValue({
-		orderBy: vi.fn().mockReturnValue({ limit: mockSelectLimit }),
+		orderBy: vi.fn().mockReturnValue(orderByResult),
 		limit: mockSelectLimit,
 	})
 	mockSelectLimit.mockResolvedValue(returnedRows)

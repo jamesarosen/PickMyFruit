@@ -20,6 +20,8 @@ function makeListing(overrides: Partial<PublicListing> = {}): PublicListing {
 		approximateH3Index: '872830828ffffff',
 		userId: faker.string.uuid(),
 		notes: null,
+		coverPhotoUrl: null,
+		photos: [],
 		createdAt: new Date(),
 		updatedAt: new Date(),
 		...overrides,
