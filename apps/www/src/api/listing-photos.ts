@@ -14,13 +14,15 @@ const deletePhotoSchema = z.object({
 
 /**
  * Uploads a photo for a listing.
- * Input: FormData with `listingId` (number) and `photo` (File).
- * Returns the inserted photo's `{ id, pubUrl }`.
+ *
+ * Reads multipart/form-data from the raw request: expects a `listingId`
+ * field and a `photo` file field. Returns `{ id, pubUrl }` on success.
+ * File is not passed through inputValidator (File is not JSON-serializable);
+ * the handler reads it directly from the request body.
  */
 export const uploadPhoto = createServerFn({ method: 'POST' })
 	.middleware([errorMiddleware])
-	.inputValidator((data: { listingId: number; file: File }) => data)
-	.handler(async ({ data: { listingId, file } }) => {
+	.handler(async () => {
 		const headers = getRequestHeaders()
 		const { auth } = await import('@/lib/auth.server')
 		const session = await auth.api.getSession({ headers })
@@ -29,7 +31,21 @@ export const uploadPhoto = createServerFn({ method: 'POST' })
 			throw new UserError('AUTH_REQUIRED', 'Authentication required')
 		}
 
-		// Verify listing ownership before doing any file work
+		const { getRequest } = await import('@tanstack/solid-start/server')
+		const request = await getRequest()
+		const formData = await request.formData()
+
+		const listingId = Number(formData.get('listingId'))
+		if (!Number.isInteger(listingId) || listingId <= 0) {
+			throw new UserError('INVALID_INPUT', 'Invalid listing ID')
+		}
+
+		const file = formData.get('photo')
+		if (!(file instanceof File)) {
+			throw new UserError('INVALID_INPUT', 'A photo file is required')
+		}
+
+		// Verify listing ownership before doing file work
 		const { getListingById } = await import('@/data/queries.server')
 		const listing = await getListingById(listingId)
 		if (!listing || listing.userId !== session.user.id) {
@@ -60,9 +76,11 @@ export const uploadPhoto = createServerFn({ method: 'POST' })
 
 /**
  * Deletes a listing photo and removes both storage objects.
- * Input: `{ photoId: number }`.
+ *
+ * Uses POST (not DELETE) because TanStack Start server functions only support
+ * GET and POST. Input: `{ photoId: number }`.
  */
-export const deletePhoto = createServerFn({ method: 'DELETE' })
+export const deletePhoto = createServerFn({ method: 'POST' })
 	.middleware([errorMiddleware])
 	.inputValidator((data: { photoId: number }) => deletePhotoSchema.parse(data))
 	.handler(async ({ data: { photoId } }) => {

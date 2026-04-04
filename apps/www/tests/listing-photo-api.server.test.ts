@@ -74,16 +74,9 @@ describe('uploadPhoto', () => {
 	it('throws when the user is not authenticated', async () => {
 		mockGetSession.mockResolvedValue(null)
 
-		await expect(
-			uploadPhoto({
-				data: {
-					listingId: faker.number.int({ min: 1, max: 999 }),
-					file: new File([Buffer.from('img')], 'photo.jpg', {
-						type: 'image/jpeg',
-					}),
-				},
-			})
-		).rejects.toThrow()
+		// uploadPhoto reads FormData from the raw request; auth is checked before
+		// getRequest() is called, so no FormData setup is needed for this test.
+		await expect(uploadPhoto()).rejects.toThrow()
 	})
 })
 

@@ -63,9 +63,10 @@ export async function uploadListingPhoto(opts: {
 		mimeType: opts.mimeType,
 	})
 
-	// Strip EXIF before serving publicly — sharp is a Node-only native dep
+	// Strip EXIF before serving publicly — sharp is a Node-only native dep.
+	// sharp strips all metadata by default; withMetadata() is needed only to ADD it back.
 	const sharp = (await import('sharp')).default
-	const cleanBuffer = await sharp(opts.rawBuffer).withMetadata(false).toBuffer()
+	const cleanBuffer = await sharp(opts.rawBuffer).toBuffer()
 
 	// Public copy served from CDN
 	await opts.storage.upload('pub', pathKey, cleanBuffer, {
