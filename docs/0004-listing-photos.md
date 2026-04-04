@@ -198,21 +198,22 @@ by the dev server; `read` retrieves private file contents; `delete` removes both
 
 ---
 
-### PR 3 — Upload / delete API
+### PR 3 — Upload / delete server function
 
 **Risk:** Medium — new API surface, auth enforcement, file parsing, sharp integration.
 **Depends on:** PR 1 and PR 2 merged.
 
-- `POST /api/listings/:id/photos` (listing owner only):
+- `addPhotoToListing: createServerFn({ method: 'POST' })` (listing owner only):
   - Parse `multipart/form-data` (use `request.formData()`; no new library needed).
   - Validate with Zod: MIME type in `['image/jpeg', 'image/png', 'image/webp']`,
     size ≤ 5 MB, current photo count < 3.
   - Generate base key: `listings/${id}/${crypto.randomUUID()}`.
   - `storage.upload('raw/' + baseKey + ext, rawBuffer, mimeType, 'private')`.
+  - async import sharp, a node-only dependency
   - `const cleanBuffer = await sharp(rawBuffer).withMetadata(false).toBuffer()`.
   - `storage.upload('pub/' + baseKey + ext, cleanBuffer, mimeType, 'public')`.
   - Insert into `listing_photos`; return `201 { id, pubUrl }`.
-- `DELETE /api/listings/:id/photos/:photoId` (listing owner only):
+- `deletePhoto: createServerFn({ method: 'DELETE' })` (listing owner only):
   - Fetch photo row; verify `listingId` matches; delete both raw and pub keys from
     storage, then delete DB row.
   - Return `204`.
