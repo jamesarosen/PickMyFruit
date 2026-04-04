@@ -2,11 +2,6 @@ import { createServerFn } from '@tanstack/solid-start'
 import { getRequestHeaders } from '@tanstack/solid-start/server'
 import { z } from 'zod'
 import { errorMiddleware, UserError } from '@/lib/server-error-middleware'
-import {
-	validatePhotoFile,
-	uploadListingPhoto,
-	mimeToExt,
-} from '@/lib/listing-photo-upload.server'
 
 const deletePhotoSchema = z.object({
 	photoId: z.number().int().positive(),
@@ -53,6 +48,9 @@ export const uploadPhoto = createServerFn({ method: 'POST' })
 		}
 
 		const rawBuffer = Buffer.from(await file.arrayBuffer())
+
+		const { validatePhotoFile, uploadListingPhoto, mimeToExt } =
+			await import('@/lib/listing-photo-upload.server')
 		validatePhotoFile(file.type, rawBuffer.byteLength)
 
 		const { getPhotosForListing, addPhotoToListing } =
