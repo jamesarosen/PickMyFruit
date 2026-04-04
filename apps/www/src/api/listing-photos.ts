@@ -11,7 +11,8 @@ const deletePhotoSchema = z.object({
  * Uploads a photo for a listing.
  *
  * Reads multipart/form-data from the raw request: expects a `listingId`
- * field and a `photo` file field. Returns `{ id, pubUrl }` on success.
+ * field (number) and a `photo` file field. Returns `{ id, pubUrl }` on success.
+ *
  * File is not passed through inputValidator (File is not JSON-serializable);
  * the handler reads it directly from the request body.
  */
@@ -40,6 +41,19 @@ export const uploadPhoto = createServerFn({ method: 'POST' })
 			throw new UserError('INVALID_INPUT', 'A photo file is required')
 		}
 
+		// Reject oversized uploads before buffering to avoid OOM on large files.
+		// Import the constant from the server module dynamically (*.server modules
+		// may not be statically imported per the no-server-static-import lint rule).
+		const {
+			MAX_FILE_SIZE_BYTES,
+			validatePhotoFile,
+			uploadListingPhoto,
+			mimeToExt,
+		} = await import('@/lib/listing-photo-upload.server')
+		if (file.size > MAX_FILE_SIZE_BYTES) {
+			throw new UserError('FILE_TOO_LARGE', 'Photo must be 5 MB or smaller')
+		}
+
 		// Verify listing ownership before doing file work
 		const { getListingById } = await import('@/data/queries.server')
 		const listing = await getListingById(listingId)
@@ -48,10 +62,8 @@ export const uploadPhoto = createServerFn({ method: 'POST' })
 		}
 
 		const rawBuffer = Buffer.from(await file.arrayBuffer())
-
-		const { validatePhotoFile, uploadListingPhoto, mimeToExt } =
-			await import('@/lib/listing-photo-upload.server')
-		validatePhotoFile(file.type, rawBuffer.byteLength)
+		// validatePhotoFile returns the narrowed AllowedMimeType, eliminating any cast
+		const mimeType = validatePhotoFile(file.type, rawBuffer.byteLength)
 
 		const { getPhotosForListing, addPhotoToListing } =
 			await import('@/data/queries.server')
@@ -61,14 +73,31 @@ export const uploadPhoto = createServerFn({ method: 'POST' })
 		const { rawKey, pubUrl } = await uploadListingPhoto({
 			listingId,
 			rawBuffer,
-			mimeType: file.type,
-			fileExt: mimeToExt(file.type as Parameters<typeof mimeToExt>[0]),
+			mimeType,
+			fileExt: mimeToExt(mimeType),
 			currentPhotoCount: existingPhotos.length,
 			storage,
 		})
 
 		const order = existingPhotos.length
-		const photo = await addPhotoToListing(listingId, rawKey, pubUrl, order)
+		let photo
+		try {
+			photo = await addPhotoToListing(listingId, rawKey, pubUrl, order)
+		} catch (dbErr) {
+			// The storage objects are now orphaned. Best-effort cleanup — if deletion
+			// fails, Sentry will capture it so an ops script can reconcile.
+			const { Sentry } = await import('@/lib/sentry')
+			await Promise.all([
+				storage
+					.delete('raw', rawKey)
+					.catch((e) => Sentry.captureException(e, { extra: { rawKey } })),
+				storage
+					.delete('pub', rawKey)
+					.catch((e) => Sentry.captureException(e, { extra: { rawKey } })),
+			])
+			throw dbErr
+		}
+
 		return { id: photo.id, pubUrl: photo.pubUrl }
 	})
 
@@ -76,7 +105,7 @@ export const uploadPhoto = createServerFn({ method: 'POST' })
  * Deletes a listing photo and removes both storage objects.
  *
  * Uses POST (not DELETE) because TanStack Start server functions only support
- * GET and POST. Input: `{ photoId: number }`.
+ * GET and POST. Input: `{ photoId: number }`. Returns `{ success: true }`.
  */
 export const deletePhoto = createServerFn({ method: 'POST' })
 	.middleware([errorMiddleware])
@@ -97,10 +126,21 @@ export const deletePhoto = createServerFn({ method: 'POST' })
 			throw new UserError('NOT_FOUND', 'Photo not found')
 		}
 
+		// Attempt storage cleanup. On failure, capture the rawKey to Sentry so it can
+		// be reconciled by an ops script — it is no longer reachable from the DB.
 		const { storage } = await import('@/lib/storage.server')
+		const { Sentry } = await import('@/lib/sentry')
 		await Promise.all([
-			storage.delete('raw', deleted.rawKey),
-			storage.delete('pub', deleted.rawKey),
+			storage
+				.delete('raw', deleted.rawKey)
+				.catch((e) =>
+					Sentry.captureException(e, { extra: { rawKey: deleted.rawKey } })
+				),
+			storage
+				.delete('pub', deleted.rawKey)
+				.catch((e) =>
+					Sentry.captureException(e, { extra: { rawKey: deleted.rawKey } })
+				),
 		])
 
 		return { success: true }

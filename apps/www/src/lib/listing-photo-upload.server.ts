@@ -2,11 +2,15 @@ import { randomUUID } from 'node:crypto'
 import type { StorageAdapter } from '@/lib/storage.server'
 import { UserError } from '@/lib/user-error'
 
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
-type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number]
+export const ALLOWED_MIME_TYPES = [
+	'image/jpeg',
+	'image/png',
+	'image/webp',
+] as const
+export type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number]
 
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
-const MAX_PHOTOS_PER_LISTING = 3
+export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
+export const MAX_PHOTOS_PER_LISTING = 3
 
 const MIME_TO_EXT: Record<AllowedMimeType, string> = {
 	'image/jpeg': '.jpg',
@@ -16,18 +20,25 @@ const MIME_TO_EXT: Record<AllowedMimeType, string> = {
 
 /**
  * Validates that a file is an allowed image type and within the size limit.
- * Throws a UserError if invalid.
+ * Returns the narrowed MIME type on success; throws a UserError on failure.
+ *
+ * iPhone users frequently have HEIC files — the error message tells them to
+ * convert rather than leaving them confused.
  */
-export function validatePhotoFile(mimeType: string, byteLength: number): void {
+export function validatePhotoFile(
+	mimeType: string,
+	byteLength: number
+): AllowedMimeType {
 	if (!ALLOWED_MIME_TYPES.includes(mimeType as AllowedMimeType)) {
 		throw new UserError(
 			'INVALID_MIME_TYPE',
-			'Only JPEG, PNG, and WebP images are allowed'
+			'Only JPEG, PNG, and WebP images are allowed. iPhone HEIC photos must be converted first.'
 		)
 	}
 	if (byteLength > MAX_FILE_SIZE_BYTES) {
 		throw new UserError('FILE_TOO_LARGE', 'Photo must be 5 MB or smaller')
 	}
+	return mimeType as AllowedMimeType
 }
 
 /** Returns the file extension for an allowed MIME type. */
@@ -39,12 +50,17 @@ export function mimeToExt(mimeType: AllowedMimeType): string {
  * Uploads a photo to both raw/ (private, full EXIF) and pub/ (public, EXIF-stripped)
  * storage, and returns the storage key and public URL.
  *
+ * - `rawKey` — private storage path; must be persisted to DB for future deletion.
+ * - `pubUrl` — public CDN URL of the EXIF-stripped copy; safe to return to clients.
+ *
  * Throws a UserError if the listing already has the maximum number of photos.
+ * Cleans up the raw/ object if the pub/ upload fails, to avoid orphaning a
+ * private file that contains full EXIF.
  */
 export async function uploadListingPhoto(opts: {
 	listingId: number
 	rawBuffer: Buffer
-	mimeType: string
+	mimeType: AllowedMimeType
 	fileExt: string
 	currentPhotoCount: number
 	storage: StorageAdapter
@@ -66,12 +82,20 @@ export async function uploadListingPhoto(opts: {
 	// Strip EXIF before serving publicly — sharp is a Node-only native dep.
 	// sharp strips all metadata by default; withMetadata() is needed only to ADD it back.
 	const sharp = (await import('sharp')).default
-	const cleanBuffer = await sharp(opts.rawBuffer).toBuffer()
-
-	// Public copy served from CDN
-	await opts.storage.upload('pub', pathKey, cleanBuffer, {
-		mimeType: opts.mimeType,
-	})
+	let cleanBuffer: Buffer
+	try {
+		cleanBuffer = await sharp(opts.rawBuffer).toBuffer()
+		// Public copy served from CDN
+		await opts.storage.upload('pub', pathKey, cleanBuffer, {
+			mimeType: opts.mimeType,
+		})
+	} catch (err) {
+		// Clean up the raw/ object so it doesn't linger without a DB record.
+		// Best-effort: if deletion also fails, the error is swallowed — the
+		// original error is what the caller needs to handle.
+		await opts.storage.delete('raw', pathKey).catch(() => undefined)
+		throw err
+	}
 
 	return {
 		rawKey: pathKey,
