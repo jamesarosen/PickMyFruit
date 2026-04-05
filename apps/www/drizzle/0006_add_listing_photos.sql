@@ -1,8 +1,7 @@
 CREATE TABLE listing_photos (
-	id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	id text PRIMARY KEY NOT NULL,
 	listing_id integer NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
-	raw_key text NOT NULL,
-	pub_url text NOT NULL,
+	ext text NOT NULL,
 	"order" integer DEFAULT 0 NOT NULL,
 	created_at integer DEFAULT (unixepoch()) NOT NULL,
 	deleted_at integer

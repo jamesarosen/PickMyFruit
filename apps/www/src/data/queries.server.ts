@@ -50,7 +50,7 @@ async function fetchPhotosByListingIds(
 		.select({
 			id: listingPhotos.id,
 			listingId: listingPhotos.listingId,
-			pubPath: listingPhotos.pubUrl,
+			ext: listingPhotos.ext,
 			order: listingPhotos.order,
 		})
 		.from(listingPhotos)
@@ -64,7 +64,7 @@ async function fetchPhotosByListingIds(
 		const existing = map.get(row.listingId) ?? []
 		existing.push({
 			id: row.id,
-			pubUrl: storage.publicUrl(row.pubPath),
+			pubUrl: storage.publicUrl(`listing_photos/${row.id}${row.ext}`),
 			order: row.order,
 		})
 		map.set(row.listingId, existing)
@@ -245,7 +245,8 @@ export async function deleteListingById(
  */
 export async function addPhotoToListing(
 	listingId: number,
-	rawKey: string,
+	id: string,
+	ext: string,
 	maxPhotos: number
 ): Promise<ListingPhoto | null> {
 	return Sentry.startSpan(
@@ -270,9 +271,9 @@ export async function addPhotoToListing(
 				const result = await tx
 					.insert(listingPhotos)
 					.values({
+						id,
 						listingId,
-						rawKey,
-						pubUrl: rawKey, // store path; full URL derived at read time via storage.publicUrl()
+						ext,
 						// Compute order atomically so concurrent inserts don't collide.
 						order: sql`COALESCE(
 							(SELECT MAX("order") FROM listing_photos
@@ -303,7 +304,7 @@ export async function getPhotosForListing(
 			const rows = await db
 				.select({
 					id: listingPhotos.id,
-					pubPath: listingPhotos.pubUrl,
+					ext: listingPhotos.ext,
 					order: listingPhotos.order,
 				})
 				.from(listingPhotos)
@@ -316,7 +317,7 @@ export async function getPhotosForListing(
 				.orderBy(listingPhotos.order)
 			return rows.map((row) => ({
 				id: row.id,
-				pubUrl: storage.publicUrl(row.pubPath),
+				pubUrl: storage.publicUrl(`listing_photos/${row.id}${row.ext}`),
 				order: row.order,
 			}))
 		}
@@ -335,9 +336,9 @@ export async function getPhotosForListing(
  * does not exist or the user does not own the listing.
  */
 export async function deleteListingPhoto(
-	photoId: number,
+	photoId: string,
 	userId: string
-): Promise<{ rawKey: string } | undefined> {
+): Promise<{ id: string; ext: string } | undefined> {
 	return Sentry.startSpan(
 		{
 			name: 'deleteListingPhoto',
@@ -354,7 +355,7 @@ export async function deleteListingPhoto(
 						sql`listing_id IN (SELECT id FROM listings WHERE user_id = ${userId} AND deleted_at IS NULL)`
 					)
 				)
-				.returning({ rawKey: listingPhotos.rawKey })
+				.returning({ id: listingPhotos.id, ext: listingPhotos.ext })
 			return result[0]
 		}
 	)

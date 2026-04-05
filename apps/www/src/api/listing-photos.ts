@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { errorMiddleware, UserError } from '@/lib/server-error-middleware'
 
 const deletePhotoSchema = z.object({
-	photoId: z.number().int().positive(),
+	photoId: z.string().uuid(),
 })
 
 /**
@@ -78,29 +78,35 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 
 		const { addPhotoToListing } = await import('@/data/queries.server')
 
+		const fileExt = mimeToExt(mimeType)
 		const { storage } = await import('@/lib/storage.server')
-		const { rawKey } = await uploadListingPhoto({
-			listingId,
+		const { id } = await uploadListingPhoto({
 			rawBuffer,
 			mimeType,
-			fileExt: mimeToExt(mimeType),
+			fileExt,
 			storage,
 		})
+		const pathKey = `listing_photos/${id}${fileExt}`
 
 		let photo
 		try {
-			photo = await addPhotoToListing(listingId, rawKey, MAX_PHOTOS_PER_LISTING)
+			photo = await addPhotoToListing(
+				listingId,
+				id,
+				fileExt,
+				MAX_PHOTOS_PER_LISTING
+			)
 		} catch (dbErr) {
 			// The storage objects are now orphaned. Best-effort cleanup — if deletion
 			// fails, Sentry will capture it so an ops script can reconcile.
 			const { Sentry } = await import('@/lib/sentry')
 			await Promise.all([
 				storage
-					.delete('raw', rawKey)
-					.catch((e) => Sentry.captureException(e, { extra: { rawKey } })),
+					.delete('raw', pathKey)
+					.catch((e) => Sentry.captureException(e, { extra: { pathKey } })),
 				storage
-					.delete('pub', rawKey)
-					.catch((e) => Sentry.captureException(e, { extra: { rawKey } })),
+					.delete('pub', pathKey)
+					.catch((e) => Sentry.captureException(e, { extra: { pathKey } })),
 			])
 			throw dbErr
 		}
@@ -111,11 +117,11 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 			const { Sentry } = await import('@/lib/sentry')
 			await Promise.all([
 				storage
-					.delete('raw', rawKey)
-					.catch((e) => Sentry.captureException(e, { extra: { rawKey } })),
+					.delete('raw', pathKey)
+					.catch((e) => Sentry.captureException(e, { extra: { pathKey } })),
 				storage
-					.delete('pub', rawKey)
-					.catch((e) => Sentry.captureException(e, { extra: { rawKey } })),
+					.delete('pub', pathKey)
+					.catch((e) => Sentry.captureException(e, { extra: { pathKey } })),
 			])
 			throw new UserError(
 				'TOO_MANY_PHOTOS',
@@ -123,7 +129,10 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 			)
 		}
 
-		return { id: photo.id, pubUrl: storage.publicUrl(photo.pubUrl) }
+		return {
+			id: photo.id,
+			pubUrl: storage.publicUrl(`listing_photos/${photo.id}${photo.ext}`),
+		}
 	})
 
 /**
@@ -134,7 +143,7 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
  */
 export const deletePhoto = createServerFn({ method: 'POST' })
 	.middleware([errorMiddleware])
-	.inputValidator((data: { photoId: number }) => deletePhotoSchema.parse(data))
+	.inputValidator((data: { photoId: string }) => deletePhotoSchema.parse(data))
 	.handler(async ({ data: { photoId } }) => {
 		const headers = getRequestHeaders()
 		const { auth } = await import('@/lib/auth.server')
@@ -151,21 +160,18 @@ export const deletePhoto = createServerFn({ method: 'POST' })
 			throw new UserError('NOT_FOUND', 'Photo not found')
 		}
 
-		// Attempt storage cleanup. On failure, capture the rawKey to Sentry so it can
+		// Attempt storage cleanup. On failure, capture the pathKey to Sentry so it can
 		// be reconciled by an ops script — it is no longer reachable from the DB.
+		const pathKey = `listing_photos/${deleted.id}${deleted.ext}`
 		const { storage } = await import('@/lib/storage.server')
 		const { Sentry } = await import('@/lib/sentry')
 		await Promise.all([
 			storage
-				.delete('raw', deleted.rawKey)
-				.catch((e) =>
-					Sentry.captureException(e, { extra: { rawKey: deleted.rawKey } })
-				),
+				.delete('raw', pathKey)
+				.catch((e) => Sentry.captureException(e, { extra: { pathKey } })),
 			storage
-				.delete('pub', deleted.rawKey)
-				.catch((e) =>
-					Sentry.captureException(e, { extra: { rawKey: deleted.rawKey } })
-				),
+				.delete('pub', pathKey)
+				.catch((e) => Sentry.captureException(e, { extra: { pathKey } })),
 		])
 
 		return { success: true }

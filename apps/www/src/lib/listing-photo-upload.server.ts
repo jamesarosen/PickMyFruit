@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { v7 as uuidv7 } from 'uuid'
 import { detectFromBuffer } from 'mime-bytes'
 import type { StorageAdapter } from '@/lib/storage.server'
 import { UserError } from '@/lib/user-error'
@@ -61,13 +61,13 @@ export function mimeToExt(mimeType: AllowedMimeType): string {
  * private file that contains full EXIF.
  */
 export async function uploadListingPhoto(opts: {
-	listingId: number
 	rawBuffer: Buffer
 	mimeType: AllowedMimeType
 	fileExt: string
 	storage: StorageAdapter
-}): Promise<{ rawKey: string }> {
-	const pathKey = `listings/${opts.listingId}/${randomUUID()}${opts.fileExt}`
+}): Promise<{ id: string }> {
+	const id = uuidv7()
+	const pathKey = `listing_photos/${id}${opts.fileExt}`
 
 	// Store original with full EXIF intact — private, server-side only
 	await opts.storage.upload('raw', pathKey, opts.rawBuffer, {
@@ -92,7 +92,5 @@ export async function uploadListingPhoto(opts: {
 		throw err
 	}
 
-	return {
-		rawKey: pathKey,
-	}
+	return { id }
 }

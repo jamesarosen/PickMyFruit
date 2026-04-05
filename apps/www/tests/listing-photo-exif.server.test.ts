@@ -37,7 +37,6 @@ describe('EXIF stripping (real sharp)', () => {
 		}
 
 		await uploadListingPhoto({
-			listingId: 1,
 			rawBuffer,
 			mimeType: 'image/jpeg',
 			fileExt: '.jpg',

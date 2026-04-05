@@ -8,7 +8,6 @@
  *   - auth guard (tested in listing-photo-api.server.test.ts against the server fn)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { faker } from '@faker-js/faker'
 import type { StorageAdapter } from '../src/lib/storage.server'
 
 // ============================================================================
@@ -116,7 +115,6 @@ describe('uploadListingPhoto', () => {
 		const rawBuffer = Buffer.from('raw-img')
 
 		await uploadListingPhoto({
-			listingId: 42,
 			rawBuffer,
 			mimeType: 'image/jpeg',
 			fileExt: '.jpg',
@@ -125,7 +123,7 @@ describe('uploadListingPhoto', () => {
 
 		const [rawCall] = (storage.upload as ReturnType<typeof vi.fn>).mock.calls
 		expect(rawCall[0]).toBe('raw')
-		expect(rawCall[1]).toMatch(/^listings\/42\/[\w-]+\.jpg$/)
+		expect(rawCall[1]).toMatch(/^listing_photos\/[\w-]+\.jpg$/)
 		expect(rawCall[2]).toBe(rawBuffer)
 	})
 
@@ -135,7 +133,6 @@ describe('uploadListingPhoto', () => {
 		mockToBuffer.mockResolvedValue(cleanBuffer)
 
 		await uploadListingPhoto({
-			listingId: 42,
 			rawBuffer: Buffer.from('raw-img'),
 			mimeType: 'image/png',
 			fileExt: '.png',
@@ -155,7 +152,6 @@ describe('uploadListingPhoto', () => {
 		const storage = makeStorage()
 
 		await uploadListingPhoto({
-			listingId: 7,
 			rawBuffer: Buffer.from('img'),
 			mimeType: 'image/webp',
 			fileExt: '.webp',
@@ -168,20 +164,19 @@ describe('uploadListingPhoto', () => {
 		expect(rawPath).toBe(pubPath)
 	})
 
-	it('returns rawKey matching the listing path pattern', async () => {
+	it('returns id matching a UUID v7 pattern', async () => {
 		const storage = makeStorage()
-		const listingId = faker.number.int({ min: 1, max: 999 })
 
 		const result = await uploadListingPhoto({
-			listingId,
 			rawBuffer: Buffer.from('img'),
 			mimeType: 'image/jpeg',
 			fileExt: '.jpg',
 			storage,
 		})
 
-		expect(result.rawKey).toMatch(
-			new RegExp(`^listings/${listingId}/[\\w-]+\\.jpg$`)
+		// UUID v7: 8-4-4-4-12 hex chars, version nibble = 7
+		expect(result.id).toMatch(
+			/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/
 		)
 	})
 })

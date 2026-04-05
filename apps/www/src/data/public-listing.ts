@@ -3,7 +3,7 @@ import type { Listing } from './schema'
 import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
 
 /** Public photo shape returned to clients. */
-export type PublicPhoto = { id: number; pubUrl: string; order: number }
+export type PublicPhoto = { id: string; pubUrl: string; order: number }
 
 /** Public listing fields safe to expose to any visitor. */
 export type PublicListing = Omit<

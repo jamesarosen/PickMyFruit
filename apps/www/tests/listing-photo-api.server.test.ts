@@ -116,7 +116,7 @@ describe('deletePhoto', () => {
 
 		await expect(
 			deletePhoto({
-				data: { photoId: faker.number.int({ min: 1, max: 999 }) },
+				data: { photoId: faker.string.uuid() },
 			})
 		).rejects.toThrow()
 	})
@@ -127,7 +127,7 @@ describe('deletePhoto', () => {
 		mockDeleteListingPhoto.mockResolvedValue(undefined)
 
 		const error = await deletePhoto({
-			data: { photoId: faker.number.int({ min: 1, max: 999 }) },
+			data: { photoId: faker.string.uuid() },
 		}).catch((e: unknown) => e)
 		expect((error as UserError).code).toBe('NOT_FOUND')
 	})
