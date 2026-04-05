@@ -5,6 +5,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { faker } from '@faker-js/faker'
+import type { UserError } from '../src/lib/user-error'
+import { getRequest } from '@tanstack/solid-start/server'
 
 // ============================================================================
 // Mock auth — controls session presence
@@ -24,10 +26,12 @@ vi.mock('../src/lib/auth.server', () => ({
 // Mock queries — avoid real DB
 // ============================================================================
 
+const mockGetListingById = vi.fn()
 const mockAddPhotoToListing = vi.fn()
 const mockDeleteListingPhoto = vi.fn()
 
 vi.mock('../src/data/queries.server', () => ({
+	getListingById: (...args: unknown[]) => mockGetListingById(...args),
 	addPhotoToListing: (...args: unknown[]) => mockAddPhotoToListing(...args),
 	deleteListingPhoto: (...args: unknown[]) => mockDeleteListingPhoto(...args),
 }))
@@ -76,6 +80,27 @@ describe('uploadPhoto', () => {
 		// getRequest() is called, so no FormData setup is needed for this test.
 		await expect(uploadPhoto()).rejects.toThrow()
 	})
+
+	it('throws NOT_FOUND when the authenticated user does not own the listing', async () => {
+		const userId = faker.string.uuid()
+		mockGetSession.mockResolvedValue({ user: { id: userId } })
+
+		const fd = new FormData()
+		fd.append('listingId', '42')
+		fd.append(
+			'photo',
+			new File([Buffer.from('x')], 'photo.jpg', { type: 'image/jpeg' })
+		)
+		;(getRequest as ReturnType<typeof vi.fn>).mockResolvedValue({
+			formData: () => Promise.resolve(fd),
+		})
+
+		// Listing exists but belongs to a different user
+		mockGetListingById.mockResolvedValue({ id: 42, userId: faker.string.uuid() })
+
+		const error = await uploadPhoto().catch((e: unknown) => e)
+		expect((error as UserError).code).toBe('NOT_FOUND')
+	})
 })
 
 // ============================================================================
@@ -95,5 +120,16 @@ describe('deletePhoto', () => {
 				data: { photoId: faker.number.int({ min: 1, max: 999 }) },
 			})
 		).rejects.toThrow()
+	})
+
+	it('throws NOT_FOUND when the photo does not belong to the authenticated user', async () => {
+		mockGetSession.mockResolvedValue({ user: { id: faker.string.uuid() } })
+		// deleteListingPhoto returns undefined when the SQL ownership check finds nothing
+		mockDeleteListingPhoto.mockResolvedValue(undefined)
+
+		const error = await deletePhoto({
+			data: { photoId: faker.number.int({ min: 1, max: 999 }) },
+		}).catch((e: unknown) => e)
+		expect((error as UserError).code).toBe('NOT_FOUND')
 	})
 })
