@@ -55,9 +55,7 @@ vi.mock('../src/lib/storage.server', () => ({
 
 vi.mock('sharp', () => ({
 	default: vi.fn(() => ({
-		withMetadata: vi.fn().mockReturnValue({
-			toBuffer: vi.fn().mockResolvedValue(Buffer.from('clean')),
-		}),
+		toBuffer: vi.fn().mockResolvedValue(Buffer.from('clean')),
 	})),
 }))
 
