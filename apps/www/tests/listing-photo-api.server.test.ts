@@ -62,13 +62,14 @@ vi.mock('sharp', () => ({
 }))
 
 // Must import after mocking
-const { uploadPhoto, deletePhoto } = await import('../src/api/listing-photos')
+const { addPhotoToListing, deletePhoto } =
+	await import('../src/api/listing-photos')
 
 // ============================================================================
-// uploadPhoto — auth guard
+// addPhotoToListing — auth guard
 // ============================================================================
 
-describe('uploadPhoto', () => {
+describe('addPhotoToListing', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 	})
@@ -76,9 +77,9 @@ describe('uploadPhoto', () => {
 	it('throws when the user is not authenticated', async () => {
 		mockGetSession.mockResolvedValue(null)
 
-		// uploadPhoto reads FormData from the raw request; auth is checked before
+		// addPhotoToListing reads FormData from the raw request; auth is checked before
 		// getRequest() is called, so no FormData setup is needed for this test.
-		await expect(uploadPhoto()).rejects.toThrow()
+		await expect(addPhotoToListing()).rejects.toThrow()
 	})
 
 	it('throws NOT_FOUND when the authenticated user does not own the listing', async () => {
@@ -98,7 +99,7 @@ describe('uploadPhoto', () => {
 		// Listing exists but belongs to a different user
 		mockGetListingById.mockResolvedValue({ id: 42, userId: faker.string.uuid() })
 
-		const error = await uploadPhoto().catch((e: unknown) => e)
+		const error = await addPhotoToListing().catch((e: unknown) => e)
 		expect((error as UserError).code).toBe('NOT_FOUND')
 	})
 })

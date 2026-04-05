@@ -16,7 +16,7 @@ const deletePhotoSchema = z.object({
  * File is not passed through inputValidator (File is not JSON-serializable);
  * the handler reads it directly from the request body.
  */
-export const uploadPhoto = createServerFn({ method: 'POST' })
+export const addPhotoToListing = createServerFn({ method: 'POST' })
 	.middleware([errorMiddleware])
 	.handler(async () => {
 		const headers = getRequestHeaders()
