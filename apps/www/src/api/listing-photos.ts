@@ -47,12 +47,22 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 		const {
 			MAX_FILE_SIZE_BYTES,
 			MAX_PHOTOS_PER_LISTING,
+			ALLOWED_MIME_TYPES,
 			validatePhotoFile,
 			uploadListingPhoto,
 			mimeToExt,
 		} = await import('@/lib/listing-photo-upload.server')
 		if (file.size > MAX_FILE_SIZE_BYTES) {
 			throw new UserError('FILE_TOO_LARGE', 'Photo must be 5 MB or smaller')
+		}
+		// Pre-filter on client-supplied type before buffering — avoids reading the
+		// full body for obviously wrong types. The authoritative check (magic bytes)
+		// runs after arrayBuffer().
+		if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(file.type)) {
+			throw new UserError(
+				'INVALID_MIME_TYPE',
+				'Only JPEG, PNG, and WebP images are allowed. iPhone HEIC photos must be converted first.'
+			)
 		}
 
 		// Verify listing ownership before doing file work
