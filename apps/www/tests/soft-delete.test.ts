@@ -11,6 +11,10 @@ const mockSelectWhere = vi.fn()
 const mockSelectFrom = vi.fn()
 const mockSelect = vi.fn()
 
+vi.mock('../src/lib/storage.server', () => ({
+	storage: { publicUrl: (path: string) => `https://cdn.example.com/${path}` },
+}))
+
 vi.mock('../src/data/db.server', () => ({
 	db: {
 		update: vi.fn(() => ({ set: mockUpdateSet })),

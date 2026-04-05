@@ -7,6 +7,16 @@ import { faker } from '@faker-js/faker'
 import { latLngToCell } from 'h3-js'
 
 // ============================================================================
+// Mock storage — provides predictable publicUrl output
+// ============================================================================
+
+vi.mock('../src/lib/storage.server', () => ({
+	storage: {
+		publicUrl: (path: string) => `https://cdn.example.com/${path}`,
+	},
+}))
+
+// ============================================================================
 // Mock drizzle db
 // ============================================================================
 
@@ -132,20 +142,19 @@ describe('addPhotoToListing', () => {
 
 	it('returns the inserted row when under the limit', async () => {
 		const listingId = faker.number.int({ min: 1, max: 9999 })
-		const rawKey = `raw/listings/${listingId}/abc.jpg`
-		const pubUrl = `pub/listings/${listingId}/abc.jpg`
+		const rawKey = `listings/${listingId}/abc.jpg`
 		const inserted = {
 			id: faker.number.int(),
 			listingId,
 			rawKey,
-			pubUrl,
+			pubUrl: rawKey,
 			order: 0,
 			createdAt: new Date(),
 			deletedAt: null,
 		}
 		mockTx(0, [inserted])
 
-		const result = await addPhotoToListing(listingId, rawKey, pubUrl, 3)
+		const result = await addPhotoToListing(listingId, rawKey, 3)
 
 		expect(result).toEqual(inserted)
 	})
@@ -153,7 +162,7 @@ describe('addPhotoToListing', () => {
 	it('returns null when the listing is already at the limit', async () => {
 		mockTx(3, [])
 
-		const result = await addPhotoToListing(1, 'raw/x', 'pub/x', 3)
+		const result = await addPhotoToListing(1, 'listings/1/x.jpg', 3)
 
 		expect(result).toBeNull()
 	})
@@ -161,7 +170,7 @@ describe('addPhotoToListing', () => {
 	it('throws DataInvariantError when the insert returns no row', async () => {
 		mockTx(0, [])
 
-		await expect(addPhotoToListing(1, 'raw/x', 'pub/x', 3)).rejects.toThrow(
+		await expect(addPhotoToListing(1, 'listings/1/x.jpg', 3)).rejects.toThrow(
 			DataInvariantError
 		)
 	})
@@ -186,30 +195,36 @@ describe('getPhotosForListing', () => {
 		expect(result).toEqual([])
 	})
 
-	it('returns photos with id, pubUrl, and order', async () => {
+	it('returns photos with full pubUrl (path converted via storage.publicUrl)', async () => {
 		const listingId = faker.number.int({ min: 1, max: 9999 })
-		const photos = [
-			{ id: 1, pubUrl: `pub/listings/${listingId}/a.jpg`, order: 0 },
-			{ id: 2, pubUrl: `pub/listings/${listingId}/b.jpg`, order: 1 },
+		// Mock returns DB rows with pubPath (the select alias for the stored path)
+		const dbRows = [
+			{ id: 1, pubPath: `listings/${listingId}/a.jpg`, order: 0 },
+			{ id: 2, pubPath: `listings/${listingId}/b.jpg`, order: 1 },
 		]
-		mockSelectOrderBy.mockResolvedValue(photos)
+		mockSelectOrderBy.mockResolvedValue(dbRows)
 
 		const result = await getPhotosForListing(listingId)
 
-		expect(result).toEqual(photos)
+		expect(result[0].pubUrl).toBe(
+			`https://cdn.example.com/listings/${listingId}/a.jpg`
+		)
+		expect(result[1].pubUrl).toBe(
+			`https://cdn.example.com/listings/${listingId}/b.jpg`
+		)
 	})
 
-	it('passes a projection to db.select that includes id/pubUrl/order but not rawKey', async () => {
+	it('passes a projection to db.select that includes id/pubPath/order but not rawKey', async () => {
 		mockSelectOrderBy.mockResolvedValue([])
 
 		await getPhotosForListing(1)
 
-		// Verifies the Drizzle projection object — rawKey must never be selected
-		// (the mock controls the return value, so result-shape checks would be tautological)
+		// Verifies the Drizzle projection — rawKey must never be selected.
+		// pubPath is the internal alias for the stored path column.
 		expect(mockSelect).toHaveBeenCalledWith(
 			expect.objectContaining({
 				id: expect.anything(),
-				pubUrl: expect.anything(),
+				pubPath: expect.anything(),
 				order: expect.anything(),
 			})
 		)
@@ -229,14 +244,13 @@ describe('deleteListingPhoto', () => {
 		mockDeleteWhere.mockReturnValue({ returning: mockDeleteReturning })
 	})
 
-	it('returns rawKey and pubUrl of the deleted photo', async () => {
-		const rawKey = 'raw/listings/1/img.jpg'
-		const pubUrl = 'pub/listings/1/img.jpg'
-		mockDeleteReturning.mockResolvedValue([{ rawKey, pubUrl }])
+	it('returns rawKey of the deleted photo', async () => {
+		const rawKey = 'listings/1/img.jpg'
+		mockDeleteReturning.mockResolvedValue([{ rawKey }])
 
 		const result = await deleteListingPhoto(1, 'user-abc')
 
-		expect(result).toEqual({ rawKey, pubUrl })
+		expect(result).toEqual({ rawKey })
 	})
 
 	it('returns undefined when the photo does not exist or is not owned by the user', async () => {
@@ -279,7 +293,7 @@ describe('getPublicListingById', () => {
 		const listingId = 42
 		const listing = makeListingRow(listingId)
 		const photoRows = [
-			{ id: 1, listingId, pubUrl: `pub/listings/${listingId}/a.jpg`, order: 0 },
+			{ id: 1, listingId, pubPath: `listings/${listingId}/a.jpg`, order: 0 },
 		]
 
 		// Promise.all: first db.select() → listing, second → photos
@@ -290,9 +304,13 @@ describe('getPublicListingById', () => {
 
 		expect(result).toBeDefined()
 		expect(result!.photos).toHaveLength(1)
-		expect(result!.photos[0].pubUrl).toBe(`pub/listings/${listingId}/a.jpg`)
+		expect(result!.photos[0].pubUrl).toBe(
+			`https://cdn.example.com/listings/${listingId}/a.jpg`
+		)
 		expect(result!.photos[0].order).toBe(0)
-		expect(result!.coverPhotoUrl).toBe(`pub/listings/${listingId}/a.jpg`)
+		expect(result!.coverPhotoUrl).toBe(
+			`https://cdn.example.com/listings/${listingId}/a.jpg`
+		)
 	})
 
 	it('returns a PublicListing with empty photos when listing has no photos', async () => {
@@ -351,9 +369,9 @@ describe('fetchPhotosByListingIds grouping (via getAvailableListings)', () => {
 
 		// fetchPhotosByListingIds returns rows for both listings, interleaved
 		const photoRows = [
-			{ id: 10, listingId: 1, pubUrl: 'pub/1/a.jpg', order: 0 },
-			{ id: 20, listingId: 2, pubUrl: 'pub/2/a.jpg', order: 0 },
-			{ id: 11, listingId: 1, pubUrl: 'pub/1/b.jpg', order: 1 },
+			{ id: 10, listingId: 1, pubPath: 'listings/1/a.jpg', order: 0 },
+			{ id: 20, listingId: 2, pubPath: 'listings/2/a.jpg', order: 0 },
+			{ id: 11, listingId: 1, pubPath: 'listings/1/b.jpg', order: 1 },
 		]
 		mockSelectWithOrderBy(photoRows)
 
@@ -363,12 +381,15 @@ describe('fetchPhotosByListingIds grouping (via getAvailableListings)', () => {
 
 		const r1 = results.find((r) => r.id === 1)!
 		expect(r1.photos).toHaveLength(2)
-		expect(r1.photos.map((p) => p.pubUrl)).toEqual(['pub/1/a.jpg', 'pub/1/b.jpg'])
-		expect(r1.coverPhotoUrl).toBe('pub/1/a.jpg')
+		expect(r1.photos.map((p) => p.pubUrl)).toEqual([
+			'https://cdn.example.com/listings/1/a.jpg',
+			'https://cdn.example.com/listings/1/b.jpg',
+		])
+		expect(r1.coverPhotoUrl).toBe('https://cdn.example.com/listings/1/a.jpg')
 
 		const r2 = results.find((r) => r.id === 2)!
 		expect(r2.photos).toHaveLength(1)
-		expect(r2.coverPhotoUrl).toBe('pub/2/a.jpg')
+		expect(r2.coverPhotoUrl).toBe('https://cdn.example.com/listings/2/a.jpg')
 	})
 
 	it('uses [] photos for listings with no matching photo rows', async () => {

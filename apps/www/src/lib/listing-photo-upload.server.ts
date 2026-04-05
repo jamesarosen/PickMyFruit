@@ -52,10 +52,10 @@ export function mimeToExt(mimeType: AllowedMimeType): string {
 
 /**
  * Uploads a photo to both raw/ (private, full EXIF) and pub/ (public, EXIF-stripped)
- * storage, and returns the storage key and public URL.
+ * storage, and returns the shared path key.
  *
- * - `rawKey` — private storage path; must be persisted to DB for future deletion.
- * - `pubUrl` — public CDN URL of the EXIF-stripped copy; safe to return to clients.
+ * - `rawKey` — storage path used for both the raw and pub objects; persist to DB.
+ *   The public URL is derived at read time via `storage.publicUrl(rawKey)`.
  *
  * Cleans up the raw/ object if the pub/ upload fails, to avoid orphaning a
  * private file that contains full EXIF.
@@ -66,7 +66,7 @@ export async function uploadListingPhoto(opts: {
 	mimeType: AllowedMimeType
 	fileExt: string
 	storage: StorageAdapter
-}): Promise<{ rawKey: string; pubUrl: string }> {
+}): Promise<{ rawKey: string }> {
 	const pathKey = `listings/${opts.listingId}/${randomUUID()}${opts.fileExt}`
 
 	// Store original with full EXIF intact — private, server-side only
@@ -94,6 +94,5 @@ export async function uploadListingPhoto(opts: {
 
 	return {
 		rawKey: pathKey,
-		pubUrl: opts.storage.publicUrl(pathKey),
 	}
 }

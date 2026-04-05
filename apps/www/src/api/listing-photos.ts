@@ -79,7 +79,7 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 		const { addPhotoToListing } = await import('@/data/queries.server')
 
 		const { storage } = await import('@/lib/storage.server')
-		const { rawKey, pubUrl } = await uploadListingPhoto({
+		const { rawKey } = await uploadListingPhoto({
 			listingId,
 			rawBuffer,
 			mimeType,
@@ -89,12 +89,7 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 
 		let photo
 		try {
-			photo = await addPhotoToListing(
-				listingId,
-				rawKey,
-				pubUrl,
-				MAX_PHOTOS_PER_LISTING
-			)
+			photo = await addPhotoToListing(listingId, rawKey, MAX_PHOTOS_PER_LISTING)
 		} catch (dbErr) {
 			// The storage objects are now orphaned. Best-effort cleanup — if deletion
 			// fails, Sentry will capture it so an ops script can reconcile.
@@ -128,7 +123,7 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 			)
 		}
 
-		return { id: photo.id, pubUrl: photo.pubUrl }
+		return { id: photo.id, pubUrl: storage.publicUrl(photo.pubUrl) }
 	})
 
 /**

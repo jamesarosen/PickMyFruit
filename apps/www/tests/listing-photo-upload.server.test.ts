@@ -168,7 +168,7 @@ describe('uploadListingPhoto', () => {
 		expect(rawPath).toBe(pubPath)
 	})
 
-	it('returns rawKey and pubUrl', async () => {
+	it('returns rawKey matching the listing path pattern', async () => {
 		const storage = makeStorage()
 		const listingId = faker.number.int({ min: 1, max: 999 })
 
@@ -183,6 +183,5 @@ describe('uploadListingPhoto', () => {
 		expect(result.rawKey).toMatch(
 			new RegExp(`^listings/${listingId}/[\\w-]+\\.jpg$`)
 		)
-		expect(result.pubUrl).toContain(result.rawKey)
 	})
 })
