@@ -52,6 +52,9 @@ importers:
       maplibre-gl:
         specifier: ^5.18.0
         version: 5.18.0
+      mime-bytes:
+        specifier: ^0.11.2
+        version: 0.11.2
       pino:
         specifier: ^10.3.1
         version: 10.3.1
@@ -4401,6 +4404,9 @@ packages:
   micromatch@4.0.8:
     resolution: {integrity: sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==}
     engines: {node: '>=8.6'}
+
+  mime-bytes@0.11.2:
+    resolution: {integrity: sha512-1nuVuL6id+2ipCjA7iyfKwS2JF4/jNOB/lGAcoa/HvQMX2n3gftVjQRImLftwl/94sHeggJzDaQL5LDpusAqkw==}
 
   mime-db@1.54.0:
     resolution: {integrity: sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ==}
@@ -10282,6 +10288,8 @@ snapshots:
     dependencies:
       braces: 3.0.3
       picomatch: 2.3.1
+
+  mime-bytes@0.11.2: {}
 
   mime-db@1.54.0: {}
 

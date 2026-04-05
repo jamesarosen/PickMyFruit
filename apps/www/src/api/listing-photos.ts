@@ -63,8 +63,8 @@ export const uploadPhoto = createServerFn({ method: 'POST' })
 		}
 
 		const rawBuffer = Buffer.from(await file.arrayBuffer())
-		// validatePhotoFile returns the narrowed AllowedMimeType, eliminating any cast
-		const mimeType = validatePhotoFile(file.type, rawBuffer.byteLength)
+		// Detect MIME from magic bytes — ignores the client-supplied Content-Type
+		const mimeType = await validatePhotoFile(rawBuffer)
 
 		const { addPhotoToListing } = await import('@/data/queries.server')
 

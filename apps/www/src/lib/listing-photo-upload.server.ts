@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { detectFromBuffer } from 'mime-bytes'
 import type { StorageAdapter } from '@/lib/storage.server'
 import { UserError } from '@/lib/user-error'
 
@@ -19,23 +20,26 @@ const MIME_TO_EXT: Record<AllowedMimeType, string> = {
 }
 
 /**
- * Validates that a file is an allowed image type and within the size limit.
+ * Validates that a buffer is an allowed image type and within the size limit.
+ * Detects the actual MIME type from magic bytes — the client-supplied Content-Type
+ * is intentionally ignored.
  * Returns the narrowed MIME type on success; throws a UserError on failure.
  *
  * iPhone users frequently have HEIC files — the error message tells them to
  * convert rather than leaving them confused.
  */
-export function validatePhotoFile(
-	mimeType: string,
-	byteLength: number
-): AllowedMimeType {
+export async function validatePhotoFile(
+	buffer: Buffer
+): Promise<AllowedMimeType> {
+	const detected = await detectFromBuffer(buffer)
+	const mimeType = detected?.mimeType ?? 'application/octet-stream'
 	if (!ALLOWED_MIME_TYPES.includes(mimeType as AllowedMimeType)) {
 		throw new UserError(
 			'INVALID_MIME_TYPE',
 			'Only JPEG, PNG, and WebP images are allowed. iPhone HEIC photos must be converted first.'
 		)
 	}
-	if (byteLength > MAX_FILE_SIZE_BYTES) {
+	if (buffer.byteLength > MAX_FILE_SIZE_BYTES) {
 		throw new UserError('FILE_TOO_LARGE', 'Photo must be 5 MB or smaller')
 	}
 	return mimeType as AllowedMimeType

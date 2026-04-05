@@ -4,12 +4,22 @@
  * Covers the four key risks called out in docs/0004-listing-photos.md PR 3:
  *   - wrong MIME type rejected
  *   - oversized file rejected
- *   - fourth photo rejected (count ≥ 3)
+ *   - unrecognized magic bytes rejected
  *   - auth guard (tested in listing-photo-api.server.test.ts against the server fn)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { faker } from '@faker-js/faker'
 import type { StorageAdapter } from '../src/lib/storage.server'
+
+// ============================================================================
+// Mock mime-bytes — avoids real magic-byte detection in unit tests.
+// ============================================================================
+
+const mockDetectFromBuffer = vi.fn()
+
+vi.mock('mime-bytes', () => ({
+	detectFromBuffer: (...args: unknown[]) => mockDetectFromBuffer(...args),
+}))
 
 // ============================================================================
 // Mock sharp — avoids native binary in unit tests.
@@ -46,33 +56,48 @@ function makeStorage(): StorageAdapter {
 // ============================================================================
 
 describe('validatePhotoFile', () => {
-	it('accepts image/jpeg', () => {
-		expect(() => validatePhotoFile('image/jpeg', 1024)).not.toThrow()
+	const smallBuf = Buffer.from('fake')
+	const fiveMb = Buffer.alloc(5 * 1024 * 1024)
+	const sixMb = Buffer.alloc(6 * 1024 * 1024)
+
+	it('accepts image/jpeg', async () => {
+		mockDetectFromBuffer.mockResolvedValue({ mimeType: 'image/jpeg' })
+		await expect(validatePhotoFile(smallBuf)).resolves.toBe('image/jpeg')
 	})
 
-	it('accepts image/png', () => {
-		expect(() => validatePhotoFile('image/png', 1024)).not.toThrow()
+	it('accepts image/png', async () => {
+		mockDetectFromBuffer.mockResolvedValue({ mimeType: 'image/png' })
+		await expect(validatePhotoFile(smallBuf)).resolves.toBe('image/png')
 	})
 
-	it('accepts image/webp', () => {
-		expect(() => validatePhotoFile('image/webp', 1024)).not.toThrow()
+	it('accepts image/webp', async () => {
+		mockDetectFromBuffer.mockResolvedValue({ mimeType: 'image/webp' })
+		await expect(validatePhotoFile(smallBuf)).resolves.toBe('image/webp')
 	})
 
-	it('rejects non-image MIME types', () => {
-		expect(() => validatePhotoFile('application/pdf', 1024)).toThrow()
+	it('rejects files with unrecognized magic bytes', async () => {
+		mockDetectFromBuffer.mockResolvedValue(null)
+		await expect(validatePhotoFile(smallBuf)).rejects.toThrow()
 	})
 
-	it('rejects image/gif (not in the allowed set)', () => {
-		expect(() => validatePhotoFile('image/gif', 1024)).toThrow()
+	it('rejects non-image MIME types detected from bytes', async () => {
+		mockDetectFromBuffer.mockResolvedValue({ mimeType: 'application/pdf' })
+		await expect(validatePhotoFile(smallBuf)).rejects.toThrow()
 	})
 
-	it('rejects files over 5 MB', () => {
-		const sixMb = 6 * 1024 * 1024
-		expect(() => validatePhotoFile('image/jpeg', sixMb)).toThrow()
+	it('rejects image/gif (not in the allowed set)', async () => {
+		mockDetectFromBuffer.mockResolvedValue({ mimeType: 'image/gif' })
+		await expect(validatePhotoFile(smallBuf)).rejects.toThrow()
 	})
 
-	it('accepts files exactly at 5 MB', () => {
-		expect(() => validatePhotoFile('image/jpeg', 5 * 1024 * 1024)).not.toThrow()
+	it('rejects files over 5 MB', async () => {
+		mockDetectFromBuffer.mockResolvedValue({ mimeType: 'image/jpeg' })
+		await expect(validatePhotoFile(sixMb)).rejects.toThrow()
+	})
+
+	it('accepts files exactly at 5 MB', async () => {
+		mockDetectFromBuffer.mockResolvedValue({ mimeType: 'image/jpeg' })
+		await expect(validatePhotoFile(fiveMb)).resolves.toBe('image/jpeg')
 	})
 })
 
