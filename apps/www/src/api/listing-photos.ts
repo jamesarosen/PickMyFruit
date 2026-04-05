@@ -86,7 +86,8 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 			fileExt,
 			storage,
 		})
-		const pathKey = `listing_photos/${id}${fileExt}`
+		const rawPathKey = `listing_photos/${id}${fileExt}`
+		const pubPathKey = `listing_photos/${id}.jpg`
 
 		let photo
 		try {
@@ -102,11 +103,11 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 			const { Sentry } = await import('@/lib/sentry')
 			await Promise.all([
 				storage
-					.delete('raw', pathKey)
-					.catch((e) => Sentry.captureException(e, { extra: { pathKey } })),
+					.delete('raw', rawPathKey)
+					.catch((e) => Sentry.captureException(e, { extra: { rawPathKey } })),
 				storage
-					.delete('pub', pathKey)
-					.catch((e) => Sentry.captureException(e, { extra: { pathKey } })),
+					.delete('pub', pubPathKey)
+					.catch((e) => Sentry.captureException(e, { extra: { pubPathKey } })),
 			])
 			throw dbErr
 		}
@@ -117,11 +118,11 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 			const { Sentry } = await import('@/lib/sentry')
 			await Promise.all([
 				storage
-					.delete('raw', pathKey)
-					.catch((e) => Sentry.captureException(e, { extra: { pathKey } })),
+					.delete('raw', rawPathKey)
+					.catch((e) => Sentry.captureException(e, { extra: { rawPathKey } })),
 				storage
-					.delete('pub', pathKey)
-					.catch((e) => Sentry.captureException(e, { extra: { pathKey } })),
+					.delete('pub', pubPathKey)
+					.catch((e) => Sentry.captureException(e, { extra: { pubPathKey } })),
 			])
 			throw new UserError(
 				'TOO_MANY_PHOTOS',
@@ -131,7 +132,7 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 
 		return {
 			id: photo.id,
-			pubUrl: storage.publicUrl(`listing_photos/${photo.id}${photo.ext}`),
+			pubUrl: storage.publicUrl(`listing_photos/${photo.id}.jpg`),
 		}
 	})
 
@@ -160,18 +161,19 @@ export const deletePhoto = createServerFn({ method: 'POST' })
 			throw new UserError('NOT_FOUND', 'Photo not found')
 		}
 
-		// Attempt storage cleanup. On failure, capture the pathKey to Sentry so it can
+		// Attempt storage cleanup. On failure, capture the path to Sentry so it can
 		// be reconciled by an ops script — it is no longer reachable from the DB.
-		const pathKey = `listing_photos/${deleted.id}${deleted.ext}`
+		const rawPathKey = `listing_photos/${deleted.id}${deleted.ext}`
+		const pubPathKey = `listing_photos/${deleted.id}.jpg`
 		const { storage } = await import('@/lib/storage.server')
 		const { Sentry } = await import('@/lib/sentry')
 		await Promise.all([
 			storage
-				.delete('raw', pathKey)
-				.catch((e) => Sentry.captureException(e, { extra: { pathKey } })),
+				.delete('raw', rawPathKey)
+				.catch((e) => Sentry.captureException(e, { extra: { rawPathKey } })),
 			storage
-				.delete('pub', pathKey)
-				.catch((e) => Sentry.captureException(e, { extra: { pathKey } })),
+				.delete('pub', pubPathKey)
+				.catch((e) => Sentry.captureException(e, { extra: { pubPathKey } })),
 		])
 
 		return { success: true }

@@ -195,7 +195,7 @@ describe('getPhotosForListing', () => {
 		expect(result).toEqual([])
 	})
 
-	it('returns photos with full pubUrl derived from id + ext via storage.publicUrl', async () => {
+	it('pub URL is always .jpg regardless of raw ext', async () => {
 		const listingId = faker.number.int({ min: 1, max: 9999 })
 		const id1 = faker.string.uuid()
 		const id2 = faker.string.uuid()
@@ -211,7 +211,7 @@ describe('getPhotosForListing', () => {
 			`https://cdn.example.com/listing_photos/${id1}.jpg`
 		)
 		expect(result[1].pubUrl).toBe(
-			`https://cdn.example.com/listing_photos/${id2}.png`
+			`https://cdn.example.com/listing_photos/${id2}.jpg`
 		)
 	})
 

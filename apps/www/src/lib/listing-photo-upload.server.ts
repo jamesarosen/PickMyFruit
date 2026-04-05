@@ -67,28 +67,30 @@ export async function uploadListingPhoto(opts: {
 	storage: StorageAdapter
 }): Promise<{ id: string }> {
 	const id = uuidv7()
-	const pathKey = `listing_photos/${id}${opts.fileExt}`
+	const rawPathKey = `listing_photos/${id}${opts.fileExt}`
+	const pubPathKey = `listing_photos/${id}.jpg`
 
 	// Store original with full EXIF intact — private, server-side only
-	await opts.storage.upload('raw', pathKey, opts.rawBuffer, {
+	await opts.storage.upload('raw', rawPathKey, opts.rawBuffer, {
 		mimeType: opts.mimeType,
 	})
 
-	// Strip EXIF before serving publicly — sharp is a Node-only native dep.
-	// sharp strips all metadata by default; withMetadata() is needed only to ADD it back.
+	// Strip EXIF and convert to JPEG before serving publicly.
+	// sharp strips all metadata by default; .jpeg() ensures uniform JPEG output
+	// regardless of input format (PNG, WebP, etc.).
 	const sharp = (await import('sharp')).default
 	let cleanBuffer: Buffer
 	try {
-		cleanBuffer = await sharp(opts.rawBuffer).toBuffer()
+		cleanBuffer = await sharp(opts.rawBuffer).jpeg().toBuffer()
 		// Public copy served from CDN
-		await opts.storage.upload('pub', pathKey, cleanBuffer, {
-			mimeType: opts.mimeType,
+		await opts.storage.upload('pub', pubPathKey, cleanBuffer, {
+			mimeType: 'image/jpeg',
 		})
 	} catch (err) {
 		// Clean up the raw/ object so it doesn't linger without a DB record.
 		// Best-effort: if deletion also fails, the error is swallowed — the
 		// original error is what the caller needs to handle.
-		await opts.storage.delete('raw', pathKey).catch(() => undefined)
+		await opts.storage.delete('raw', rawPathKey).catch(() => undefined)
 		throw err
 	}
 

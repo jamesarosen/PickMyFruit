@@ -22,14 +22,15 @@ vi.mock('mime-bytes', () => ({
 
 // ============================================================================
 // Mock sharp — avoids native binary in unit tests.
-// Sharp strips metadata by default; no call to withMetadata() is needed.
+// Production calls .jpeg().toBuffer() — mock both methods in the chain.
 // ============================================================================
 
 const mockToBuffer = vi.fn()
+const mockJpeg = vi.fn()
 
 vi.mock('sharp', () => ({
 	default: vi.fn(() => ({
-		toBuffer: mockToBuffer,
+		jpeg: mockJpeg,
 	})),
 }))
 
@@ -107,27 +108,28 @@ describe('validatePhotoFile', () => {
 describe('uploadListingPhoto', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
+		mockJpeg.mockReturnValue({ toBuffer: mockToBuffer })
 		mockToBuffer.mockResolvedValue(Buffer.from('clean-image'))
 	})
 
-	it('uploads the raw buffer to raw/ dir', async () => {
+	it('uploads the raw buffer to raw/ dir preserving input extension', async () => {
 		const storage = makeStorage()
 		const rawBuffer = Buffer.from('raw-img')
 
 		await uploadListingPhoto({
 			rawBuffer,
-			mimeType: 'image/jpeg',
-			fileExt: '.jpg',
+			mimeType: 'image/webp',
+			fileExt: '.webp',
 			storage,
 		})
 
 		const [rawCall] = (storage.upload as ReturnType<typeof vi.fn>).mock.calls
 		expect(rawCall[0]).toBe('raw')
-		expect(rawCall[1]).toMatch(/^listing_photos\/[\w-]+\.jpg$/)
+		expect(rawCall[1]).toMatch(/^listing_photos\/[\w-]+\.webp$/)
 		expect(rawCall[2]).toBe(rawBuffer)
 	})
 
-	it('strips EXIF and uploads the clean buffer to pub/ dir', async () => {
+	it('converts to JPEG and uploads the clean buffer to pub/ dir', async () => {
 		const storage = makeStorage()
 		const cleanBuffer = Buffer.from('clean-image')
 		mockToBuffer.mockResolvedValue(cleanBuffer)
@@ -139,7 +141,8 @@ describe('uploadListingPhoto', () => {
 			storage,
 		})
 
-		// sharp.toBuffer() was called — metadata stripped is the default sharp behavior
+		// sharp().jpeg().toBuffer() was called — JPEG conversion + metadata strip
+		expect(mockJpeg).toHaveBeenCalled()
 		expect(mockToBuffer).toHaveBeenCalled()
 
 		const calls = (storage.upload as ReturnType<typeof vi.fn>).mock.calls
@@ -148,7 +151,7 @@ describe('uploadListingPhoto', () => {
 		expect(pubCall![2]).toBe(cleanBuffer)
 	})
 
-	it('uses the same path key for raw and pub uploads', async () => {
+	it('pub path is always .jpg regardless of input extension', async () => {
 		const storage = makeStorage()
 
 		await uploadListingPhoto({
@@ -161,7 +164,9 @@ describe('uploadListingPhoto', () => {
 		const calls = (storage.upload as ReturnType<typeof vi.fn>).mock.calls
 		const rawPath = calls.find((c: unknown[]) => c[0] === 'raw')?.[1]
 		const pubPath = calls.find((c: unknown[]) => c[0] === 'pub')?.[1]
-		expect(rawPath).toBe(pubPath)
+		// Raw preserves input extension; pub is always JPEG
+		expect(rawPath).toMatch(/\.webp$/)
+		expect(pubPath).toMatch(/\.jpg$/)
 	})
 
 	it('returns id matching a UUID v7 pattern', async () => {
