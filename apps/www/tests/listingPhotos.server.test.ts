@@ -27,6 +27,8 @@ const mockUpdate = vi.fn()
 const mockUpdateSet = vi.fn()
 const mockUpdateWhere = vi.fn()
 
+const mockTransaction = vi.fn()
+
 vi.mock('../src/data/db.server', () => ({
 	db: {
 		insert: (...args: unknown[]) => {
@@ -44,6 +46,7 @@ vi.mock('../src/data/db.server', () => ({
 			mockUpdate(...args)
 			return { set: mockUpdateSet }
 		},
+		transaction: (...args: unknown[]) => mockTransaction(...args),
 	},
 }))
 
@@ -104,10 +107,30 @@ function makeListingRow(id: number, overrides: Record<string, unknown> = {}) {
 describe('addPhotoToListing', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
-		mockInsertValues.mockReturnValue({ returning: mockInsertReturning })
 	})
 
-	it('returns the inserted row', async () => {
+	/** Builds a mock transaction that resolves count then insert in sequence. */
+	function mockTx(count: number, insertRows: unknown[]) {
+		mockTransaction.mockImplementation(
+			async (callback: (tx: unknown) => Promise<unknown>) => {
+				const tx = {
+					select: () => ({
+						from: () => ({
+							where: () => Promise.resolve([{ count }]),
+						}),
+					}),
+					insert: () => ({
+						values: () => ({
+							returning: () => Promise.resolve(insertRows),
+						}),
+					}),
+				}
+				return callback(tx)
+			}
+		)
+	}
+
+	it('returns the inserted row when under the limit', async () => {
 		const listingId = faker.number.int({ min: 1, max: 9999 })
 		const rawKey = `raw/listings/${listingId}/abc.jpg`
 		const pubUrl = `pub/listings/${listingId}/abc.jpg`
@@ -120,44 +143,25 @@ describe('addPhotoToListing', () => {
 			createdAt: new Date(),
 			deletedAt: null,
 		}
-		mockInsertReturning.mockResolvedValue([inserted])
+		mockTx(0, [inserted])
 
-		const result = await addPhotoToListing(listingId, rawKey, pubUrl, 0)
+		const result = await addPhotoToListing(listingId, rawKey, pubUrl, 3)
 
 		expect(result).toEqual(inserted)
 	})
 
-	it('passes all four arguments to the insert', async () => {
-		const listingId = faker.number.int({ min: 1, max: 9999 })
-		const rawKey = `raw/listings/${listingId}/img.jpg`
-		const pubUrl = `pub/listings/${listingId}/img.jpg`
-		const order = 2
-		mockInsertReturning.mockResolvedValue([
-			{
-				id: 1,
-				listingId,
-				rawKey,
-				pubUrl,
-				order,
-				createdAt: new Date(),
-				deletedAt: null,
-			},
-		])
+	it('returns null when the listing is already at the limit', async () => {
+		mockTx(3, [])
 
-		await addPhotoToListing(listingId, rawKey, pubUrl, order)
+		const result = await addPhotoToListing(1, 'raw/x', 'pub/x', 3)
 
-		expect(mockInsertValues).toHaveBeenCalledWith({
-			listingId,
-			rawKey,
-			pubUrl,
-			order,
-		})
+		expect(result).toBeNull()
 	})
 
 	it('throws DataInvariantError when the insert returns no row', async () => {
-		mockInsertReturning.mockResolvedValue([])
+		mockTx(0, [])
 
-		await expect(addPhotoToListing(1, 'raw/x', 'pub/x', 0)).rejects.toThrow(
+		await expect(addPhotoToListing(1, 'raw/x', 'pub/x', 3)).rejects.toThrow(
 			DataInvariantError
 		)
 	})

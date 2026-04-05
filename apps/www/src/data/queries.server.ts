@@ -231,27 +231,56 @@ export async function deleteListingById(
 // Photo Functions
 // ============================================================================
 
-/** Inserts a photo record for a listing. Returns the inserted row. */
+/**
+ * Inserts a photo record for a listing inside a transaction that atomically
+ * checks the photo count and assigns `order` via MAX()+1.
+ *
+ * Returns `null` when the listing already has `maxPhotos` photos — the caller
+ * is responsible for translating that into a user-facing error.
+ */
 export async function addPhotoToListing(
 	listingId: number,
 	rawKey: string,
 	pubUrl: string,
-	order: number
-): Promise<ListingPhoto> {
+	maxPhotos: number
+): Promise<ListingPhoto | null> {
 	return Sentry.startSpan(
 		{
 			name: 'addPhotoToListing',
 			op: 'db.query',
-			attributes: { listingId, order },
+			attributes: { listingId },
 		},
 		async () => {
-			const result = await db
-				.insert(listingPhotos)
-				.values({ listingId, rawKey, pubUrl, order })
-				.returning()
-			if (!result[0])
-				throw new DataInvariantError('addPhotoToListing: insert returned no row')
-			return result[0]
+			return db.transaction(async (tx) => {
+				const [{ count }] = await tx
+					.select({ count: sql<number>`COUNT(*)` })
+					.from(listingPhotos)
+					.where(
+						and(
+							eq(listingPhotos.listingId, listingId),
+							isNull(listingPhotos.deletedAt)
+						)
+					)
+				if (Number(count) >= maxPhotos) return null
+
+				const result = await tx
+					.insert(listingPhotos)
+					.values({
+						listingId,
+						rawKey,
+						pubUrl,
+						// Compute order atomically so concurrent inserts don't collide.
+						order: sql`COALESCE(
+							(SELECT MAX("order") FROM listing_photos
+							 WHERE listing_id = ${listingId} AND deleted_at IS NULL),
+							-1
+						) + 1`,
+					})
+					.returning()
+				if (!result[0])
+					throw new DataInvariantError('addPhotoToListing: insert returned no row')
+				return result[0]
+			})
 		}
 	)
 }

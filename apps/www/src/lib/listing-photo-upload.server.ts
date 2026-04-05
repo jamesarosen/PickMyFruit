@@ -53,7 +53,6 @@ export function mimeToExt(mimeType: AllowedMimeType): string {
  * - `rawKey` — private storage path; must be persisted to DB for future deletion.
  * - `pubUrl` — public CDN URL of the EXIF-stripped copy; safe to return to clients.
  *
- * Throws a UserError if the listing already has the maximum number of photos.
  * Cleans up the raw/ object if the pub/ upload fails, to avoid orphaning a
  * private file that contains full EXIF.
  */
@@ -62,16 +61,8 @@ export async function uploadListingPhoto(opts: {
 	rawBuffer: Buffer
 	mimeType: AllowedMimeType
 	fileExt: string
-	currentPhotoCount: number
 	storage: StorageAdapter
 }): Promise<{ rawKey: string; pubUrl: string }> {
-	if (opts.currentPhotoCount >= MAX_PHOTOS_PER_LISTING) {
-		throw new UserError(
-			'TOO_MANY_PHOTOS',
-			`A listing can have at most ${MAX_PHOTOS_PER_LISTING} photos`
-		)
-	}
-
 	const pathKey = `listings/${opts.listingId}/${randomUUID()}${opts.fileExt}`
 
 	// Store original with full EXIF intact — private, server-side only

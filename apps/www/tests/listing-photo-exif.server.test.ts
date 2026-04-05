@@ -41,7 +41,6 @@ describe('EXIF stripping (real sharp)', () => {
 			rawBuffer,
 			mimeType: 'image/jpeg',
 			fileExt: '.jpg',
-			currentPhotoCount: 0,
 			storage,
 		})
 

@@ -86,20 +86,6 @@ describe('uploadListingPhoto', () => {
 		mockToBuffer.mockResolvedValue(Buffer.from('clean-image'))
 	})
 
-	it('throws when photo count is already at the limit', async () => {
-		const storage = makeStorage()
-		await expect(
-			uploadListingPhoto({
-				listingId: 1,
-				rawBuffer: Buffer.from('img'),
-				mimeType: 'image/jpeg',
-				fileExt: '.jpg',
-				currentPhotoCount: 3,
-				storage,
-			})
-		).rejects.toThrow()
-	})
-
 	it('uploads the raw buffer to raw/ dir', async () => {
 		const storage = makeStorage()
 		const rawBuffer = Buffer.from('raw-img')
@@ -109,7 +95,6 @@ describe('uploadListingPhoto', () => {
 			rawBuffer,
 			mimeType: 'image/jpeg',
 			fileExt: '.jpg',
-			currentPhotoCount: 0,
 			storage,
 		})
 
@@ -129,7 +114,6 @@ describe('uploadListingPhoto', () => {
 			rawBuffer: Buffer.from('raw-img'),
 			mimeType: 'image/png',
 			fileExt: '.png',
-			currentPhotoCount: 1,
 			storage,
 		})
 
@@ -150,7 +134,6 @@ describe('uploadListingPhoto', () => {
 			rawBuffer: Buffer.from('img'),
 			mimeType: 'image/webp',
 			fileExt: '.webp',
-			currentPhotoCount: 2,
 			storage,
 		})
 
@@ -169,7 +152,6 @@ describe('uploadListingPhoto', () => {
 			rawBuffer: Buffer.from('img'),
 			mimeType: 'image/jpeg',
 			fileExt: '.jpg',
-			currentPhotoCount: 0,
 			storage,
 		})
 

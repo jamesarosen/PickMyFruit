@@ -46,6 +46,7 @@ export const uploadPhoto = createServerFn({ method: 'POST' })
 		// may not be statically imported per the no-server-static-import lint rule).
 		const {
 			MAX_FILE_SIZE_BYTES,
+			MAX_PHOTOS_PER_LISTING,
 			validatePhotoFile,
 			uploadListingPhoto,
 			mimeToExt,
@@ -65,9 +66,7 @@ export const uploadPhoto = createServerFn({ method: 'POST' })
 		// validatePhotoFile returns the narrowed AllowedMimeType, eliminating any cast
 		const mimeType = validatePhotoFile(file.type, rawBuffer.byteLength)
 
-		const { getPhotosForListing, addPhotoToListing } =
-			await import('@/data/queries.server')
-		const existingPhotos = await getPhotosForListing(listingId)
+		const { addPhotoToListing } = await import('@/data/queries.server')
 
 		const { storage } = await import('@/lib/storage.server')
 		const { rawKey, pubUrl } = await uploadListingPhoto({
@@ -75,14 +74,17 @@ export const uploadPhoto = createServerFn({ method: 'POST' })
 			rawBuffer,
 			mimeType,
 			fileExt: mimeToExt(mimeType),
-			currentPhotoCount: existingPhotos.length,
 			storage,
 		})
 
-		const order = existingPhotos.length
 		let photo
 		try {
-			photo = await addPhotoToListing(listingId, rawKey, pubUrl, order)
+			photo = await addPhotoToListing(
+				listingId,
+				rawKey,
+				pubUrl,
+				MAX_PHOTOS_PER_LISTING
+			)
 		} catch (dbErr) {
 			// The storage objects are now orphaned. Best-effort cleanup — if deletion
 			// fails, Sentry will capture it so an ops script can reconcile.
@@ -96,6 +98,24 @@ export const uploadPhoto = createServerFn({ method: 'POST' })
 					.catch((e) => Sentry.captureException(e, { extra: { rawKey } })),
 			])
 			throw dbErr
+		}
+
+		if (!photo) {
+			// addPhotoToListing returns null when the listing is already at the limit.
+			// Clean up the storage objects we just uploaded.
+			const { Sentry } = await import('@/lib/sentry')
+			await Promise.all([
+				storage
+					.delete('raw', rawKey)
+					.catch((e) => Sentry.captureException(e, { extra: { rawKey } })),
+				storage
+					.delete('pub', rawKey)
+					.catch((e) => Sentry.captureException(e, { extra: { rawKey } })),
+			])
+			throw new UserError(
+				'TOO_MANY_PHOTOS',
+				`A listing can have at most ${MAX_PHOTOS_PER_LISTING} photos`
+			)
 		}
 
 		return { id: photo.id, pubUrl: photo.pubUrl }

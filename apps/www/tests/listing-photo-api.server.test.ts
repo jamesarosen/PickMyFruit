@@ -24,12 +24,10 @@ vi.mock('../src/lib/auth.server', () => ({
 // Mock queries — avoid real DB
 // ============================================================================
 
-const mockGetPhotosForListing = vi.fn()
 const mockAddPhotoToListing = vi.fn()
 const mockDeleteListingPhoto = vi.fn()
 
 vi.mock('../src/data/queries.server', () => ({
-	getPhotosForListing: (...args: unknown[]) => mockGetPhotosForListing(...args),
 	addPhotoToListing: (...args: unknown[]) => mockAddPhotoToListing(...args),
 	deleteListingPhoto: (...args: unknown[]) => mockDeleteListingPhoto(...args),
 }))
