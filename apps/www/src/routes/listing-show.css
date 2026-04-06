@@ -185,7 +185,13 @@
 			block-size: 1px;
 			overflow: hidden;
 			clip: rect(0 0 0 0);
+			clip-path: inset(50%);
 			white-space: nowrap;
+		}
+
+		& .listing-photo-ghost--disabled {
+			cursor: not-allowed;
+			pointer-events: none;
 		}
 
 		@keyframes listing-photo-spin {

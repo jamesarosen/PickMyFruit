@@ -98,6 +98,9 @@ export default function ListingPhotosSection(props: {
 
 	return (
 		<section class="listing-photos-section" aria-label="Listing photos">
+			<div aria-live="polite" aria-atomic="true" class="sr-only">
+				<Show when={uploading()}>Uploading photo…</Show>
+			</div>
 			<Show
 				when={visiblePhotos().length > 0 || (props.isOwner && !hasReachedLimit())}
 			>
@@ -129,13 +132,23 @@ export default function ListingPhotosSection(props: {
 					<Show when={props.isOwner && !hasReachedLimit()}>
 						<label
 							class="listing-photo-ghost"
-							classList={{ 'listing-photo-ghost--uploading': uploading() }}
+							classList={{
+								'listing-photo-ghost--uploading': uploading(),
+								'listing-photo-ghost--disabled': controlsDisabled(),
+							}}
 							for={inputId}
-							aria-label="Add photo"
+							aria-disabled={controlsDisabled() ? 'true' : undefined}
 						>
 							<div class="listing-photo-ghost-content">
-								<Show when={uploading()} fallback={<ImagePlus size={40} />}>
-									<Loader size={40} class="listing-photo-ghost-spinner" />
+								<Show
+									when={uploading()}
+									fallback={<ImagePlus size={40} aria-hidden="true" />}
+								>
+									<Loader
+										size={40}
+										class="listing-photo-ghost-spinner"
+										aria-hidden="true"
+									/>
 								</Show>
 								<span class="listing-photo-upload-label">Add photo</span>
 							</div>
