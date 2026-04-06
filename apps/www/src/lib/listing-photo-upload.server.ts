@@ -54,10 +54,7 @@ export function mimeToExt(mimeType: AllowedMimeType): ALLOWED_EXT {
 
 /**
  * Uploads a photo to both raw/ (private, full EXIF) and pub/ (public, EXIF-stripped)
- * storage, and returns the shared path key.
- *
- * - `rawKey` — storage path used for both the raw and pub objects; persist to DB.
- *   The public URL is derived at read time via `storage.publicUrl(rawKey)`.
+ * storage, and returns the ID to be used in paths.
  *
  * Cleans up the raw/ object if the pub/ upload fails, to avoid orphaning a
  * private file that contains full EXIF.
