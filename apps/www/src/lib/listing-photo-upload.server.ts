@@ -13,11 +13,13 @@ export type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number]
 export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 export const MAX_PHOTOS_PER_LISTING = 3
 
-const MIME_TO_EXT: Record<AllowedMimeType, string> = {
+const MIME_TO_EXT = {
 	'image/jpeg': '.jpg',
 	'image/png': '.png',
 	'image/webp': '.webp',
-}
+} as const
+
+export type ALLOWED_EXT = (typeof MIME_TO_EXT)[keyof typeof MIME_TO_EXT]
 
 /**
  * Validates that a buffer is an allowed image type and within the size limit.
@@ -46,7 +48,7 @@ export async function validatePhotoFile(
 }
 
 /** Returns the file extension for an allowed MIME type. */
-export function mimeToExt(mimeType: AllowedMimeType): string {
+export function mimeToExt(mimeType: AllowedMimeType): ALLOWED_EXT {
 	return MIME_TO_EXT[mimeType]
 }
 

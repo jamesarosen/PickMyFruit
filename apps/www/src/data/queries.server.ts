@@ -20,6 +20,7 @@ import {
 	type PublicListing,
 	type PublicPhoto,
 } from './public-listing'
+import { ALLOWED_EXT } from '@/lib/listing-photo-upload.server'
 export { type PublicListing } from './public-listing'
 
 export type { AddressFields } from './schema'
@@ -246,7 +247,7 @@ export async function deleteListingById(
 export async function addPhotoToListing(
 	listingId: number,
 	id: string,
-	ext: string,
+	ext: ALLOWED_EXT,
 	maxPhotos: number
 ): Promise<ListingPhoto | null> {
 	return Sentry.startSpan(
