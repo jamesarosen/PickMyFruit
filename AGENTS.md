@@ -92,6 +92,7 @@ We use a monorepo structure
 - `db:push` for local dev — diffs `schema.ts` against the live DB
 - `db:migrate` for E2E tests and production — runs migration files tracked by a journal
 - Do not mix: a DB created with `push` can't switch to `migrate` (and vice versa)
+- When writing a migration by hand, set `when` in `drizzle/meta/_journal.json` to `Date.now()` at the time of writing (milliseconds since epoch). Values must be strictly increasing; entries with a `when` below the current `MAX(created_at)` in `__drizzle_migrations` are silently skipped by the migrator.
 - Use Solid JS for reactive UI components
 - Routes are defined using TanStack Router's file-based routing
 - Route loaders that fetch data must use `createServerFn` (not `createIsomorphicFn` with `.client(() => undefined)`) so client-side navigation triggers an RPC call
