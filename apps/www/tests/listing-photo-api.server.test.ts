@@ -55,7 +55,9 @@ vi.mock('../src/lib/storage.server', () => ({
 
 vi.mock('sharp', () => ({
 	default: vi.fn(() => ({
-		toBuffer: vi.fn().mockResolvedValue(Buffer.from('clean')),
+		jpeg: vi.fn().mockResolvedValue({
+			toBuffer: vi.fn().mockResolvedValue(Buffer.from('clean')),
+		}),
 	})),
 }))
 
