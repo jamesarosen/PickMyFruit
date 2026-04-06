@@ -6,6 +6,7 @@ import PageHeader from '@/components/PageHeader'
 import Banner from '@/components/Banner'
 import InquiryForm from '@/components/InquiryForm'
 import ListingMap from '@/components/ListingMap'
+import ListingPhotosSection from '@/components/ListingPhotosSection'
 import {
 	getStatusClass,
 	VISIBILITY_OPTIONS,
@@ -16,6 +17,7 @@ import { Sentry } from '@/lib/sentry'
 import { getListingForViewer } from '@/api/listings'
 import type { Listing } from '@/data/schema'
 import type { PublicListing } from '@/data/queries.server'
+import type { OwnerListingView, PublicPhoto } from '@/data/public-listing'
 import '@/routes/listing-show.css'
 import { createErrorSignal, ErrorMessage } from '@/components/ErrorMessage'
 
@@ -31,6 +33,15 @@ export const Route = createFileRoute('/listings/$id')({
 })
 
 const STATUS_DEBOUNCE_MS = 300
+
+function photosForViewerRow(
+	row: Listing | PublicListing | OwnerListingView
+): PublicPhoto[] {
+	if ('photos' in row) {
+		return row.photos
+	}
+	return []
+}
 
 function OwnerControls(props: {
 	listingId: number
@@ -133,7 +144,8 @@ function ListingDetailPage() {
 	const params = Route.useParams()
 	const search = Route.useSearch()
 
-	const listing = () => data() as Listing | PublicListing | undefined
+	const listing = () =>
+		data() as Listing | PublicListing | OwnerListingView | undefined
 	const isOwner = () => context().session?.user?.id === listing()?.userId
 	const justCreated = () => search().created === true
 	const justMarkedUnavailable = () => search().marked === 'unavailable'
@@ -229,6 +241,12 @@ function ListingDetailPage() {
 									</div>
 								</Show>
 							</div>
+
+							<ListingPhotosSection
+								isOwner={isOwner()}
+								listingId={l().id}
+								photos={photosForViewerRow(l())}
+							/>
 
 							<div class="listing-map-section">
 								<Show

@@ -10,7 +10,7 @@ const CSP_DIRECTIVES = [
 	// replaced with 'sha256-VQTei97aMH9YclKPQM3e8rL/RXSmj3lPwKVXZgaN2QA=' to whitelist
 	// only the static @layer ordering <style> block in RootShell.
 	"style-src 'self' 'unsafe-inline'",
-	"img-src 'self' data: blob:",
+	["img-src 'self' data: blob:", 'https://*.fly.storage.tigris.dev'].join(' '),
 	"font-src 'self'",
 	[
 		"connect-src 'self'",

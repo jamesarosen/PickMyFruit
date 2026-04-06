@@ -172,6 +172,15 @@
 			cursor: pointer;
 		}
 
+		& .listing-card-thumb {
+			width: 100%;
+			max-height: 160px;
+			object-fit: cover;
+			border-radius: 8px;
+			margin-bottom: 16px;
+			display: block;
+		}
+
 		& .listing-card:hover {
 			transform: translateY(-2px);
 			box-shadow: 0 4px 12px oklch(from var(--color-quiet) l c h / 0.15);

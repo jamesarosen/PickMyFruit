@@ -23,4 +23,12 @@ describe('applySecurityHeaders', () => {
 
 		expect(directives.get('frame-ancestors')).toEqual(["'none'"])
 	})
+
+	it('allows listing images from the Tigris CDN', () => {
+		const headers = new Headers()
+		applySecurityHeaders(headers)
+
+		const csp = headers.get('Content-Security-Policy')!
+		expect(csp).toContain('https://*.fly.storage.tigris.dev')
+	})
 })

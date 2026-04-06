@@ -23,6 +23,12 @@ export type PublicListing = Omit<
 	photos: PublicPhoto[]
 }
 
+/** Full listing row plus public photo fields — returned to the listing owner only. */
+export type OwnerListingView = Listing & {
+	coverPhotoUrl: string | null
+	photos: PublicPhoto[]
+}
+
 /**
  * Strips sensitive location fields and coarsens h3Index to neighborhood precision.
  * Returns null if the h3Index is invalid so callers can skip bad rows.

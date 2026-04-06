@@ -128,6 +128,19 @@ function HomePage() {
 												params={{ id: String(listing.id) }}
 												class="listing-card surface-subtle"
 											>
+												<Show when={listing.coverPhotoUrl}>
+													{(coverUrl) => (
+														<img
+															alt=""
+															class="listing-card-thumb"
+															decoding="async"
+															height={96}
+															loading="lazy"
+															src={coverUrl()}
+															width={96}
+														/>
+													)}
+												</Show>
 												<h3>{listing.name}</h3>
 												<p class="listing-variety">
 													{listing.type} - {listing.variety}

@@ -92,6 +92,59 @@
 			line-height: 1.5;
 		}
 
+		& .listing-photos-section {
+			margin-top: 24px;
+		}
+
+		& .listing-photo {
+			width: 100%;
+			max-height: 420px;
+			object-fit: contain;
+			border-radius: 12px;
+			display: block;
+			background: oklch(from var(--color-quiet) l calc(c * 0.08) h);
+		}
+
+		& .listing-photo-upload {
+			margin-top: 16px;
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 12px;
+		}
+
+		& .listing-photo-upload-label {
+			font-size: 14px;
+			font-weight: 500;
+			color: var(--color-foreground);
+		}
+
+		& .listing-photo-upload input[type='file'] {
+			font-size: 14px;
+			max-width: 100%;
+		}
+
+		& .listing-photo-upload button {
+			padding: 8px 16px;
+			font-size: 14px;
+			font-weight: 600;
+			color: var(--color-background);
+			background: var(--color-primary);
+			border: none;
+			border-radius: 8px;
+			cursor: pointer;
+		}
+
+		& .listing-photo-upload button:disabled {
+			opacity: 0.6;
+			cursor: not-allowed;
+		}
+
+		& .listing-photo-upload-error {
+			flex-basis: 100%;
+			margin: 0;
+		}
+
 		& .listing-map-section {
 			margin-top: 24px;
 		}
