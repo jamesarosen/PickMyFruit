@@ -95,6 +95,7 @@
 		& .listing-photos-section {
 			--listing-photo-gap: 12px;
 			margin-top: 24px;
+			container-type: inline-size;
 		}
 
 		& .listing-photo-grid {
@@ -110,6 +111,18 @@
 			margin: 0;
 			inline-size: calc((100% - (2 * var(--listing-photo-gap))) / 3);
 			flex: 0 0 calc((100% - (2 * var(--listing-photo-gap))) / 3);
+		}
+
+		@container (max-width: 590px) {
+			& .listing-photo-grid {
+				flex-direction: column;
+			}
+
+			& .listing-photo-frame,
+			& .listing-photo-ghost {
+				inline-size: 100%;
+				flex-basis: 100%;
+			}
 		}
 
 		& .listing-photo {
