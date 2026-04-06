@@ -27,6 +27,7 @@ import { Route as ApiListingsIdRouteImport } from './routes/api/listings.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiListingsIdUnavailableRouteImport } from './routes/api/listings.$id.unavailable'
 import { Route as ApiListingsIdPhotosRouteImport } from './routes/api/listings.$id.photos'
+import { Route as ApiListingsIdPhotosPhotoIdRouteImport } from './routes/api/listings.$id.photos.$photoId'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -119,6 +120,12 @@ const ApiListingsIdPhotosRoute = ApiListingsIdPhotosRouteImport.update({
   path: '/photos',
   getParentRoute: () => ApiListingsIdRoute,
 } as any)
+const ApiListingsIdPhotosPhotoIdRoute =
+  ApiListingsIdPhotosPhotoIdRouteImport.update({
+    id: '/$photoId',
+    path: '/$photoId',
+    getParentRoute: () => ApiListingsIdPhotosRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -137,8 +144,9 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/listings/$id': typeof ApiListingsIdRouteWithChildren
   '/api/uploads/$': typeof ApiUploadsSplatRoute
-  '/api/listings/$id/photos': typeof ApiListingsIdPhotosRoute
+  '/api/listings/$id/photos': typeof ApiListingsIdPhotosRouteWithChildren
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
+  '/api/listings/$id/photos/$photoId': typeof ApiListingsIdPhotosPhotoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -157,8 +165,9 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/listings/$id': typeof ApiListingsIdRouteWithChildren
   '/api/uploads/$': typeof ApiUploadsSplatRoute
-  '/api/listings/$id/photos': typeof ApiListingsIdPhotosRoute
+  '/api/listings/$id/photos': typeof ApiListingsIdPhotosRouteWithChildren
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
+  '/api/listings/$id/photos/$photoId': typeof ApiListingsIdPhotosPhotoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -178,8 +187,9 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/listings/$id': typeof ApiListingsIdRouteWithChildren
   '/api/uploads/$': typeof ApiUploadsSplatRoute
-  '/api/listings/$id/photos': typeof ApiListingsIdPhotosRoute
+  '/api/listings/$id/photos': typeof ApiListingsIdPhotosRouteWithChildren
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
+  '/api/listings/$id/photos/$photoId': typeof ApiListingsIdPhotosPhotoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/api/uploads/$'
     | '/api/listings/$id/photos'
     | '/api/listings/$id/unavailable'
+    | '/api/listings/$id/photos/$photoId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/api/uploads/$'
     | '/api/listings/$id/photos'
     | '/api/listings/$id/unavailable'
+    | '/api/listings/$id/photos/$photoId'
   id:
     | '__root__'
     | '/'
@@ -242,6 +254,7 @@ export interface FileRouteTypes {
     | '/api/uploads/$'
     | '/api/listings/$id/photos'
     | '/api/listings/$id/unavailable'
+    | '/api/listings/$id/photos/$photoId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -390,16 +403,34 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ApiListingsIdPhotosRouteImport
       parentRoute: typeof ApiListingsIdRoute
     }
+    '/api/listings/$id/photos/$photoId': {
+      id: '/api/listings/$id/photos/$photoId'
+      path: '/$photoId'
+      fullPath: '/api/listings/$id/photos/$photoId'
+      preLoaderRoute: typeof ApiListingsIdPhotosPhotoIdRouteImport
+      parentRoute: typeof ApiListingsIdPhotosRoute
+    }
   }
 }
 
+interface ApiListingsIdPhotosRouteChildren {
+  ApiListingsIdPhotosPhotoIdRoute: typeof ApiListingsIdPhotosPhotoIdRoute
+}
+
+const ApiListingsIdPhotosRouteChildren: ApiListingsIdPhotosRouteChildren = {
+  ApiListingsIdPhotosPhotoIdRoute: ApiListingsIdPhotosPhotoIdRoute,
+}
+
+const ApiListingsIdPhotosRouteWithChildren =
+  ApiListingsIdPhotosRoute._addFileChildren(ApiListingsIdPhotosRouteChildren)
+
 interface ApiListingsIdRouteChildren {
-  ApiListingsIdPhotosRoute: typeof ApiListingsIdPhotosRoute
+  ApiListingsIdPhotosRoute: typeof ApiListingsIdPhotosRouteWithChildren
   ApiListingsIdUnavailableRoute: typeof ApiListingsIdUnavailableRoute
 }
 
 const ApiListingsIdRouteChildren: ApiListingsIdRouteChildren = {
-  ApiListingsIdPhotosRoute: ApiListingsIdPhotosRoute,
+  ApiListingsIdPhotosRoute: ApiListingsIdPhotosRouteWithChildren,
   ApiListingsIdUnavailableRoute: ApiListingsIdUnavailableRoute,
 }
 

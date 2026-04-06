@@ -96,21 +96,47 @@
 			margin-top: 24px;
 		}
 
+		& .listing-photo-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+			gap: 12px;
+		}
+
+		& .listing-photo-frame {
+			position: relative;
+			margin: 0;
+		}
+
 		& .listing-photo {
 			width: 100%;
-			max-height: 420px;
-			object-fit: contain;
+			aspect-ratio: 1 / 1;
+			object-fit: cover;
 			border-radius: 12px;
 			display: block;
 			background: oklch(from var(--color-quiet) l calc(c * 0.08) h);
 		}
 
+		& .listing-photo-remove {
+			position: absolute;
+			top: 8px;
+			right: 8px;
+			inline-size: 30px;
+			block-size: 30px;
+			border-radius: 999px;
+			border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.3) h);
+			background: oklch(from var(--color-background) l c h / 0.95);
+			color: var(--color-foreground);
+			font-weight: 700;
+			cursor: pointer;
+		}
+
 		& .listing-photo-upload {
+			--gap: 0.8rem;
 			margin-top: 16px;
 			display: flex;
 			flex-wrap: wrap;
 			align-items: center;
-			gap: 12px;
+			gap: var(--gap);
 		}
 
 		& .listing-photo-upload-label {
@@ -124,6 +150,10 @@
 			max-width: 100%;
 		}
 
+		& .listing-photo-upload input::file-selector-button {
+			margin-inline-end: var(--gap);
+		}
+
 		& .listing-photo-upload button {
 			padding: 8px 16px;
 			font-size: 14px;
@@ -133,6 +163,11 @@
 			border: none;
 			border-radius: 8px;
 			cursor: pointer;
+		}
+
+		& .listing-photo-upload > button {
+			margin-inline-start: auto;
+			margin-block-start: auto;
 		}
 
 		& .listing-photo-upload button:disabled {
