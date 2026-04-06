@@ -193,7 +193,6 @@ export const listingPhotos = sqliteTable(
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),
-		deletedAt: integer('deleted_at', { mode: 'timestamp' }), // soft delete
 	},
 	(table) => [
 		index('listing_photos_listing_id_idx').on(table.listingId),

@@ -55,9 +55,7 @@ async function fetchPhotosByListingIds(
 			order: listingPhotos.order,
 		})
 		.from(listingPhotos)
-		.where(
-			and(inArray(listingPhotos.listingId, ids), isNull(listingPhotos.deletedAt))
-		)
+		.where(inArray(listingPhotos.listingId, ids))
 		.orderBy(listingPhotos.order)
 
 	const map = new Map<number, PublicPhoto[]>()
@@ -261,12 +259,7 @@ export async function addPhotoToListing(
 				const [{ count }] = await tx
 					.select({ count: sql<number>`COUNT(*)` })
 					.from(listingPhotos)
-					.where(
-						and(
-							eq(listingPhotos.listingId, listingId),
-							isNull(listingPhotos.deletedAt)
-						)
-					)
+					.where(eq(listingPhotos.listingId, listingId))
 				if (Number(count) >= maxPhotos) return null
 
 				const result = await tx
@@ -278,7 +271,7 @@ export async function addPhotoToListing(
 						// Compute order atomically so concurrent inserts don't collide.
 						order: sql`COALESCE(
 							(SELECT MAX("order") FROM listing_photos
-							 WHERE listing_id = ${listingId} AND deleted_at IS NULL),
+							 WHERE listing_id = ${listingId}),
 							-1
 						) + 1`,
 					})
@@ -309,12 +302,7 @@ export async function getPhotosForListing(
 					order: listingPhotos.order,
 				})
 				.from(listingPhotos)
-				.where(
-					and(
-						eq(listingPhotos.listingId, listingId),
-						isNull(listingPhotos.deletedAt)
-					)
-				)
+				.where(eq(listingPhotos.listingId, listingId))
 				.orderBy(listingPhotos.order)
 			return rows.map((row) => ({
 				id: row.id,
