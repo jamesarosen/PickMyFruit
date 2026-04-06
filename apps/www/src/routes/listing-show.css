@@ -122,9 +122,12 @@
 		}
 
 		& .listing-photo-remove {
+			display: flex;
+			align-items: center;
+			justify-content: center;
 			position: absolute;
-			top: 8px;
-			right: 8px;
+			top: -4px;
+			right: -4px;
 			inline-size: 30px;
 			block-size: 30px;
 			border-radius: 999px;
@@ -185,7 +188,6 @@
 			block-size: 1px;
 			overflow: hidden;
 			clip: rect(0 0 0 0);
-			clip-path: inset(50%);
 			white-space: nowrap;
 		}
 

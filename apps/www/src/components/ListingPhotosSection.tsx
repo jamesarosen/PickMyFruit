@@ -1,6 +1,6 @@
 import { useRouter } from '@tanstack/solid-router'
 import { createSignal, For, Show } from 'solid-js'
-import { ImagePlus, Loader } from 'lucide-solid'
+import { ImagePlus, Loader, Trash } from 'lucide-solid'
 import { LISTING_PHOTO_ACCEPT } from '@/lib/listing-photos'
 import { Sentry } from '@/lib/sentry'
 import type { PublicPhoto } from '@/data/public-listing'
@@ -123,7 +123,9 @@ export default function ListingPhotosSection(props: {
 										onClick={() => void removePhoto(photo.id)}
 										type="button"
 									>
-										<span aria-hidden="true">X</span>
+										<span aria-hidden="true">
+											<Trash size={14} />
+										</span>
 									</button>
 								</Show>
 							</figure>
