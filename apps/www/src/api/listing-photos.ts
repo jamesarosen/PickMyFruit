@@ -140,7 +140,9 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
  * Deletes a listing photo and removes both storage objects.
  *
  * Uses POST (not DELETE) because TanStack Start server functions only support
- * GET and POST. Input: `{ photoId: number }`. Returns `{ success: true }`.
+ * GET and POST. Input: `{ photoId: string }`, a valid UUIDv7.
+ *
+ * @return `{ success: true }`.
  */
 export const deletePhoto = createServerFn({ method: 'POST' })
 	.middleware([errorMiddleware])
