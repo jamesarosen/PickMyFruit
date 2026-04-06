@@ -14,11 +14,13 @@ import {
 import { eq, desc, and, ne, isNull, gt, inArray, sql } from 'drizzle-orm'
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 import { Sentry } from '@/lib/sentry'
+import { storage } from '@/lib/storage.server'
 import {
 	toPublicListing,
 	type PublicListing,
 	type PublicPhoto,
 } from './public-listing'
+import { ALLOWED_EXT } from '@/lib/listing-photo-upload.server'
 export { type PublicListing } from './public-listing'
 
 export type { AddressFields } from './schema'
@@ -49,19 +51,21 @@ async function fetchPhotosByListingIds(
 		.select({
 			id: listingPhotos.id,
 			listingId: listingPhotos.listingId,
-			pubUrl: listingPhotos.pubUrl,
+			ext: listingPhotos.ext,
 			order: listingPhotos.order,
 		})
 		.from(listingPhotos)
-		.where(
-			and(inArray(listingPhotos.listingId, ids), isNull(listingPhotos.deletedAt))
-		)
+		.where(inArray(listingPhotos.listingId, ids))
 		.orderBy(listingPhotos.order)
 
 	const map = new Map<number, PublicPhoto[]>()
 	for (const row of rows) {
 		const existing = map.get(row.listingId) ?? []
-		existing.push({ id: row.id, pubUrl: row.pubUrl, order: row.order })
+		existing.push({
+			id: row.id,
+			pubUrl: storage.publicUrl(`listing_photos/${row.id}.jpg`),
+			order: row.order,
+		})
 		map.set(row.listingId, existing)
 	}
 	return map
@@ -231,27 +235,51 @@ export async function deleteListingById(
 // Photo Functions
 // ============================================================================
 
-/** Inserts a photo record for a listing. Returns the inserted row. */
+/**
+ * Inserts a photo record for a listing inside a transaction that atomically
+ * checks the photo count and assigns `order` via MAX()+1.
+ *
+ * Returns `null` when the listing already has `maxPhotos` photos — the caller
+ * is responsible for translating that into a user-facing error.
+ */
 export async function addPhotoToListing(
 	listingId: number,
-	rawKey: string,
-	pubUrl: string,
-	order: number
-): Promise<ListingPhoto> {
+	id: string,
+	ext: ALLOWED_EXT,
+	maxPhotos: number
+): Promise<ListingPhoto | null> {
 	return Sentry.startSpan(
 		{
 			name: 'addPhotoToListing',
 			op: 'db.query',
-			attributes: { listingId, order },
+			attributes: { listingId },
 		},
 		async () => {
-			const result = await db
-				.insert(listingPhotos)
-				.values({ listingId, rawKey, pubUrl, order })
-				.returning()
-			if (!result[0])
-				throw new DataInvariantError('addPhotoToListing: insert returned no row')
-			return result[0]
+			return db.transaction(async (tx) => {
+				const [{ count }] = await tx
+					.select({ count: sql<number>`COUNT(*)` })
+					.from(listingPhotos)
+					.where(eq(listingPhotos.listingId, listingId))
+				if (Number(count) >= maxPhotos) return null
+
+				const result = await tx
+					.insert(listingPhotos)
+					.values({
+						id,
+						listingId,
+						ext,
+						// Compute order atomically so concurrent inserts don't collide.
+						order: sql`COALESCE(
+							(SELECT MAX("order") FROM listing_photos
+							 WHERE listing_id = ${listingId}),
+							-1
+						) + 1`,
+					})
+					.returning()
+				if (!result[0])
+					throw new DataInvariantError('addPhotoToListing: insert returned no row')
+				return result[0]
+			})
 		}
 	)
 }
@@ -267,40 +295,39 @@ export async function getPhotosForListing(
 			attributes: { listingId },
 		},
 		async () => {
-			return db
+			const rows = await db
 				.select({
 					id: listingPhotos.id,
-					pubUrl: listingPhotos.pubUrl,
+					ext: listingPhotos.ext,
 					order: listingPhotos.order,
 				})
 				.from(listingPhotos)
-				.where(
-					and(
-						eq(listingPhotos.listingId, listingId),
-						isNull(listingPhotos.deletedAt)
-					)
-				)
+				.where(eq(listingPhotos.listingId, listingId))
 				.orderBy(listingPhotos.order)
+			return rows.map((row) => ({
+				id: row.id,
+				pubUrl: storage.publicUrl(`listing_photos/${row.id}.jpg`),
+				order: row.order,
+			}))
 		}
 	)
 }
 
 /**
- * Hard-deletes a photo record and returns its storage keys so the caller
- * can remove the corresponding objects from storage.
+ * Hard-deletes a photo record and returns its rawKey so the caller can remove
+ * both storage objects (raw/ and pub/ share the same key).
  *
- * We use a hard delete (not soft) because the storage objects referenced
- * by rawKey and pubUrl must be cleaned up immediately. A soft delete would
- * leave orphaned objects in storage indefinitely.
+ * We use a hard delete (not soft) because the storage objects must be cleaned
+ * up immediately. A soft delete would leave orphaned objects indefinitely.
  *
  * Ownership is enforced in the WHERE clause: the photo is only deleted if
  * its listing is owned by the given user. Returns undefined if the photo
  * does not exist or the user does not own the listing.
  */
 export async function deleteListingPhoto(
-	photoId: number,
+	photoId: string,
 	userId: string
-): Promise<{ rawKey: string; pubUrl: string } | undefined> {
+): Promise<{ id: string; ext: string } | undefined> {
 	return Sentry.startSpan(
 		{
 			name: 'deleteListingPhoto',
@@ -317,10 +344,7 @@ export async function deleteListingPhoto(
 						sql`listing_id IN (SELECT id FROM listings WHERE user_id = ${userId} AND deleted_at IS NULL)`
 					)
 				)
-				.returning({
-					rawKey: listingPhotos.rawKey,
-					pubUrl: listingPhotos.pubUrl,
-				})
+				.returning({ id: listingPhotos.id, ext: listingPhotos.ext })
 			return result[0]
 		}
 	)

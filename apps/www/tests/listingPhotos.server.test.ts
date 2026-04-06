@@ -7,6 +7,16 @@ import { faker } from '@faker-js/faker'
 import { latLngToCell } from 'h3-js'
 
 // ============================================================================
+// Mock storage — provides predictable publicUrl output
+// ============================================================================
+
+vi.mock('../src/lib/storage.server', () => ({
+	storage: {
+		publicUrl: (path: string) => `https://cdn.example.com/${path}`,
+	},
+}))
+
+// ============================================================================
 // Mock drizzle db
 // ============================================================================
 
@@ -27,6 +37,8 @@ const mockUpdate = vi.fn()
 const mockUpdateSet = vi.fn()
 const mockUpdateWhere = vi.fn()
 
+const mockTransaction = vi.fn()
+
 vi.mock('../src/data/db.server', () => ({
 	db: {
 		insert: (...args: unknown[]) => {
@@ -44,6 +56,7 @@ vi.mock('../src/data/db.server', () => ({
 			mockUpdate(...args)
 			return { set: mockUpdateSet }
 		},
+		transaction: (...args: unknown[]) => mockTransaction(...args),
 	},
 }))
 
@@ -104,62 +117,62 @@ function makeListingRow(id: number, overrides: Record<string, unknown> = {}) {
 describe('addPhotoToListing', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
-		mockInsertValues.mockReturnValue({ returning: mockInsertReturning })
 	})
 
-	it('returns the inserted row', async () => {
+	/** Builds a mock transaction that resolves count then insert in sequence. */
+	function mockTx(count: number, insertRows: unknown[]) {
+		mockTransaction.mockImplementation(
+			async (callback: (tx: unknown) => Promise<unknown>) => {
+				const tx = {
+					select: () => ({
+						from: () => ({
+							where: () => Promise.resolve([{ count }]),
+						}),
+					}),
+					insert: () => ({
+						values: () => ({
+							returning: () => Promise.resolve(insertRows),
+						}),
+					}),
+				}
+				return callback(tx)
+			}
+		)
+	}
+
+	it('returns the inserted row when under the limit', async () => {
 		const listingId = faker.number.int({ min: 1, max: 9999 })
-		const rawKey = `raw/listings/${listingId}/abc.jpg`
-		const pubUrl = `pub/listings/${listingId}/abc.jpg`
+		const id = faker.string.uuid()
+		const ext = '.jpg'
 		const inserted = {
-			id: faker.number.int(),
+			id,
 			listingId,
-			rawKey,
-			pubUrl,
+			ext,
 			order: 0,
 			createdAt: new Date(),
 			deletedAt: null,
 		}
-		mockInsertReturning.mockResolvedValue([inserted])
+		mockTx(0, [inserted])
 
-		const result = await addPhotoToListing(listingId, rawKey, pubUrl, 0)
+		const result = await addPhotoToListing(listingId, id, ext, 3)
 
 		expect(result).toEqual(inserted)
 	})
 
-	it('passes all four arguments to the insert', async () => {
-		const listingId = faker.number.int({ min: 1, max: 9999 })
-		const rawKey = `raw/listings/${listingId}/img.jpg`
-		const pubUrl = `pub/listings/${listingId}/img.jpg`
-		const order = 2
-		mockInsertReturning.mockResolvedValue([
-			{
-				id: 1,
-				listingId,
-				rawKey,
-				pubUrl,
-				order,
-				createdAt: new Date(),
-				deletedAt: null,
-			},
-		])
+	it('returns null when the listing is already at the limit', async () => {
+		mockTx(3, [])
 
-		await addPhotoToListing(listingId, rawKey, pubUrl, order)
+		const result = await addPhotoToListing(1, faker.string.uuid(), '.jpg', 3)
 
-		expect(mockInsertValues).toHaveBeenCalledWith({
-			listingId,
-			rawKey,
-			pubUrl,
-			order,
-		})
+		expect(result).toBeNull()
 	})
 
 	it('throws DataInvariantError when the insert returns no row', async () => {
-		mockInsertReturning.mockResolvedValue([])
+		mockTx(0, [])
 
-		await expect(addPhotoToListing(1, 'raw/x', 'pub/x', 0)).rejects.toThrow(
-			DataInvariantError
-		)
+		await expect(
+			addPhotoToListing(1, faker.string.uuid(), '.jpg', 3)
+		).rejects.toThrow(DataInvariantError)
 	})
 })
 
@@ -182,30 +195,36 @@ describe('getPhotosForListing', () => {
 		expect(result).toEqual([])
 	})
 
-	it('returns photos with id, pubUrl, and order', async () => {
+	it('pub URL is always .jpg regardless of raw ext', async () => {
 		const listingId = faker.number.int({ min: 1, max: 9999 })
-		const photos = [
-			{ id: 1, pubUrl: `pub/listings/${listingId}/a.jpg`, order: 0 },
-			{ id: 2, pubUrl: `pub/listings/${listingId}/b.jpg`, order: 1 },
+		const id1 = faker.string.uuid()
+		const id2 = faker.string.uuid()
+		const dbRows = [
+			{ id: id1, ext: '.jpg', order: 0 },
+			{ id: id2, ext: '.png', order: 1 },
 		]
-		mockSelectOrderBy.mockResolvedValue(photos)
+		mockSelectOrderBy.mockResolvedValue(dbRows)
 
 		const result = await getPhotosForListing(listingId)
 
-		expect(result).toEqual(photos)
+		expect(result[0].pubUrl).toBe(
+			`https://cdn.example.com/listing_photos/${id1}.jpg`
+		)
+		expect(result[1].pubUrl).toBe(
+			`https://cdn.example.com/listing_photos/${id2}.jpg`
+		)
 	})
 
-	it('passes a projection to db.select that includes id/pubUrl/order but not rawKey', async () => {
+	it('passes a projection to db.select that includes id/ext/order but not raw_key', async () => {
 		mockSelectOrderBy.mockResolvedValue([])
 
 		await getPhotosForListing(1)
 
-		// Verifies the Drizzle projection object — rawKey must never be selected
-		// (the mock controls the return value, so result-shape checks would be tautological)
+		// Verifies the Drizzle projection — raw storage details must never be selected.
 		expect(mockSelect).toHaveBeenCalledWith(
 			expect.objectContaining({
 				id: expect.anything(),
-				pubUrl: expect.anything(),
+				ext: expect.anything(),
 				order: expect.anything(),
 			})
 		)
@@ -225,14 +244,13 @@ describe('deleteListingPhoto', () => {
 		mockDeleteWhere.mockReturnValue({ returning: mockDeleteReturning })
 	})
 
-	it('returns rawKey and pubUrl of the deleted photo', async () => {
-		const rawKey = 'raw/listings/1/img.jpg'
-		const pubUrl = 'pub/listings/1/img.jpg'
-		mockDeleteReturning.mockResolvedValue([{ rawKey, pubUrl }])
+	it('returns id and ext of the deleted photo', async () => {
+		const id = faker.string.uuid()
+		mockDeleteReturning.mockResolvedValue([{ id, ext: '.jpg' }])
 
-		const result = await deleteListingPhoto(1, 'user-abc')
+		const result = await deleteListingPhoto(id, 'user-abc')
 
-		expect(result).toEqual({ rawKey, pubUrl })
+		expect(result).toEqual({ id, ext: '.jpg' })
 	})
 
 	it('returns undefined when the photo does not exist or is not owned by the user', async () => {
@@ -240,7 +258,10 @@ describe('deleteListingPhoto', () => {
 		// the SQL WHERE clause enforces ownership so only the owner's photo is deleted.
 		mockDeleteReturning.mockResolvedValue([])
 
-		const result = await deleteListingPhoto(999_999, 'some-other-user')
+		const result = await deleteListingPhoto(
+			faker.string.uuid(),
+			'some-other-user'
+		)
 
 		expect(result).toBeUndefined()
 	})
@@ -274,9 +295,8 @@ describe('getPublicListingById', () => {
 	it('returns a PublicListing with photos and coverPhotoUrl populated', async () => {
 		const listingId = 42
 		const listing = makeListingRow(listingId)
-		const photoRows = [
-			{ id: 1, listingId, pubUrl: `pub/listings/${listingId}/a.jpg`, order: 0 },
-		]
+		const photoId = faker.string.uuid()
+		const photoRows = [{ id: photoId, listingId, ext: '.jpg', order: 0 }]
 
 		// Promise.all: first db.select() → listing, second → photos
 		mockSelectWithLimit([listing])
@@ -286,9 +306,13 @@ describe('getPublicListingById', () => {
 
 		expect(result).toBeDefined()
 		expect(result!.photos).toHaveLength(1)
-		expect(result!.photos[0].pubUrl).toBe(`pub/listings/${listingId}/a.jpg`)
+		expect(result!.photos[0].pubUrl).toBe(
+			`https://cdn.example.com/listing_photos/${photoId}.jpg`
+		)
 		expect(result!.photos[0].order).toBe(0)
-		expect(result!.coverPhotoUrl).toBe(`pub/listings/${listingId}/a.jpg`)
+		expect(result!.coverPhotoUrl).toBe(
+			`https://cdn.example.com/listing_photos/${photoId}.jpg`
+		)
 	})
 
 	it('returns a PublicListing with empty photos when listing has no photos', async () => {
@@ -345,11 +369,14 @@ describe('fetchPhotosByListingIds grouping (via getAvailableListings)', () => {
 		const listing2 = makeListingRow(2)
 		mockSelectWithOrderByAndLimit([listing1, listing2])
 
+		const id10 = faker.string.uuid()
+		const id11 = faker.string.uuid()
+		const id20 = faker.string.uuid()
 		// fetchPhotosByListingIds returns rows for both listings, interleaved
 		const photoRows = [
-			{ id: 10, listingId: 1, pubUrl: 'pub/1/a.jpg', order: 0 },
-			{ id: 20, listingId: 2, pubUrl: 'pub/2/a.jpg', order: 0 },
-			{ id: 11, listingId: 1, pubUrl: 'pub/1/b.jpg', order: 1 },
+			{ id: id10, listingId: 1, ext: '.jpg', order: 0 },
+			{ id: id20, listingId: 2, ext: '.jpg', order: 0 },
+			{ id: id11, listingId: 1, ext: '.jpg', order: 1 },
 		]
 		mockSelectWithOrderBy(photoRows)
 
@@ -359,12 +386,19 @@ describe('fetchPhotosByListingIds grouping (via getAvailableListings)', () => {
 
 		const r1 = results.find((r) => r.id === 1)!
 		expect(r1.photos).toHaveLength(2)
-		expect(r1.photos.map((p) => p.pubUrl)).toEqual(['pub/1/a.jpg', 'pub/1/b.jpg'])
-		expect(r1.coverPhotoUrl).toBe('pub/1/a.jpg')
+		expect(r1.photos.map((p) => p.pubUrl)).toEqual([
+			`https://cdn.example.com/listing_photos/${id10}.jpg`,
+			`https://cdn.example.com/listing_photos/${id11}.jpg`,
+		])
+		expect(r1.coverPhotoUrl).toBe(
+			`https://cdn.example.com/listing_photos/${id10}.jpg`
+		)
 
 		const r2 = results.find((r) => r.id === 2)!
 		expect(r2.photos).toHaveLength(1)
-		expect(r2.coverPhotoUrl).toBe('pub/2/a.jpg')
+		expect(r2.coverPhotoUrl).toBe(
+			`https://cdn.example.com/listing_photos/${id20}.jpg`
+		)
 	})
 
 	it('uses [] photos for listings with no matching photo rows', async () => {

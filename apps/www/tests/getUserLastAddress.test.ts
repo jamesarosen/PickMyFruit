@@ -7,6 +7,10 @@ const mockWhere = vi.fn()
 const mockOrderBy = vi.fn()
 const mockLimit = vi.fn()
 
+vi.mock('../src/lib/storage.server', () => ({
+	storage: { publicUrl: (path: string) => `https://cdn.example.com/${path}` },
+}))
+
 vi.mock('../src/data/db.server', () => ({
 	db: {
 		select: (...args: unknown[]) => {

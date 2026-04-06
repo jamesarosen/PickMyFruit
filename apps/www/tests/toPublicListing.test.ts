@@ -34,12 +34,12 @@ function makeListing(overrides: Partial<Listing> = {}): Listing {
 }
 
 function makePhoto(
-	listingId: number = faker.number.int({ min: 1, max: 9999 }),
+	_listingId: number = faker.number.int({ min: 1, max: 9999 }),
 	overrides: Partial<PublicPhoto> = {}
 ): PublicPhoto {
 	return {
-		id: faker.number.int({ min: 1, max: 9999 }),
-		pubUrl: `pub/listings/${listingId}/${faker.string.uuid()}.jpg`,
+		id: faker.string.uuid(),
+		pubUrl: `https://cdn.example.com/listing_photos/${faker.string.uuid()}.jpg`,
 		order: 0,
 		...overrides,
 	}
@@ -162,16 +162,30 @@ describe('toPublicListing', () => {
 		it('passes photos through verbatim — pubUrl and order are unchanged', () => {
 			const listing = makeListing()
 			// pubUrl values come from the storage layer; toPublicListing must not alter them
+			const uuid1 = faker.string.uuid()
+			const uuid2 = faker.string.uuid()
 			const photos = [
-				makePhoto(listing.id, { pubUrl: 'pub/listings/42/abc.jpg', order: 0 }),
-				makePhoto(listing.id, { pubUrl: 'pub/listings/42/def.jpg', order: 1 }),
+				makePhoto(listing.id, {
+					pubUrl: `https://cdn.example.com/listing_photos/${uuid1}.jpg`,
+					order: 0,
+				}),
+				makePhoto(listing.id, {
+					pubUrl: `https://cdn.example.com/listing_photos/${uuid2}.jpg`,
+					order: 1,
+				}),
 			]
 			const result = toPublicListing(listing, photos)!
 
-			expect(result.coverPhotoUrl).toBe('pub/listings/42/abc.jpg')
-			expect(result.photos[0].pubUrl).toBe('pub/listings/42/abc.jpg')
+			expect(result.coverPhotoUrl).toBe(
+				`https://cdn.example.com/listing_photos/${uuid1}.jpg`
+			)
+			expect(result.photos[0].pubUrl).toBe(
+				`https://cdn.example.com/listing_photos/${uuid1}.jpg`
+			)
 			expect(result.photos[0].order).toBe(0)
-			expect(result.photos[1].pubUrl).toBe('pub/listings/42/def.jpg')
+			expect(result.photos[1].pubUrl).toBe(
+				`https://cdn.example.com/listing_photos/${uuid2}.jpg`
+			)
 			expect(result.photos[1].order).toBe(1)
 		})
 	})
