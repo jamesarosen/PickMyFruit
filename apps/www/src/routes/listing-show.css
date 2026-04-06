@@ -139,7 +139,7 @@
 			aspect-ratio: 1 / 1;
 			border-radius: 12px;
 			border: 2px dashed oklch(from var(--color-quiet) l calc(c * 0.4) h);
-			background: oklch(from var(--color-quiet) l calc(c * 0.06) h);
+			background: transparent;
 			display: flex;
 			justify-content: center;
 			align-items: center;
@@ -156,29 +156,21 @@
 		}
 
 		& .listing-photo-upload-label {
-			font-size: 14px;
+			font-size: 16px;
 			font-weight: 500;
 			color: var(--color-foreground);
 		}
 
-		& .listing-photo-upload-inline {
-			display: flex;
-			flex-wrap: wrap;
-			align-items: center;
-			justify-content: center;
-			gap: 12px;
-		}
-
-		& .listing-photo-upload-inline input[type='file'] {
+		& .listing-photo-ghost input[type='file'] {
 			font-size: 14px;
 			max-width: 100%;
 		}
 
-		& .listing-photo-upload-inline input::file-selector-button {
-			margin-block-end: 1rem;
+		& .listing-photo-ghost input::file-selector-button {
+			display: block;
 		}
 
-		& .listing-photo-upload-inline button {
+		& .listing-photo-ghost button {
 			padding: 8px 16px;
 			font-size: 14px;
 			font-weight: 600;
@@ -189,7 +181,7 @@
 			cursor: pointer;
 		}
 
-		& .listing-photo-upload-inline button:disabled {
+		& .listing-photo-ghost button:disabled {
 			opacity: 0.6;
 			cursor: not-allowed;
 		}

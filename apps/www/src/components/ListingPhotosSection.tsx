@@ -132,25 +132,23 @@ export default function ListingPhotosSection(props: {
 						<div class="listing-photo-ghost">
 							<div class="listing-photo-ghost-content">
 								<label class="listing-photo-upload-label" for={inputId}>
-									Add photos
+									Add photo
 								</label>
-								<div class="listing-photo-upload-inline">
-									<input
-										accept={LISTING_PHOTO_ACCEPT}
-										disabled={controlsDisabled() || hasReachedLimit()}
-										id={inputId}
-										name="photo"
-										ref={fileInputRef}
-										type="file"
-									/>
-									<button
-										disabled={controlsDisabled() || hasReachedLimit()}
-										onClick={() => void upload()}
-										type="button"
-									>
-										{uploading() ? 'Uploading…' : 'Upload'}
-									</button>
-								</div>
+								<input
+									accept={LISTING_PHOTO_ACCEPT}
+									disabled={controlsDisabled() || hasReachedLimit()}
+									id={inputId}
+									name="photo"
+									ref={fileInputRef}
+									type="file"
+								/>
+								<button
+									disabled={controlsDisabled() || hasReachedLimit()}
+									onClick={() => void upload()}
+									type="button"
+								>
+									{uploading() ? 'Uploading…' : 'Upload'}
+								</button>
 							</div>
 						</div>
 					</Show>
