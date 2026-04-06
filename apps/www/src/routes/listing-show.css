@@ -145,6 +145,22 @@
 			align-items: center;
 			padding: 12px;
 			box-sizing: border-box;
+			cursor: pointer;
+		}
+
+		& .listing-photo-ghost:hover,
+		& .listing-photo-ghost:focus-within {
+			border-color: var(--color-primary);
+			background: oklch(from var(--color-primary) l c h / 0.05);
+		}
+
+		& .listing-photo-ghost:focus-within {
+			outline: 2px solid var(--color-primary);
+			outline-offset: 2px;
+		}
+
+		& .listing-photo-ghost--uploading {
+			cursor: wait;
 		}
 
 		& .listing-photo-ghost-content {
@@ -153,37 +169,33 @@
 			align-items: center;
 			gap: 12px;
 			inline-size: 100%;
+			color: var(--color-quiet);
+			pointer-events: none;
 		}
 
 		& .listing-photo-upload-label {
-			font-size: 16px;
+			font-size: 14px;
 			font-weight: 500;
 			color: var(--color-foreground);
 		}
 
-		& .listing-photo-ghost input[type='file'] {
-			font-size: 14px;
-			max-width: 100%;
+		& .listing-photo-file-input {
+			position: absolute;
+			inline-size: 1px;
+			block-size: 1px;
+			overflow: hidden;
+			clip: rect(0 0 0 0);
+			white-space: nowrap;
 		}
 
-		& .listing-photo-ghost input::file-selector-button {
-			display: block;
+		@keyframes listing-photo-spin {
+			to {
+				transform: rotate(360deg);
+			}
 		}
 
-		& .listing-photo-ghost button {
-			padding: 8px 16px;
-			font-size: 14px;
-			font-weight: 600;
-			color: var(--color-background);
-			background: var(--color-primary);
-			border: none;
-			border-radius: 8px;
-			cursor: pointer;
-		}
-
-		& .listing-photo-ghost button:disabled {
-			opacity: 0.6;
-			cursor: not-allowed;
+		& .listing-photo-ghost-spinner {
+			animation: listing-photo-spin 1s linear infinite;
 		}
 
 		& .listing-photo-upload-error {

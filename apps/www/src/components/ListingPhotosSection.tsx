@@ -1,5 +1,6 @@
 import { useRouter } from '@tanstack/solid-router'
 import { createSignal, For, Show } from 'solid-js'
+import { ImagePlus, Loader } from 'lucide-solid'
 import { LISTING_PHOTO_ACCEPT } from '@/lib/listing-photos'
 import { Sentry } from '@/lib/sentry'
 import type { PublicPhoto } from '@/data/public-listing'
@@ -24,10 +25,7 @@ export default function ListingPhotosSection(props: {
 
 	async function upload() {
 		const file = fileInputRef.files?.[0]
-		if (!file) {
-			setError(new Error('Choose a photo first'))
-			return
-		}
+		if (!file) return
 		if (hasReachedLimit()) {
 			setError(new Error('Maximum number of photos reached'))
 			return
@@ -129,28 +127,29 @@ export default function ListingPhotosSection(props: {
 						)}
 					</For>
 					<Show when={props.isOwner && !hasReachedLimit()}>
-						<div class="listing-photo-ghost">
+						<label
+							class="listing-photo-ghost"
+							classList={{ 'listing-photo-ghost--uploading': uploading() }}
+							for={inputId}
+							aria-label="Add photo"
+						>
 							<div class="listing-photo-ghost-content">
-								<label class="listing-photo-upload-label" for={inputId}>
-									Add photo
-								</label>
-								<input
-									accept={LISTING_PHOTO_ACCEPT}
-									disabled={controlsDisabled() || hasReachedLimit()}
-									id={inputId}
-									name="photo"
-									ref={fileInputRef}
-									type="file"
-								/>
-								<button
-									disabled={controlsDisabled() || hasReachedLimit()}
-									onClick={() => void upload()}
-									type="button"
-								>
-									{uploading() ? 'Uploading…' : 'Upload'}
-								</button>
+								<Show when={uploading()} fallback={<ImagePlus size={40} />}>
+									<Loader size={40} class="listing-photo-ghost-spinner" />
+								</Show>
+								<span class="listing-photo-upload-label">Add photo</span>
 							</div>
-						</div>
+							<input
+								accept={LISTING_PHOTO_ACCEPT}
+								disabled={controlsDisabled()}
+								id={inputId}
+								name="photo"
+								ref={fileInputRef}
+								type="file"
+								class="listing-photo-file-input"
+								onChange={() => void upload()}
+							/>
+						</label>
 					</Show>
 				</div>
 			</Show>
