@@ -205,6 +205,12 @@ function ListingDetailPage() {
 								</Show>
 							</header>
 
+							<ListingPhotosSection
+								isOwner={isOwner()}
+								listingId={l().id}
+								photos={photosForViewerRow(l())}
+							/>
+
 							<div class="listing-info">
 								<Show when={l().variety}>
 									<div class="info-row">
@@ -241,12 +247,6 @@ function ListingDetailPage() {
 									</div>
 								</Show>
 							</div>
-
-							<ListingPhotosSection
-								isOwner={isOwner()}
-								listingId={l().id}
-								photos={photosForViewerRow(l())}
-							/>
 
 							<div class="listing-map-section">
 								<Show
