@@ -100,7 +100,9 @@ export default function ListingPhotosSection(props: {
 
 	return (
 		<section class="listing-photos-section" aria-label="Listing photos">
-			<Show when={visiblePhotos().length > 0}>
+			<Show
+				when={visiblePhotos().length > 0 || (props.isOwner && !hasReachedLimit())}
+			>
 				<div class="listing-photo-grid">
 					<For each={visiblePhotos()}>
 						{(photo, index) => (
@@ -126,35 +128,39 @@ export default function ListingPhotosSection(props: {
 							</figure>
 						)}
 					</For>
+					<Show when={props.isOwner && !hasReachedLimit()}>
+						<div class="listing-photo-ghost">
+							<div class="listing-photo-ghost-content">
+								<label class="listing-photo-upload-label" for={inputId}>
+									Add photos
+								</label>
+								<div class="listing-photo-upload-inline">
+									<input
+										accept={LISTING_PHOTO_ACCEPT}
+										disabled={controlsDisabled() || hasReachedLimit()}
+										id={inputId}
+										name="photo"
+										ref={fileInputRef}
+										type="file"
+									/>
+									<button
+										disabled={controlsDisabled() || hasReachedLimit()}
+										onClick={() => void upload()}
+										type="button"
+									>
+										{uploading() ? 'Uploading…' : 'Upload'}
+									</button>
+								</div>
+							</div>
+						</div>
+					</Show>
 				</div>
 			</Show>
-			<Show when={props.isOwner}>
-				<div class="listing-photo-upload">
-					<label class="listing-photo-upload-label" for={inputId}>
-						Add photos
-					</label>
-					<input
-						accept={LISTING_PHOTO_ACCEPT}
-						disabled={controlsDisabled() || hasReachedLimit()}
-						id={inputId}
-						name="photo"
-						ref={fileInputRef}
-						type="file"
-					/>
-					<button
-						disabled={controlsDisabled() || hasReachedLimit()}
-						onClick={() => void upload()}
-						type="button"
-					>
-						{uploading() ? 'Uploading…' : 'Upload'}
-					</button>
-					<ErrorMessage
-						class="listing-photo-upload-error"
-						defaultMessage="Upload failed"
-						error={error()}
-					/>
-				</div>
-			</Show>
+			<ErrorMessage
+				class="listing-photo-upload-error"
+				defaultMessage="Upload failed"
+				error={error()}
+			/>
 		</section>
 	)
 }

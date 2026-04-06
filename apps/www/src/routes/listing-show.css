@@ -93,18 +93,23 @@
 		}
 
 		& .listing-photos-section {
+			--listing-photo-gap: 12px;
 			margin-top: 24px;
 		}
 
 		& .listing-photo-grid {
-			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-			gap: 12px;
+			display: flex;
+			flex-wrap: wrap;
+			align-items: flex-start;
+			gap: var(--listing-photo-gap);
 		}
 
-		& .listing-photo-frame {
+		& .listing-photo-frame,
+		& .listing-photo-ghost {
 			position: relative;
 			margin: 0;
+			inline-size: calc((100% - (2 * var(--listing-photo-gap))) / 3);
+			flex: 0 0 calc((100% - (2 * var(--listing-photo-gap))) / 3);
 		}
 
 		& .listing-photo {
@@ -130,13 +135,24 @@
 			cursor: pointer;
 		}
 
-		& .listing-photo-upload {
-			--gap: 0.8rem;
-			margin-top: 16px;
+		& .listing-photo-ghost {
+			aspect-ratio: 1 / 1;
+			border-radius: 12px;
+			border: 2px dashed oklch(from var(--color-quiet) l calc(c * 0.4) h);
+			background: oklch(from var(--color-quiet) l calc(c * 0.06) h);
 			display: flex;
-			flex-wrap: wrap;
+			justify-content: center;
 			align-items: center;
-			gap: var(--gap);
+			padding: 12px;
+			box-sizing: border-box;
+		}
+
+		& .listing-photo-ghost-content {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 12px;
+			inline-size: 100%;
 		}
 
 		& .listing-photo-upload-label {
@@ -145,16 +161,24 @@
 			color: var(--color-foreground);
 		}
 
-		& .listing-photo-upload input[type='file'] {
+		& .listing-photo-upload-inline {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			justify-content: center;
+			gap: 12px;
+		}
+
+		& .listing-photo-upload-inline input[type='file'] {
 			font-size: 14px;
 			max-width: 100%;
 		}
 
-		& .listing-photo-upload input::file-selector-button {
-			margin-inline-end: var(--gap);
+		& .listing-photo-upload-inline input::file-selector-button {
+			margin-block-end: 1rem;
 		}
 
-		& .listing-photo-upload button {
+		& .listing-photo-upload-inline button {
 			padding: 8px 16px;
 			font-size: 14px;
 			font-weight: 600;
@@ -165,19 +189,13 @@
 			cursor: pointer;
 		}
 
-		& .listing-photo-upload > button {
-			margin-inline-start: auto;
-			margin-block-start: auto;
-		}
-
-		& .listing-photo-upload button:disabled {
+		& .listing-photo-upload-inline button:disabled {
 			opacity: 0.6;
 			cursor: not-allowed;
 		}
 
 		& .listing-photo-upload-error {
-			flex-basis: 100%;
-			margin: 0;
+			margin: 12px 0 0;
 		}
 
 		& .listing-map-section {
