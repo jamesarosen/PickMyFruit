@@ -2,7 +2,6 @@ import { createServerFn } from '@tanstack/solid-start'
 import { getRequestHeaders } from '@tanstack/solid-start/server'
 import { z } from 'zod'
 import { errorMiddleware } from '@/lib/server-error-middleware'
-import type { Listing } from '@/data/schema'
 import type { AddressFields } from '@/data/schema'
 import type { OwnerListingView } from '@/data/public-listing'
 
@@ -14,7 +13,7 @@ export const getMyListings = createServerFn({ method: 'GET' })
 		const { auth } = await import('@/lib/auth.server')
 		const session = await auth.api.getSession({ headers })
 		if (!session?.user) {
-			return [] as Listing[]
+			return [] as OwnerListingView[]
 		}
 
 		const { getUserListings } = await import('@/data/queries.server')

@@ -19,9 +19,10 @@ import {
 	toPublicListing,
 	type PublicListing,
 	type PublicPhoto,
+	type OwnerListingView,
 } from './public-listing'
 import { ALLOWED_EXT } from '@/lib/listing-photo-upload.server'
-export { type PublicListing } from './public-listing'
+export { type PublicListing, type OwnerListingView } from './public-listing'
 
 export type { AddressFields } from './schema'
 
@@ -143,7 +144,9 @@ export async function createListing(data: NewListing): Promise<Listing> {
 	)
 }
 
-export async function getUserListings(userId: string): Promise<Listing[]> {
+export async function getUserListings(
+	userId: string
+): Promise<OwnerListingView[]> {
 	return Sentry.startSpan(
 		{ name: 'getUserListings', op: 'db.query' },
 		async (span) => {
@@ -153,7 +156,11 @@ export async function getUserListings(userId: string): Promise<Listing[]> {
 				.where(and(eq(listings.userId, userId), isNull(listings.deletedAt)))
 				.orderBy(desc(listings.createdAt))
 			span.setAttribute('listing_count', results.length)
-			return results
+			const photoMap = await fetchPhotosByListingIds(results.map((l) => l.id))
+			return results.map((listing) => {
+				const photos = photoMap.get(listing.id) ?? []
+				return { ...listing, photos, coverPhotoUrl: photos[0]?.pubUrl ?? null }
+			})
 		}
 	)
 }

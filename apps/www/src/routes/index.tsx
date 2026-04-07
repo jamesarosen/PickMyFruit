@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/solid-router'
-import { Apple } from 'lucide-solid'
 import { For, Show } from 'solid-js'
 import { z } from 'zod'
 import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
 import ListingsMap from '@/components/ListingsMap'
+import ListingCard from '@/components/ListingCard'
 import { getNearbyListings } from '@/api/listings'
 import { normalizeArea, listingMatchesArea } from '@/lib/h3-area'
 import '@/routes/index.css'
@@ -123,45 +123,7 @@ function HomePage() {
 								</Show>
 								<div class="listings-grid">
 									<For each={visibleListings()}>
-										{(listing) => (
-											<Link
-												to="/listings/$id"
-												params={{ id: String(listing.id) }}
-												class="listing-card surface-subtle"
-											>
-												<h3>{listing.name}</h3>
-												<p class="listing-variety">
-													{listing.type} - {listing.variety}
-												</p>
-												<Show
-													when={listing.coverPhotoUrl}
-													fallback={
-														<span
-															class="listing-card-thumb listing-card-thumb--placeholder"
-															aria-hidden="true"
-														>
-															<Apple />
-														</span>
-													}
-												>
-													{(coverUrl) => (
-														<img
-															alt=""
-															class="listing-card-thumb"
-															decoding="async"
-															loading="lazy"
-															src={coverUrl()}
-														/>
-													)}
-												</Show>
-												<p class="listing-quantity">Quantity: {listing.quantity}</p>
-												<p class="listing-harvest">Harvest: {listing.harvestWindow}</p>
-												<p class="listing-location">
-													{listing.city}, {listing.state}
-												</p>
-												{listing.notes && <p class="listing-notes">{listing.notes}</p>}
-											</Link>
-										)}
+										{(listing) => <ListingCard listing={listing} />}
 									</For>
 								</div>
 							</Show>

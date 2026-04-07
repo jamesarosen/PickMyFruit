@@ -1,0 +1,114 @@
+@layer components {
+	.listing-card {
+		border: 1px solid var(--color-border);
+		border-radius: 12px;
+		container-type: inline-size;
+		transition:
+			transform 0.15s ease,
+			box-shadow 0.15s ease;
+
+		&:has(.listing-card-link:hover) {
+			transform: translateY(-2px);
+			box-shadow: 0 4px 12px oklch(from var(--color-quiet) l c h / 0.15);
+		}
+	}
+
+	.listing-card-link {
+		display: flex;
+		flex-direction: column;
+		padding: 20px;
+		color: inherit;
+		text-decoration: none;
+		border-radius: 12px;
+
+		&:focus-visible {
+			outline: 2px solid var(--color-accent);
+			outline-offset: -2px;
+		}
+	}
+
+	.listing-card-thumb {
+		align-self: center;
+		width: min(80cqi, 50vw);
+		aspect-ratio: 1 / 1;
+		object-fit: cover;
+		border-radius: 8px;
+		margin-bottom: 16px;
+		display: block;
+	}
+
+	.listing-card-thumb--placeholder {
+		background: transparent;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--color-quiet);
+
+		& svg {
+			width: 40%;
+			height: 40%;
+			stroke-width: 0.8;
+		}
+	}
+
+	.listing-card-link h3 {
+		font-size: 18px;
+		font-weight: 600;
+		color: var(--color-foreground);
+		margin: 0 0 6px;
+		text-transform: capitalize;
+	}
+
+	.listing-card-status {
+		display: inline-block;
+		font-size: 12px;
+		font-weight: 600;
+		text-transform: capitalize;
+		margin-bottom: 8px;
+
+		&.status-available {
+			color: var(--color-secondary);
+		}
+
+		&.status-unavailable {
+			color: var(--color-quiet);
+		}
+
+		&.status-private {
+			color: var(--color-accent);
+		}
+	}
+
+	.listing-card-variety {
+		font-size: 16px;
+		color: var(--color-secondary);
+		font-weight: 500;
+		margin: 0 0 16px;
+		text-transform: capitalize;
+	}
+
+	.listing-card-quantity,
+	.listing-card-harvest,
+	.listing-card-location {
+		font-size: 14px;
+		color: var(--color-quiet);
+		margin: 0 0 8px;
+	}
+
+	.listing-card-quantity {
+		text-transform: capitalize;
+	}
+
+	.listing-card-location {
+		font-weight: 500;
+	}
+
+	.listing-card-notes {
+		font-size: 14px;
+		color: oklch(from var(--color-quiet) calc(l + 0.1) calc(c * 0.8) h);
+		font-style: italic;
+		margin: 12px 0 0;
+		padding-top: 12px;
+		border-top: 1px solid oklch(from var(--color-quiet) l calc(c * 0.2) h);
+	}
+}
