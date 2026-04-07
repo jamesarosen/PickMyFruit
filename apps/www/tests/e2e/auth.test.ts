@@ -63,18 +63,23 @@ test.describe('Authentication', () => {
 		await loginViaUI(page, testUser)
 
 		const nav = pageHeader(page)
-		expect(await nav.isSignedIn()).toBeTruthy()
+		// Vite dev mode may reload the page when loading new modules on first visit.
+		// Poll until the session is established rather than asserting immediately.
+		await expect.poll(() => nav.isSignedIn(), { timeout: 10000 }).toBeTruthy()
 
 		await page.reload()
+		await page.waitForLoadState('networkidle')
 
 		await expect(page).toHaveURL('/listings/mine')
-		expect(await nav.isSignedIn()).toBeTruthy()
+		await expect.poll(() => nav.isSignedIn(), { timeout: 5000 }).toBeTruthy()
 	})
 
 	test('sign-out redirects from protected page', async ({ page, testUser }) => {
 		await loginViaUI(page, testUser)
 
 		const nav = pageHeader(page)
+		// Wait for page to settle (Vite may reload on first visit to mine page)
+		await expect.poll(() => nav.isSignedIn(), { timeout: 10000 }).toBeTruthy()
 		await nav.signOut()
 
 		await expect(page).toHaveURL('/')
