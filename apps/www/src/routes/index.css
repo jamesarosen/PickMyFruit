@@ -184,6 +184,20 @@
 			display: block;
 		}
 
+		& .listing-card-thumb--placeholder {
+			background: transparent;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: var(--color-quiet);
+
+			& svg {
+				width: 40%;
+				height: 40%;
+				stroke-width: 0.8;
+			}
+		}
+
 		& .listing-card:hover {
 			transform: translateY(-2px);
 			box-shadow: 0 4px 12px oklch(from var(--color-quiet) l c h / 0.15);

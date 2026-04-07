@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/solid-router'
+import { Apple } from 'lucide-solid'
 import { For, Show } from 'solid-js'
 import { z } from 'zod'
 import Layout from '@/components/Layout'
@@ -132,7 +133,17 @@ function HomePage() {
 												<p class="listing-variety">
 													{listing.type} - {listing.variety}
 												</p>
-												<Show when={listing.coverPhotoUrl}>
+												<Show
+													when={listing.coverPhotoUrl}
+													fallback={
+														<span
+															class="listing-card-thumb listing-card-thumb--placeholder"
+															aria-hidden="true"
+														>
+															<Apple />
+														</span>
+													}
+												>
 													{(coverUrl) => (
 														<img
 															alt=""
