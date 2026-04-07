@@ -160,7 +160,8 @@
 		}
 
 		& .listing-card {
-			display: block;
+			display: flex;
+			flex-direction: column;
 			text-decoration: none;
 			color: inherit;
 			border-radius: 12px;
@@ -170,10 +171,12 @@
 				transform 0.15s ease,
 				box-shadow 0.15s ease;
 			cursor: pointer;
+			container-type: inline-size;
 		}
 
 		& .listing-card-thumb {
-			width: 100%;
+			align-self: center;
+			width: min(80cqi, 50vw);
 			aspect-ratio: 1 / 1;
 			object-fit: cover;
 			border-radius: 8px;
