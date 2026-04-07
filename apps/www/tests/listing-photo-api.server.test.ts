@@ -6,7 +6,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { faker } from '@faker-js/faker'
 import type { UserError } from '../src/lib/user-error'
-import { getRequest } from '@tanstack/solid-start/server'
 
 // ============================================================================
 // Mock auth — controls session presence
@@ -77,9 +76,14 @@ describe('addPhotoToListing', () => {
 	it('throws when the user is not authenticated', async () => {
 		mockGetSession.mockResolvedValue(null)
 
-		// addPhotoToListing reads FormData from the raw request; auth is checked before
-		// getRequest() is called, so no FormData setup is needed for this test.
-		await expect(addPhotoToListing()).rejects.toThrow()
+		const fd = new FormData()
+		fd.append('listingId', '42')
+		fd.append(
+			'photo',
+			new File([Buffer.from('x')], 'photo.jpg', { type: 'image/jpeg' })
+		)
+		const error = await addPhotoToListing({ data: fd }).catch((e: unknown) => e)
+		expect((error as UserError).code).toBe('AUTH_REQUIRED')
 	})
 
 	it('throws NOT_FOUND when the authenticated user does not own the listing', async () => {
@@ -92,14 +96,11 @@ describe('addPhotoToListing', () => {
 			'photo',
 			new File([Buffer.from('x')], 'photo.jpg', { type: 'image/jpeg' })
 		)
-		;(getRequest as ReturnType<typeof vi.fn>).mockResolvedValue({
-			formData: () => Promise.resolve(fd),
-		})
 
 		// Listing exists but belongs to a different user
 		mockGetListingById.mockResolvedValue({ id: 42, userId: faker.string.uuid() })
 
-		const error = await addPhotoToListing().catch((e: unknown) => e)
+		const error = await addPhotoToListing({ data: fd }).catch((e: unknown) => e)
 		expect((error as UserError).code).toBe('NOT_FOUND')
 	})
 })

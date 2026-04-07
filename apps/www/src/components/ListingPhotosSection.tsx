@@ -2,7 +2,10 @@ import { useRouter } from '@tanstack/solid-router'
 import { createSignal, For, Show } from 'solid-js'
 import { ImagePlus, Loader, Trash } from 'lucide-solid'
 import { addPhotoToListing, deletePhoto } from '@/api/listing-photos'
-import { LISTING_PHOTO_ACCEPT, MAX_PHOTOS_PER_LISTING } from '@/lib/listing-photos'
+import {
+	LISTING_PHOTO_ACCEPT,
+	MAX_PHOTOS_PER_LISTING,
+} from '@/lib/listing-photos'
 import { Sentry } from '@/lib/sentry'
 import type { PublicPhoto } from '@/data/public-listing'
 import { createErrorSignal, ErrorMessage } from '@/components/ErrorMessage'
