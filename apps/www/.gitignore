@@ -29,6 +29,7 @@ pnpm-debug.log*
 /test-results/
 /playwright-report/
 /playwright/.cache/
+/test-uploads/
 
 # Test databases
 .test-dbs/
