@@ -1,12 +1,11 @@
 import { useRouter } from '@tanstack/solid-router'
 import { createSignal, For, Show } from 'solid-js'
 import { ImagePlus, Loader, Trash } from 'lucide-solid'
-import { LISTING_PHOTO_ACCEPT } from '@/lib/listing-photos'
+import { addPhotoToListing, deletePhoto } from '@/api/listing-photos'
+import { LISTING_PHOTO_ACCEPT, MAX_PHOTOS_PER_LISTING } from '@/lib/listing-photos'
 import { Sentry } from '@/lib/sentry'
 import type { PublicPhoto } from '@/data/public-listing'
 import { createErrorSignal, ErrorMessage } from '@/components/ErrorMessage'
-
-const MAX_PHOTOS_PER_LISTING = 3
 
 /** Displays up to 3 listing photos with owner upload/delete controls. */
 export default function ListingPhotosSection(props: {
@@ -16,7 +15,7 @@ export default function ListingPhotosSection(props: {
 }) {
 	const router = useRouter()
 	const [uploading, setUploading] = createSignal(false)
-	const [deletingPhotoId, setDeletingPhotoId] = createSignal<number | null>(null)
+	const [deletingPhotoId, setDeletingPhotoId] = createSignal<string | null>(null)
 	const [error, setError] = createErrorSignal()
 	let fileInputRef!: HTMLInputElement
 	const visiblePhotos = () => props.photos.slice(0, MAX_PHOTOS_PER_LISTING)
@@ -34,24 +33,9 @@ export default function ListingPhotosSection(props: {
 		setError(null)
 		try {
 			const body = new FormData()
+			body.append('listingId', String(props.listingId))
 			body.append('photo', file)
-			const res = await fetch(`/api/listings/${props.listingId}/photos`, {
-				method: 'POST',
-				body,
-				credentials: 'same-origin',
-			})
-			if (!res.ok) {
-				let message = 'Upload failed'
-				try {
-					const data = (await res.json()) as { error?: unknown }
-					if (typeof data.error === 'string') {
-						message = data.error
-					}
-				} catch {
-					// Response wasn't JSON
-				}
-				throw new Error(message)
-			}
+			await addPhotoToListing({ data: body })
 			fileInputRef.value = ''
 			await router.invalidate()
 		} catch (err) {
@@ -62,29 +46,11 @@ export default function ListingPhotosSection(props: {
 		}
 	}
 
-	async function removePhoto(photoId: number) {
+	async function removePhoto(photoId: string) {
 		setDeletingPhotoId(photoId)
 		setError(null)
 		try {
-			const res = await fetch(
-				`/api/listings/${props.listingId}/photos/${photoId}`,
-				{
-					method: 'DELETE',
-					credentials: 'same-origin',
-				}
-			)
-			if (!res.ok) {
-				let message = 'Failed to remove photo'
-				try {
-					const data = (await res.json()) as { error?: unknown }
-					if (typeof data.error === 'string') {
-						message = data.error
-					}
-				} catch {
-					// Response wasn't JSON
-				}
-				throw new Error(message)
-			}
+			await deletePhoto({ data: { photoId } })
 			await router.invalidate()
 		} catch (err) {
 			Sentry.captureException(err)

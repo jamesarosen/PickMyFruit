@@ -12,14 +12,10 @@ test.describe('Listing photos', () => {
 		await loginViaUI(page, testUser)
 		await page.goto(`/listings/${testListing.id}`)
 
+		const uploadDone = page.waitForResponse((r) => r.url().includes('_server'))
 		await page
-			.getByLabel(/Add photos/i)
+			.getByLabel(/Add photo/i)
 			.setInputFiles('tests/fixtures/test-photo.png')
-
-		const uploadDone = page.waitForResponse(
-			(r) => r.url().includes('/photos') && r.status() === 201
-		)
-		await page.getByRole('button', { name: /Upload/i }).click()
 		await uploadDone
 
 		await expect(page.getByRole('img', { name: /listing photo/i })).toBeVisible()

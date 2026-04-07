@@ -7,6 +7,9 @@ export const LISTING_PHOTO_MIME_TYPES = [
 
 export type ListingPhotoMimeType = (typeof LISTING_PHOTO_MIME_TYPES)[number]
 
+/** Maximum number of photos allowed per listing. */
+export const MAX_PHOTOS_PER_LISTING = 3
+
 /** Maximum upload size for a single listing photo (5 MB). */
 export const LISTING_PHOTO_MAX_BYTES = 5 * 1024 * 1024
 
