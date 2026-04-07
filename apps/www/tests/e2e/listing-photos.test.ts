@@ -11,8 +11,9 @@ test.describe('Listing photos', () => {
 	}) => {
 		await loginViaUI(page, testUser)
 		await page.goto(`/listings/${testListing.id}`)
+		await page.waitForLoadState('networkidle')
 
-		const uploadDone = page.waitForResponse((r) => r.url().includes('_server'))
+		const uploadDone = page.waitForResponse((r) => r.url().includes('/_serverFn'))
 		await page
 			.getByLabel(/Add photo/i)
 			.setInputFiles('tests/fixtures/test-photo.png')
