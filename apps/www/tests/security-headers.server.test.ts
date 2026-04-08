@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import parseContentSecurityPolicy from 'content-security-policy-parser'
 import { applySecurityHeaders } from '../src/middleware/security-headers'
 
@@ -24,11 +24,33 @@ describe('applySecurityHeaders', () => {
 		expect(directives.get('frame-ancestors')).toEqual(["'none'"])
 	})
 
-	it('allows listing images from the Tigris CDN', () => {
+	it('does not include any Tigris wildcard in local storage mode', () => {
+		// Test env uses STORAGE_PROVIDER=local — no bucket URL should appear.
 		const headers = new Headers()
 		applySecurityHeaders(headers)
 
 		const csp = headers.get('Content-Security-Policy')!
-		expect(csp).toContain('https://*.fly.storage.tigris.dev')
+		expect(csp).not.toContain('fly.storage.tigris.dev')
+	})
+
+	it('allows images only from the specific Tigris bucket, not all tenants', async () => {
+		vi.resetModules()
+		vi.doMock('../src/lib/env.server', () => ({
+			serverEnv: {
+				storage: { PROVIDER: 'tigris', BUCKET_NAME: 'test-bucket' },
+			},
+		}))
+		const { applySecurityHeaders: apply } =
+			await import('../src/middleware/security-headers')
+
+		const headers = new Headers()
+		apply(headers)
+		const csp = headers.get('Content-Security-Policy')!
+
+		expect(csp).toContain('https://test-bucket.fly.storage.tigris.dev')
+		expect(csp).not.toContain('https://*.fly.storage.tigris.dev')
+
+		vi.doUnmock('../src/lib/env.server')
+		vi.resetModules()
 	})
 })

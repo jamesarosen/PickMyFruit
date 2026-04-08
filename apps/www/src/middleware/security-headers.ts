@@ -1,4 +1,12 @@
 import { createMiddleware } from '@tanstack/solid-start'
+import { serverEnv } from '@/lib/env.server'
+
+// Narrow to the specific bucket hostname when running against Tigris, so a
+// compromised or misconfigured sibling bucket cannot be used to exfiltrate data.
+const tigrisImgSrc =
+	serverEnv.storage.PROVIDER === 'tigris'
+		? `https://${serverEnv.storage.BUCKET_NAME}.fly.storage.tigris.dev`
+		: null
 
 const CSP_DIRECTIVES = [
 	"default-src 'self'",
@@ -10,7 +18,7 @@ const CSP_DIRECTIVES = [
 	// replaced with 'sha256-VQTei97aMH9YclKPQM3e8rL/RXSmj3lPwKVXZgaN2QA=' to whitelist
 	// only the static @layer ordering <style> block in RootShell.
 	"style-src 'self' 'unsafe-inline'",
-	["img-src 'self' data: blob:", 'https://*.fly.storage.tigris.dev'].join(' '),
+	["img-src 'self' data: blob:", tigrisImgSrc].filter(Boolean).join(' '),
 	"font-src 'self'",
 	[
 		"connect-src 'self'",
