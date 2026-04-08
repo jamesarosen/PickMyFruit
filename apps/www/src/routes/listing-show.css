@@ -151,6 +151,63 @@
 			cursor: pointer;
 		}
 
+		& .listing-photo-frame--pending-delete .listing-photo {
+			opacity: 0.25;
+			filter: blur(2px);
+		}
+
+		& .listing-photo-pending-delete-overlay {
+			position: absolute;
+			inset: 0;
+			border-radius: 12px;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 10px;
+			padding: 16px;
+		}
+
+		& .listing-photo-pending-label {
+			margin: 0;
+			font-size: 14px;
+			font-weight: 600;
+			color: var(--color-foreground);
+		}
+
+		& .listing-photo-countdown-bar {
+			width: 100%;
+			height: 4px;
+			border-radius: 2px;
+			background: oklch(from var(--color-quiet) l calc(c * 0.2) h);
+			overflow: hidden;
+
+			&::after {
+				content: '';
+				display: block;
+				height: 100%;
+				width: 100%;
+				background: var(--color-accent);
+				transform-origin: left;
+				animation: listing-photo-countdown-bar 5s linear forwards;
+			}
+		}
+
+		& .listing-photo-cancel-delete {
+			padding: 5px 14px;
+			border-radius: 6px;
+			border: 1px solid var(--color-border);
+			background: oklch(from var(--color-background) l c h / 0.95);
+			color: var(--color-foreground);
+			font-size: 13px;
+			font-weight: 600;
+			cursor: pointer;
+
+			&:hover {
+				background: oklch(from var(--color-background) calc(l - 0.04) c h);
+			}
+		}
+
 		& .listing-photo-ghost {
 			aspect-ratio: 1 / 1;
 			border-radius: 12px;
@@ -207,12 +264,6 @@
 		& .listing-photo-ghost--disabled {
 			cursor: not-allowed;
 			pointer-events: none;
-		}
-
-		@keyframes listing-photo-spin {
-			to {
-				transform: rotate(360deg);
-			}
 		}
 
 		& .listing-photo-ghost-spinner {
@@ -367,6 +418,21 @@
 			& .info-value {
 				text-align: left;
 			}
+		}
+	}
+
+	@keyframes listing-photo-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	@keyframes listing-photo-countdown-bar {
+		from {
+			transform: scaleX(1);
+		}
+		to {
+			transform: scaleX(0);
 		}
 	}
 }

@@ -1,5 +1,5 @@
 import { useRouter } from '@tanstack/solid-router'
-import { createSignal, For, Show } from 'solid-js'
+import { batch, createSignal, For, Show } from 'solid-js'
 import { ImagePlus, Loader, Trash } from 'lucide-solid'
 import { addPhotoToListing, deletePhoto } from '@/api/listing-photos'
 import {
@@ -10,6 +10,8 @@ import { Sentry } from '@/lib/sentry'
 import type { PublicPhoto } from '@/data/public-listing'
 import { createErrorSignal, ErrorMessage } from '@/components/ErrorMessage'
 
+const PENDING_DELETE_DELAY_MS = 5000
+
 /** Displays up to 3 listing photos with owner upload/delete controls. */
 export default function ListingPhotosSection(props: {
 	listingId: number
@@ -19,16 +21,21 @@ export default function ListingPhotosSection(props: {
 	const router = useRouter()
 	const [uploading, setUploading] = createSignal(false)
 	const [deletingPhotoId, setDeletingPhotoId] = createSignal<string | null>(null)
+	const [pendingDeleteId, setPendingDeleteId] = createSignal<string | null>(null)
 	const [error, setError] = createErrorSignal()
 	const [announcement, setAnnouncement] = createSignal('')
 	let fileInputRef!: HTMLInputElement
+	let pendingDeleteTimeoutId: ReturnType<typeof setTimeout> | null = null
 	const visiblePhotos = () => props.photos.slice(0, MAX_PHOTOS_PER_LISTING)
 	const hasReachedLimit = () => visiblePhotos().length >= MAX_PHOTOS_PER_LISTING
-	const controlsDisabled = () => uploading() || deletingPhotoId() !== null
+	const controlsDisabled = () =>
+		uploading() || deletingPhotoId() !== null || pendingDeleteId() !== null
 
 	async function upload() {
 		const file = fileInputRef.files?.[0]
-		if (!file) return
+		if (!file) {
+			return
+		}
 		if (hasReachedLimit()) {
 			setError(new Error('Maximum number of photos reached'))
 			return
@@ -67,6 +74,30 @@ export default function ListingPhotosSection(props: {
 		}
 	}
 
+	function startPendingDelete(photoId: string) {
+		pendingDeleteTimeoutId = setTimeout(() => {
+			pendingDeleteTimeoutId = null
+			// batch ensures setPendingDeleteId(null) and setDeletingPhotoId (inside
+			// removePhoto) flush in a single render, preventing a visible flash between
+			// the two states.
+			batch(() => {
+				setPendingDeleteId(null)
+				void removePhoto(photoId)
+			})
+		}, PENDING_DELETE_DELAY_MS)
+		setPendingDeleteId(photoId)
+		setAnnouncement('Deletion pending. Press Cancel within 5 seconds to undo.')
+	}
+
+	function cancelPendingDelete() {
+		if (pendingDeleteTimeoutId !== null) {
+			clearTimeout(pendingDeleteTimeoutId)
+			pendingDeleteTimeoutId = null
+		}
+		setPendingDeleteId(null)
+		setAnnouncement('Deletion cancelled')
+	}
+
 	const inputId = `listing-photo-${props.listingId}`
 
 	return (
@@ -80,7 +111,12 @@ export default function ListingPhotosSection(props: {
 				<div class="listing-photo-grid">
 					<For each={visiblePhotos()}>
 						{(photo, index) => (
-							<figure class="listing-photo-frame">
+							<figure
+								class="listing-photo-frame"
+								classList={{
+									'listing-photo-frame--pending-delete': pendingDeleteId() === photo.id,
+								}}
+							>
 								<img
 									class="listing-photo"
 									src={photo.pubUrl}
@@ -89,17 +125,36 @@ export default function ListingPhotosSection(props: {
 									decoding="async"
 								/>
 								<Show when={props.isOwner}>
-									<button
-										aria-label={`Remove photo ${index() + 1}`}
-										class="listing-photo-remove"
-										disabled={controlsDisabled()}
-										onClick={() => void removePhoto(photo.id)}
-										type="button"
+									<Show
+										when={pendingDeleteId() === photo.id}
+										fallback={
+											<button
+												aria-label={`Remove photo ${index() + 1}`}
+												class="listing-photo-remove"
+												disabled={controlsDisabled()}
+												onClick={() => startPendingDelete(photo.id)}
+												type="button"
+											>
+												<span aria-hidden="true">
+													<Trash size={14} />
+												</span>
+											</button>
+										}
 									>
-										<span aria-hidden="true">
-											<Trash size={14} />
-										</span>
-									</button>
+										<div class="listing-photo-pending-delete-overlay">
+											<p class="listing-photo-pending-label" aria-hidden="true">
+												Deleting…
+											</p>
+											<div class="listing-photo-countdown-bar" aria-hidden="true" />
+											<button
+												class="listing-photo-cancel-delete"
+												onClick={cancelPendingDelete}
+												type="button"
+											>
+												Cancel
+											</button>
+										</div>
+									</Show>
 								</Show>
 							</figure>
 						)}
