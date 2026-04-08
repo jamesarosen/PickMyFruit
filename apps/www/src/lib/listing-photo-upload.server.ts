@@ -2,6 +2,9 @@ import { v7 as uuidv7 } from 'uuid'
 import { detectFromBuffer } from 'mime-bytes'
 import type { StorageAdapter } from '@/lib/storage.server'
 import { UserError } from '@/lib/user-error'
+import { MAX_PHOTOS_PER_LISTING } from '@/lib/listing-photos'
+
+export { MAX_PHOTOS_PER_LISTING }
 
 export const ALLOWED_MIME_TYPES = [
 	'image/jpeg',
@@ -11,7 +14,6 @@ export const ALLOWED_MIME_TYPES = [
 export type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number]
 
 export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
-export const MAX_PHOTOS_PER_LISTING = 3
 
 const MIME_TO_EXT = {
 	'image/jpeg': '.jpg',
