@@ -20,6 +20,7 @@ export default function ListingPhotosSection(props: {
 	const [uploading, setUploading] = createSignal(false)
 	const [deletingPhotoId, setDeletingPhotoId] = createSignal<string | null>(null)
 	const [error, setError] = createErrorSignal()
+	const [announcement, setAnnouncement] = createSignal('')
 	let fileInputRef!: HTMLInputElement
 	const visiblePhotos = () => props.photos.slice(0, MAX_PHOTOS_PER_LISTING)
 	const hasReachedLimit = () => visiblePhotos().length >= MAX_PHOTOS_PER_LISTING
@@ -33,6 +34,7 @@ export default function ListingPhotosSection(props: {
 			return
 		}
 		setUploading(true)
+		setAnnouncement('Uploading photo…')
 		setError(null)
 		try {
 			const body = new FormData()
@@ -40,9 +42,11 @@ export default function ListingPhotosSection(props: {
 			body.append('photo', file)
 			await addPhotoToListing({ data: body })
 			fileInputRef.value = ''
+			setAnnouncement('Photo uploaded')
 			await router.invalidate()
 		} catch (err) {
 			Sentry.captureException(err)
+			setAnnouncement('')
 			setError(err)
 		} finally {
 			setUploading(false)
@@ -68,7 +72,7 @@ export default function ListingPhotosSection(props: {
 	return (
 		<section class="listing-photos-section" aria-label="Listing photos">
 			<div aria-live="polite" aria-atomic="true" class="sr-only">
-				<Show when={uploading()}>Uploading photo…</Show>
+				{announcement()}
 			</div>
 			<Show
 				when={visiblePhotos().length > 0 || (props.isOwner && !hasReachedLimit())}
