@@ -167,7 +167,9 @@ export default function ListingPhotosSection(props: {
 											<div
 												class="listing-photo-countdown-bar"
 												aria-hidden="true"
-												style={{ '--countdown-progress': `${(deleteCountdown() / (PENDING_DELETE_DELAY_MS / 1000)) * 100}%` }}
+												style={{
+													'--countdown-progress': `${(deleteCountdown() / (PENDING_DELETE_DELAY_MS / 1000)) * 100}%`,
+												}}
 											/>
 											<button
 												class="listing-photo-cancel-delete"
