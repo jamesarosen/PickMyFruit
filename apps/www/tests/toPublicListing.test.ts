@@ -61,7 +61,6 @@ const EXPECTED_PUBLIC_KEYS = [
 	'status',
 	'type',
 	'updatedAt',
-	'userId',
 	'variety',
 ].sort()
 

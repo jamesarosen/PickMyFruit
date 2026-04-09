@@ -1,5 +1,5 @@
 import { useRouter } from '@tanstack/solid-router'
-import { batch, createSignal, For, Show } from 'solid-js'
+import { batch, createSignal, For, onCleanup, Show } from 'solid-js'
 import { ImagePlus, Loader, Trash } from 'lucide-solid'
 import { addPhotoToListing, deletePhoto } from '@/api/listing-photos'
 import {
@@ -24,8 +24,14 @@ export default function ListingPhotosSection(props: {
 	const [pendingDeleteId, setPendingDeleteId] = createSignal<string | null>(null)
 	const [error, setError] = createErrorSignal()
 	const [announcement, setAnnouncement] = createSignal('')
+	const [deleteCountdown, setDeleteCountdown] = createSignal(0)
+	let pendingDeleteIntervalId: ReturnType<typeof setInterval> | null = null
 	let fileInputRef!: HTMLInputElement
 	let pendingDeleteTimeoutId: ReturnType<typeof setTimeout> | null = null
+	onCleanup(() => {
+		if (pendingDeleteTimeoutId !== null) clearTimeout(pendingDeleteTimeoutId)
+		if (pendingDeleteIntervalId !== null) clearInterval(pendingDeleteIntervalId)
+	})
 	const visiblePhotos = () => props.photos.slice(0, MAX_PHOTOS_PER_LISTING)
 	const hasReachedLimit = () => visiblePhotos().length >= MAX_PHOTOS_PER_LISTING
 	const controlsDisabled = () =>
@@ -75,8 +81,17 @@ export default function ListingPhotosSection(props: {
 	}
 
 	function startPendingDelete(photoId: string) {
+		const totalSeconds = PENDING_DELETE_DELAY_MS / 1000
+		setDeleteCountdown(totalSeconds)
+		pendingDeleteIntervalId = setInterval(() => {
+			setDeleteCountdown((s) => s - 1)
+		}, 1000)
 		pendingDeleteTimeoutId = setTimeout(() => {
 			pendingDeleteTimeoutId = null
+			if (pendingDeleteIntervalId !== null) {
+				clearInterval(pendingDeleteIntervalId)
+				pendingDeleteIntervalId = null
+			}
 			// batch ensures setPendingDeleteId(null) and setDeletingPhotoId (inside
 			// removePhoto) flush in a single render, preventing a visible flash between
 			// the two states.
@@ -93,6 +108,10 @@ export default function ListingPhotosSection(props: {
 		if (pendingDeleteTimeoutId !== null) {
 			clearTimeout(pendingDeleteTimeoutId)
 			pendingDeleteTimeoutId = null
+		}
+		if (pendingDeleteIntervalId !== null) {
+			clearInterval(pendingDeleteIntervalId)
+			pendingDeleteIntervalId = null
 		}
 		setPendingDeleteId(null)
 		setAnnouncement('Deletion cancelled')
@@ -143,9 +162,13 @@ export default function ListingPhotosSection(props: {
 									>
 										<div class="listing-photo-pending-delete-overlay">
 											<p class="listing-photo-pending-label" aria-hidden="true">
-												Deleting…
+												Deleting in {deleteCountdown()}s…
 											</p>
-											<div class="listing-photo-countdown-bar" aria-hidden="true" />
+											<div
+												class="listing-photo-countdown-bar"
+												aria-hidden="true"
+												style={{ '--countdown-progress': `${(deleteCountdown() / (PENDING_DELETE_DELAY_MS / 1000)) * 100}%` }}
+											/>
 											<button
 												class="listing-photo-cancel-delete"
 												onClick={cancelPendingDelete}

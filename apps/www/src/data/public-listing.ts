@@ -8,6 +8,7 @@ export type PublicPhoto = { id: string; pubUrl: string; order: number }
 /** Public listing fields safe to expose to any visitor. */
 export type PublicListing = Omit<
 	Listing,
+	| 'userId'
 	| 'address'
 	| 'accessInstructions'
 	| 'deletedAt'
@@ -39,6 +40,7 @@ export function toPublicListing(
 	onError?: (listingId: number, error: unknown) => void
 ): PublicListing | null {
 	const {
+		userId: _userId,
 		address: _address,
 		accessInstructions: _accessInstructions,
 		deletedAt: _deletedAt,

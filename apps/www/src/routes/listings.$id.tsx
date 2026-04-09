@@ -146,7 +146,11 @@ function ListingDetailPage() {
 
 	const listing = () =>
 		data() as Listing | PublicListing | OwnerListingView | undefined
-	const isOwner = () => context().session?.user?.id === listing()?.userId
+	// OwnerListingView includes userId; PublicListing does not.
+	const isOwner = () => {
+		const l = listing()
+		return !!l && 'userId' in l && context().session?.user?.id === l.userId
+	}
 	const justCreated = () => search().created === true
 	const justMarkedUnavailable = () => search().marked === 'unavailable'
 	const canInquire = () => {

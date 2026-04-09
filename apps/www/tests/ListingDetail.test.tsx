@@ -18,7 +18,6 @@ function makeListing(overrides: Partial<PublicListing> = {}): PublicListing {
 		city: 'Napa',
 		state: 'CA',
 		approximateH3Index: '872830828ffffff',
-		userId: faker.string.uuid(),
 		notes: null,
 		coverPhotoUrl: null,
 		photos: [],
