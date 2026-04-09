@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/solid-start'
 import { getRequestHeaders } from '@tanstack/solid-start/server'
 import { z } from 'zod'
 import { errorMiddleware, UserError } from '@/lib/server-error-middleware'
+import { MAX_PHOTOS_PER_LISTING } from '@/lib/listing-photos'
 
 const deletePhotoSchema = z.object({
 	photoId: z.string().uuid(),
@@ -45,7 +46,6 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 		// may not be statically imported per the no-server-static-import lint rule).
 		const {
 			MAX_FILE_SIZE_BYTES,
-			MAX_PHOTOS_PER_LISTING,
 			ALLOWED_MIME_TYPES,
 			validatePhotoFile,
 			uploadListingPhoto,
