@@ -3,7 +3,7 @@ import { getRequestHeaders } from '@tanstack/solid-start/server'
 import { z } from 'zod'
 import { errorMiddleware } from '@/lib/server-error-middleware'
 import type { AddressFields } from '@/data/schema'
-import type { OwnerListingView } from '@/data/public-listing'
+import type { OwnerListingView } from '@/data/listing'
 
 /** Fetches the current user's listings, or empty array if not authenticated. */
 export const getMyListings = createServerFn({ method: 'GET' })

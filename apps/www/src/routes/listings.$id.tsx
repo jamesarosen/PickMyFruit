@@ -17,7 +17,7 @@ import { Sentry } from '@/lib/sentry'
 import { getListingForViewer } from '@/api/listings'
 import type { Listing } from '@/data/schema'
 import type { PublicListing } from '@/data/queries.server'
-import type { OwnerListingView, PublicPhoto } from '@/data/public-listing'
+import type { OwnerListingView, PublicPhoto } from '@/data/listing'
 import '@/routes/listing-show.css'
 import { createErrorSignal, ErrorMessage } from '@/components/ErrorMessage'
 
@@ -37,10 +37,7 @@ const STATUS_DEBOUNCE_MS = 300
 function photosForViewerRow(
 	row: Listing | PublicListing | OwnerListingView
 ): PublicPhoto[] {
-	if ('photos' in row) {
-		return row.photos
-	}
-	return []
+	return 'photos' in row ? row.photos : []
 }
 
 function OwnerControls(props: {

@@ -20,9 +20,9 @@ import {
 	type PublicListing,
 	type PublicPhoto,
 	type OwnerListingView,
-} from './public-listing'
+} from './listing'
 import { ALLOWED_EXT } from '@/lib/listing-photo-upload.server'
-export { type PublicListing, type OwnerListingView } from './public-listing'
+export { type PublicListing, type OwnerListingView } from './listing'
 
 export type { AddressFields } from './schema'
 

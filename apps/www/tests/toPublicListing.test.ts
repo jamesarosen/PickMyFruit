@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { faker } from '@faker-js/faker'
 import { latLngToCell, cellToParent, getResolution } from 'h3-js'
-import { toPublicListing, type PublicPhoto } from '../src/data/public-listing'
+import { toPublicListing, type PublicPhoto } from '../src/data/listing'
 import type { Listing } from '../src/data/schema'
 
 const NAPA = { lat: 38.2975, lng: -122.2869 }

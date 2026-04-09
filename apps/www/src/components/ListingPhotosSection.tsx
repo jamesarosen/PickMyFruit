@@ -7,7 +7,7 @@ import {
 	MAX_PHOTOS_PER_LISTING,
 } from '@/lib/listing-photos'
 import { Sentry } from '@/lib/sentry'
-import type { PublicPhoto } from '@/data/public-listing'
+import type { PublicPhoto } from '@/data/listing'
 import { createErrorSignal, ErrorMessage } from '@/components/ErrorMessage'
 
 const PENDING_DELETE_DELAY_MS = 5000
@@ -214,7 +214,7 @@ export default function ListingPhotosSection(props: {
 								name="photo"
 								ref={fileInputRef}
 								type="file"
-								class="listing-photo-file-input"
+								class="sr-only"
 								onChange={() => void upload()}
 							/>
 						</label>

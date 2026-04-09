@@ -4,7 +4,6 @@ import type { StorageAdapter } from '@/lib/storage.server'
 import { UserError } from '@/lib/user-error'
 import { MAX_PHOTOS_PER_LISTING } from '@/lib/listing-photos'
 
-export { MAX_PHOTOS_PER_LISTING }
 
 export const ALLOWED_MIME_TYPES = [
 	'image/jpeg',
