@@ -7,9 +7,10 @@ on:
     types: [closed]
   workflow_dispatch:
 
-# Prevent concurrent runs on the same ref
+# Prevent concurrent runs on the same ref+event (include event_name so that a
+# pull_request closed event on main doesn't cancel a concurrent push-to-main run)
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
