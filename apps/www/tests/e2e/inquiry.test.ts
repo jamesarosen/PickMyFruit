@@ -24,6 +24,7 @@ test.describe('Inquiry Flow', () => {
 		try {
 			await loginViaUI(page, gleaner)
 			await page.goto(`/listings/${listing.id}`)
+			await page.waitForLoadState('networkidle')
 
 			// Verify the inquiry form is visible
 			await expect(
@@ -97,6 +98,7 @@ test.describe('Inquiry Flow', () => {
 	}) => {
 		await loginViaUI(page, testUser)
 		await page.goto(`/listings/${testListing.id}`)
+		await page.waitForLoadState('networkidle')
 
 		// Owner sees "This is your listing" instead of the inquiry form
 		await expect(page.getByText('This is your listing.')).toBeVisible()
