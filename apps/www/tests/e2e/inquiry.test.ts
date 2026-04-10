@@ -24,17 +24,23 @@ test.describe('Inquiry Flow', () => {
 		try {
 			await loginViaUI(page, gleaner)
 			await page.goto(`/listings/${listing.id}`)
-			await page.waitForLoadState('networkidle')
+			// Map tiles and session-driven RPC can keep the network busy; wait for
+			// quiescence before driving the form so submit sees a settled session.
+			await page.waitForLoadState('networkidle', { timeout: 60_000 })
 
 			// Verify the inquiry form is visible
 			await expect(
 				page.getByRole('heading', { name: 'Interested in this produce?' })
-			).toBeVisible()
+			).toBeVisible({ timeout: 10000 })
+			await expect(
+				page.getByRole('button', { name: 'Put me in touch' })
+			).toBeEnabled({ timeout: 10000 })
 
-			// Fill in the note and submit
+			// Fill in the note and submit (message field is a Kobalte textbox)
 			const noteText = 'I would love some figs!'
-			const noteField = page.locator('textarea')
-			// const noteField = page.getByLabel('Message', { exact: false })
+			const noteField = page.getByRole('textbox', {
+				name: /Message to owner \(optional\)/i,
+			})
 			await noteField.click()
 			await noteField.pressSequentially(noteText, { delay: 20 })
 			await expect(noteField).toHaveValue(noteText)
@@ -43,7 +49,7 @@ test.describe('Inquiry Flow', () => {
 			// Verify success message
 			await expect(
 				page.getByRole('heading', { name: 'Request sent!' })
-			).toBeVisible()
+			).toBeVisible({ timeout: 15000 })
 			await expect(page.getByText('The owner has been notified')).toBeVisible()
 
 			// Verify inquiry was recorded in the database
@@ -66,19 +72,31 @@ test.describe('Inquiry Flow', () => {
 		try {
 			await loginViaUI(page, gleaner)
 			await page.goto(`/listings/${listing.id}`)
+			await page.waitForLoadState('networkidle', { timeout: 60_000 })
 
-			// Wait for hydration before interacting with the form
-			await page.waitForLoadState('networkidle')
+			await expect(
+				page.getByRole('heading', { name: 'Interested in this produce?' })
+			).toBeVisible({ timeout: 10000 })
+			await expect(
+				page.getByRole('button', { name: 'Put me in touch' })
+			).toBeEnabled({ timeout: 10000 })
 
 			// First inquiry succeeds
 			await page.getByRole('button', { name: 'Put me in touch' }).click()
 			await expect(
 				page.getByRole('heading', { name: 'Request sent!' })
-			).toBeVisible()
+			).toBeVisible({ timeout: 15000 })
 
 			// Reload to get a fresh form
 			await page.goto(`/listings/${listing.id}`)
-			await page.waitForLoadState('networkidle')
+			await page.waitForLoadState('networkidle', { timeout: 60_000 })
+
+			await expect(
+				page.getByRole('heading', { name: 'Interested in this produce?' })
+			).toBeVisible({ timeout: 10000 })
+			await expect(
+				page.getByRole('button', { name: 'Put me in touch' })
+			).toBeEnabled({ timeout: 10000 })
 
 			// Second inquiry shows rate-limit message
 			await page.getByRole('button', { name: 'Put me in touch' }).click()
@@ -98,10 +116,12 @@ test.describe('Inquiry Flow', () => {
 	}) => {
 		await loginViaUI(page, testUser)
 		await page.goto(`/listings/${testListing.id}`)
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('networkidle', { timeout: 60_000 })
 
 		// Owner sees "This is your listing" instead of the inquiry form
-		await expect(page.getByText('This is your listing.')).toBeVisible()
+		await expect(page.getByText('This is your listing.')).toBeVisible({
+			timeout: 10000,
+		})
 		await expect(
 			page.getByRole('heading', { name: 'Interested in this produce?' })
 		).not.toBeVisible()
@@ -117,7 +137,9 @@ test.describe('Inquiry Flow', () => {
 
 		try {
 			await page.goto(`/listings/${listing.id}`)
-			await page.waitForLoadState('networkidle')
+			await page.waitForLoadState('networkidle', { timeout: 60_000 })
+
+			await expect(page.getByLabel(/Your email/i)).toBeVisible({ timeout: 10000 })
 
 			await page.getByLabel(/Your email/i).fill(gleanerEmail)
 			await page.getByRole('button', { name: 'Put me in touch' }).click()
@@ -148,7 +170,7 @@ test.describe('Inquiry Flow', () => {
 
 			await expect(
 				page.getByRole('heading', { name: 'Request sent!' })
-			).toBeVisible()
+			).toBeVisible({ timeout: 15000 })
 
 			// Inquiry recorded in DB
 			const rows = await getInquiriesForListing(listing.id)
@@ -173,7 +195,9 @@ test.describe('Inquiry Flow', () => {
 
 		try {
 			await page.goto(`/listings/${listing.id}`)
-			await page.waitForLoadState('networkidle')
+			await page.waitForLoadState('networkidle', { timeout: 60_000 })
+
+			await expect(page.getByLabel(/Your email/i)).toBeVisible({ timeout: 10000 })
 
 			await page.getByLabel(/Your email/i).fill(gleanerEmail)
 			await page.getByRole('button', { name: 'Put me in touch' }).click()
@@ -198,7 +222,7 @@ test.describe('Inquiry Flow', () => {
 
 			await expect(
 				page.getByRole('heading', { name: 'Request sent!' })
-			).toBeVisible()
+			).toBeVisible({ timeout: 15000 })
 
 			// Inquiry recorded
 			const rows = await getInquiriesForListing(listing.id)

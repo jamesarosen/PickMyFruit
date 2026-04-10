@@ -92,16 +92,18 @@ test.describe('Listing Detail Page', () => {
 	}) => {
 		await loginViaUI(page, testUser)
 		await page.goto(`/listings/${testListing.id}`)
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('networkidle', { timeout: 60_000 })
 
 		const newTitle = 'Freshly Edited Title'
 		const titleInput = page.getByLabel('Title')
 		await titleInput.fill(newTitle)
 		await titleInput.blur()
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('networkidle', { timeout: 60_000 })
 
 		await page.reload()
-		await page.waitForLoadState('networkidle')
-		await expect(page.getByLabel('Title')).toHaveValue(newTitle)
+		await page.waitForLoadState('networkidle', { timeout: 60_000 })
+		await expect(page.getByLabel('Title')).toHaveValue(newTitle, {
+			timeout: 10000,
+		})
 	})
 })

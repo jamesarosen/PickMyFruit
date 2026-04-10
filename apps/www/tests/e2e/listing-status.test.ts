@@ -12,18 +12,16 @@ test.describe('Listing Status', () => {
 	}) => {
 		await loginViaUI(page, testUser)
 		await page.goto(`/listings/${testListing.id}`)
-		await page.waitForLoadState('networkidle')
 
 		const availableRadio = page.getByRole('radio', { name: /^Available / })
 		const unavailableRadio = page.getByRole('radio', { name: /^Unavailable / })
 
+		await expect(availableRadio).toBeVisible({ timeout: 10000 })
 		await expect(availableRadio).toBeChecked()
 		await expect(unavailableRadio).not.toBeChecked()
 
 		await unavailableRadio.click()
-		await page.waitForLoadState('networkidle')
-
-		await expect(unavailableRadio).toBeChecked()
+		await expect(unavailableRadio).toBeChecked({ timeout: 10000 })
 		await expect(availableRadio).not.toBeChecked()
 	})
 
@@ -37,17 +35,15 @@ test.describe('Listing Status', () => {
 
 		await loginViaUI(page, testUser)
 		await page.goto(`/listings/${listing.id}`)
-		await page.waitForLoadState('networkidle')
 
 		const availableRadio = page.getByRole('radio', { name: /^Available / })
 		const unavailableRadio = page.getByRole('radio', { name: /^Unavailable / })
 
+		await expect(unavailableRadio).toBeVisible({ timeout: 10000 })
 		await expect(unavailableRadio).toBeChecked()
 
 		await availableRadio.click()
-		await page.waitForLoadState('networkidle')
-
-		await expect(availableRadio).toBeChecked()
+		await expect(availableRadio).toBeChecked({ timeout: 10000 })
 	})
 
 	test('owner can set listing status to private', async ({ page, testUser }) => {
@@ -57,16 +53,14 @@ test.describe('Listing Status', () => {
 
 		await loginViaUI(page, testUser)
 		await page.goto(`/listings/${listing.id}`)
-		await page.waitForLoadState('networkidle')
 
 		const privateRadio = page.getByRole('radio', { name: /^Private / })
 
+		await expect(privateRadio).toBeVisible({ timeout: 10000 })
 		await expect(privateRadio).not.toBeChecked()
 
 		await privateRadio.click()
-		await page.waitForLoadState('networkidle')
-
-		await expect(privateRadio).toBeChecked()
+		await expect(privateRadio).toBeChecked({ timeout: 10000 })
 	})
 
 	test('unavailable listing shows unavailable message on detail page', async ({
