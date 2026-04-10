@@ -111,5 +111,10 @@
 		margin: 12px 0 0;
 		padding-top: 12px;
 		border-top: 1px solid oklch(from var(--color-quiet) l calc(c * 0.2) h);
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 }
