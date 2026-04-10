@@ -9,13 +9,14 @@ test.describe('Address Autofill', () => {
 	}) => {
 		await loginViaUI(page, testUser)
 		await page.goto('/listings/new')
+		await page.waitForLoadState('networkidle')
 
 		await expect(page.getByLabel(/Address/)).toHaveValue('')
 		await expect(page.getByLabel('City')).toHaveValue('Napa')
 		await expect(page.getByLabel('State')).toHaveValue('CA')
 
 		// No prefill notice
-		await expect(page.locator('.form-prefill-notice')).not.toBeVisible()
+		await expect(page.locator('.form-prefill-notice')).not.toBeAttached()
 	})
 
 	test('pre-fills address from most recent listing', async ({
@@ -31,6 +32,7 @@ test.describe('Address Autofill', () => {
 
 		await loginViaUI(page, testUser)
 		await page.goto('/listings/new')
+		await page.waitForLoadState('networkidle')
 
 		await expect(page.getByLabel(/Address/)).toHaveValue('456 Oak Avenue')
 		await expect(page.getByLabel('City')).toHaveValue('St. Helena')
