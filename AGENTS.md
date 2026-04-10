@@ -113,3 +113,31 @@ We use a monorepo structure
 ## Future Plans
 
 (none yet)
+
+## Cursor Cloud specific instructions
+
+### Services
+
+The only service is the **Solid JS web application** in `apps/www`. It uses an embedded SQLite database (no external DB process required). All env defaults for dev and test are committed in `.env.development` and `.env.test`.
+
+### Common commands (run from repo root)
+
+| Task | Command |
+|---|---|
+| Dev server (port 5173) | `pnpm dev` (from `apps/www`) |
+| Lint | `pnpm lint` |
+| Typecheck | `pnpm typecheck` |
+| Unit tests | `pnpm test:run` |
+| E2E tests | `pnpm test:e2e` (from `apps/www`) |
+| Format check | `pnpm format:check` |
+| DB schema sync (dev) | `pnpm db:push` (from `apps/www`) |
+| Quality gate (all checks) | `bash bin/quality-gate.sh` |
+
+### Gotchas
+
+- **Node version**: `.npmrc` sets `use-node-version=24.9.0` — pnpm scripts automatically use Node 24.9.0 regardless of the system Node version. Ensure Node 24 is installed via nvm.
+- **DB push vs migrate**: Dev uses `db:push`; E2E tests and production use `db:migrate`. A DB created with one method cannot switch to the other — delete the `.db` file to start fresh if needed.
+- **Magic link auth in dev**: `EMAIL_PROVIDER=console` (default) logs the magic link token to the Vite dev server stdout. Look for the Pino log line with `token:` to extract it for manual testing.
+- **E2E test server**: Playwright starts its own Vite dev server on port 5174 with test-specific env vars (`reuseExistingServer: false`). The port-5173 dev server does not interfere.
+- **pnpm build script warnings**: `pnpm install` may show "Ignored build scripts" for `esbuild`, `sharp`, `@parcel/watcher`, `@sentry/cli`. The platform-specific binaries are still installed correctly via optional dependencies; these warnings are safe to ignore.
+- **`pnpm db:seed` script reference**: The `package.json` `db:seed` script references `src/data/seed.ts` but the actual file is `src/data/seed.server.ts`. The seed script will fail; this is a known discrepancy in the repo.
