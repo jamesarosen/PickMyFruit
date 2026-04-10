@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { faker } from '@faker-js/faker'
 import { latLngToCell, cellToParent, getResolution } from 'h3-js'
-import { toPublicListing, type PublicPhoto } from '../src/data/public-listing'
+import { toPublicListing, type PublicPhoto } from '../src/data/listing'
 import type { Listing } from '../src/data/schema'
 
 const NAPA = { lat: 38.2975, lng: -122.2869 }
@@ -49,7 +49,6 @@ function makePhoto(
 const EXPECTED_PUBLIC_KEYS = [
 	'approximateH3Index',
 	'city',
-	'coverPhotoUrl',
 	'createdAt',
 	'harvestWindow',
 	'id',
@@ -61,7 +60,6 @@ const EXPECTED_PUBLIC_KEYS = [
 	'status',
 	'type',
 	'updatedAt',
-	'userId',
 	'variety',
 ].sort()
 
@@ -134,21 +132,20 @@ describe('toPublicListing', () => {
 	})
 
 	describe('photos', () => {
-		it('defaults to empty photos and null coverPhotoUrl when no photos are passed', () => {
+		it('defaults to empty photos when no photos are passed', () => {
 			const listing = makeListing()
 			const result = toPublicListing(listing)!
 
 			expect(result.photos).toEqual([])
-			expect(result.coverPhotoUrl).toBeNull()
 		})
 
-		it('sets coverPhotoUrl to the first photo pubUrl', () => {
+		it('includes all passed photos in the photos array', () => {
 			const listing = makeListing()
 			const first = makePhoto()
 			const second = makePhoto()
 			const result = toPublicListing(listing, [first, second])!
 
-			expect(result.coverPhotoUrl).toBe(first.pubUrl)
+			expect(result.photos).toEqual([first, second])
 		})
 
 		it('includes all photos in the photos array', () => {
@@ -176,9 +173,6 @@ describe('toPublicListing', () => {
 			]
 			const result = toPublicListing(listing, photos)!
 
-			expect(result.coverPhotoUrl).toBe(
-				`https://cdn.example.com/listing_photos/${uuid1}.jpg`
-			)
 			expect(result.photos[0].pubUrl).toBe(
 				`https://cdn.example.com/listing_photos/${uuid1}.jpg`
 			)

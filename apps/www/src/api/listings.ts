@@ -2,8 +2,8 @@ import { createServerFn } from '@tanstack/solid-start'
 import { getRequestHeaders } from '@tanstack/solid-start/server'
 import { z } from 'zod'
 import { errorMiddleware } from '@/lib/server-error-middleware'
-import type { Listing } from '@/data/schema'
 import type { AddressFields } from '@/data/schema'
+import type { OwnerListingView } from '@/data/listing'
 
 /** Fetches the current user's listings, or empty array if not authenticated. */
 export const getMyListings = createServerFn({ method: 'GET' })
@@ -13,7 +13,7 @@ export const getMyListings = createServerFn({ method: 'GET' })
 		const { auth } = await import('@/lib/auth.server')
 		const session = await auth.api.getSession({ headers })
 		if (!session?.user) {
-			return [] as Listing[]
+			return [] as OwnerListingView[]
 		}
 
 		const { getUserListings } = await import('@/data/queries.server')
@@ -79,13 +79,18 @@ export const getListingForViewer = createServerFn({ method: 'GET' })
 		const headers = getRequestHeaders()
 		const { auth } = await import('@/lib/auth.server')
 		const session = await auth.api.getSession({ headers })
-		const { getPublicListingById: getPublic, getListingById } =
-			await import('@/data/queries.server')
+		const {
+			getPublicListingById: getPublic,
+			getListingById,
+			getPhotosForListing,
+		} = await import('@/data/queries.server')
 
 		if (session?.user) {
 			const listing = await getListingById(id)
 			if (listing && listing.userId === session.user.id) {
-				return listing
+				const photos = await getPhotosForListing(id)
+				const ownerView: OwnerListingView = { ...listing, photos }
+				return ownerView
 			}
 		}
 		return getPublic(id)

@@ -2,9 +2,8 @@ import { createFileRoute, Link, useRouteContext } from '@tanstack/solid-router'
 import { For, Show } from 'solid-js'
 import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
+import ListingCard from '@/components/ListingCard'
 import { authMiddleware } from '@/middleware/auth'
-import { getStatusClass } from '@/lib/listing-status'
-import type { Listing } from '@/data/schema'
 import { getMyListings } from '@/api/listings'
 import { displayName } from '@/lib/display-name'
 import '@/routes/listings/mine.css'
@@ -24,31 +23,6 @@ export const Route = createFileRoute('/listings/mine')({
 		middleware: [authMiddleware],
 	},
 })
-
-function ListingCard(props: { listing: Listing }) {
-	return (
-		<article class="listing-card">
-			<Link
-				to="/listings/$id"
-				params={{ id: String(props.listing.id) }}
-				class="listing-card-link"
-			>
-				<h3>{props.listing.name}</h3>
-				<span class={`status-label ${getStatusClass(props.listing.status)}`}>
-					{props.listing.status}
-				</span>
-				<div class="listing-details">
-					<p class="listing-location">
-						{props.listing.city}, {props.listing.state}
-					</p>
-					<Show when={props.listing.harvestWindow}>
-						<p class="listing-harvest">Harvest: {props.listing.harvestWindow}</p>
-					</Show>
-				</div>
-			</Link>
-		</article>
-	)
-}
 
 function EmptyState() {
 	return (

@@ -8,6 +8,7 @@ export type PublicPhoto = { id: string; pubUrl: string; order: number }
 /** Public listing fields safe to expose to any visitor. */
 export type PublicListing = Omit<
 	Listing,
+	| 'userId'
 	| 'address'
 	| 'accessInstructions'
 	| 'deletedAt'
@@ -17,9 +18,12 @@ export type PublicListing = Omit<
 	| 'zip'
 > & {
 	approximateH3Index: string
-	/** Public URL of the first photo by order, or null if none. */
-	coverPhotoUrl: string | null
 	/** All photos for this listing, ordered by `order`. */
+	photos: PublicPhoto[]
+}
+
+/** Full listing row plus public photo fields — returned to the listing owner only. */
+export type OwnerListingView = Listing & {
 	photos: PublicPhoto[]
 }
 
@@ -33,6 +37,7 @@ export function toPublicListing(
 	onError?: (listingId: number, error: unknown) => void
 ): PublicListing | null {
 	const {
+		userId: _userId,
 		address: _address,
 		accessInstructions: _accessInstructions,
 		deletedAt: _deletedAt,
@@ -52,7 +57,6 @@ export function toPublicListing(
 	return {
 		...safe,
 		approximateH3Index,
-		coverPhotoUrl: photos[0]?.pubUrl ?? null,
 		photos,
 	}
 }

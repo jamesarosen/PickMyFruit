@@ -92,6 +92,185 @@
 			line-height: 1.5;
 		}
 
+		& .listing-photos-section {
+			--listing-photo-gap: 12px;
+			margin-top: 24px;
+			container-type: inline-size;
+		}
+
+		& .listing-photo-grid {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: flex-start;
+			gap: var(--listing-photo-gap);
+		}
+
+		& .listing-photo-frame,
+		& .listing-photo-ghost {
+			position: relative;
+			margin: 0;
+			inline-size: calc((100% - (2 * var(--listing-photo-gap))) / 3);
+			flex: 0 0 calc((100% - (2 * var(--listing-photo-gap))) / 3);
+		}
+
+		@container (max-width: 590px) {
+			& .listing-photo-grid {
+				flex-direction: column;
+			}
+
+			& .listing-photo-frame,
+			& .listing-photo-ghost {
+				inline-size: 100%;
+				flex-basis: 100%;
+			}
+		}
+
+		& .listing-photo {
+			width: 100%;
+			aspect-ratio: 1 / 1;
+			object-fit: cover;
+			border-radius: 12px;
+			display: block;
+			background: oklch(from var(--color-quiet) l calc(c * 0.08) h);
+		}
+
+		& .listing-photo-remove {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			position: absolute;
+			top: -4px;
+			right: -4px;
+			inline-size: 30px;
+			block-size: 30px;
+			border-radius: 999px;
+			border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.3) h);
+			background: oklch(from var(--color-background) l c h / 0.95);
+			color: var(--color-foreground);
+			font-weight: 700;
+			cursor: pointer;
+		}
+
+		& .listing-photo-frame--pending-delete .listing-photo {
+			opacity: 0.25;
+			filter: blur(2px);
+		}
+
+		& .listing-photo-pending-delete-overlay {
+			position: absolute;
+			inset: 0;
+			border-radius: 12px;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 10px;
+			padding: 16px;
+		}
+
+		& .listing-photo-pending-label {
+			margin: 0;
+			font-size: 14px;
+			font-weight: 600;
+			color: var(--color-foreground);
+		}
+
+		& .listing-photo-countdown-bar {
+			--countdown-progress: 100%;
+			width: 100%;
+			height: 4px;
+			border-radius: 2px;
+			background: oklch(from var(--color-quiet) l calc(c * 0.2) h);
+			overflow: hidden;
+
+			&::after {
+				content: '';
+				display: block;
+				height: 100%;
+				width: var(--countdown-progress);
+				background: var(--color-accent);
+				transition: width 1s linear;
+			}
+
+			@media (prefers-reduced-motion: reduce) {
+				&::after {
+					transition: none;
+				}
+			}
+		}
+
+		& .listing-photo-cancel-delete {
+			padding: 5px 14px;
+			border-radius: 6px;
+			border: 1px solid var(--color-border);
+			background: oklch(from var(--color-background) l c h / 0.95);
+			color: var(--color-foreground);
+			font-size: 13px;
+			font-weight: 600;
+			cursor: pointer;
+
+			&:hover {
+				background: oklch(from var(--color-background) calc(l - 0.04) c h);
+			}
+		}
+
+		& .listing-photo-ghost {
+			aspect-ratio: 1 / 1;
+			border-radius: 12px;
+			border: 2px dashed oklch(from var(--color-quiet) l calc(c * 0.4) h);
+			background: transparent;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			padding: 12px;
+			box-sizing: border-box;
+			cursor: pointer;
+		}
+
+		& .listing-photo-ghost:hover,
+		& .listing-photo-ghost:focus-within {
+			border-color: var(--color-primary);
+			background: oklch(from var(--color-primary) l c h / 0.05);
+		}
+
+		& .listing-photo-ghost:focus-within {
+			outline: 2px solid var(--color-primary);
+			outline-offset: 2px;
+		}
+
+		& .listing-photo-ghost--uploading {
+			cursor: wait;
+		}
+
+		& .listing-photo-ghost-content {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 12px;
+			inline-size: 100%;
+			color: var(--color-quiet);
+			pointer-events: none;
+		}
+
+		& .listing-photo-upload-label {
+			font-size: 14px;
+			font-weight: 500;
+			color: var(--color-foreground);
+		}
+
+		& .listing-photo-ghost--disabled {
+			cursor: not-allowed;
+			pointer-events: none;
+		}
+
+		& .listing-photo-ghost-spinner {
+			animation: listing-photo-spin 1s linear infinite;
+		}
+
+		& .listing-photo-upload-error {
+			margin: 12px 0 0;
+		}
+
 		& .listing-map-section {
 			margin-top: 24px;
 		}
@@ -236,6 +415,12 @@
 			& .info-value {
 				text-align: left;
 			}
+		}
+	}
+
+	@keyframes listing-photo-spin {
+		to {
+			transform: rotate(360deg);
 		}
 	}
 }

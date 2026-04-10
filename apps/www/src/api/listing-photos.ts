@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/solid-start'
 import { getRequestHeaders } from '@tanstack/solid-start/server'
 import { z } from 'zod'
 import { errorMiddleware, UserError } from '@/lib/server-error-middleware'
+import { MAX_PHOTOS_PER_LISTING } from '@/lib/listing-photos'
 
 const deletePhotoSchema = z.object({
 	photoId: z.string().uuid(),
@@ -10,15 +11,18 @@ const deletePhotoSchema = z.object({
 /**
  * Uploads a photo for a listing.
  *
- * Reads multipart/form-data from the raw request: expects a `listingId`
- * field (number) and a `photo` file field. Returns `{ id, pubUrl }` on success.
- *
- * File is not passed through inputValidator (File is not JSON-serializable);
- * the handler reads it directly from the request body.
+ * Expects multipart/form-data with a `listingId` field (number) and a `photo`
+ * file field. Returns `{ id, pubUrl }` on success.
  */
 export const addPhotoToListing = createServerFn({ method: 'POST' })
 	.middleware([errorMiddleware])
-	.handler(async () => {
+	.inputValidator((data) => {
+		if (!(data instanceof FormData)) {
+			throw new UserError('INVALID_INPUT', 'Expected multipart form data')
+		}
+		return data
+	})
+	.handler(async ({ data: formData }) => {
 		const headers = getRequestHeaders()
 		const { auth } = await import('@/lib/auth.server')
 		const session = await auth.api.getSession({ headers })
@@ -26,10 +30,6 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 		if (!session?.user) {
 			throw new UserError('AUTH_REQUIRED', 'Authentication required')
 		}
-
-		const { getRequest } = await import('@tanstack/solid-start/server')
-		const request = await getRequest()
-		const formData = await request.formData()
 
 		const listingId = Number(formData.get('listingId'))
 		if (!Number.isInteger(listingId) || listingId <= 0) {
@@ -46,7 +46,6 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 		// may not be statically imported per the no-server-static-import lint rule).
 		const {
 			MAX_FILE_SIZE_BYTES,
-			MAX_PHOTOS_PER_LISTING,
 			ALLOWED_MIME_TYPES,
 			validatePhotoFile,
 			uploadListingPhoto,

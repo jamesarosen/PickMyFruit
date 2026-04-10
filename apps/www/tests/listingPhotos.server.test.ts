@@ -292,7 +292,7 @@ describe('getPublicListingById', () => {
 		vi.clearAllMocks()
 	})
 
-	it('returns a PublicListing with photos and coverPhotoUrl populated', async () => {
+	it('returns a PublicListing with photos populated', async () => {
 		const listingId = 42
 		const listing = makeListingRow(listingId)
 		const photoId = faker.string.uuid()
@@ -310,9 +310,6 @@ describe('getPublicListingById', () => {
 			`https://cdn.example.com/listing_photos/${photoId}.jpg`
 		)
 		expect(result!.photos[0].order).toBe(0)
-		expect(result!.coverPhotoUrl).toBe(
-			`https://cdn.example.com/listing_photos/${photoId}.jpg`
-		)
 	})
 
 	it('returns a PublicListing with empty photos when listing has no photos', async () => {
@@ -324,7 +321,6 @@ describe('getPublicListingById', () => {
 
 		expect(result).toBeDefined()
 		expect(result!.photos).toEqual([])
-		expect(result!.coverPhotoUrl).toBeNull()
 	})
 
 	it('returns undefined when the listing is not found', async () => {
@@ -390,13 +386,10 @@ describe('fetchPhotosByListingIds grouping (via getAvailableListings)', () => {
 			`https://cdn.example.com/listing_photos/${id10}.jpg`,
 			`https://cdn.example.com/listing_photos/${id11}.jpg`,
 		])
-		expect(r1.coverPhotoUrl).toBe(
-			`https://cdn.example.com/listing_photos/${id10}.jpg`
-		)
 
 		const r2 = results.find((r) => r.id === 2)!
 		expect(r2.photos).toHaveLength(1)
-		expect(r2.coverPhotoUrl).toBe(
+		expect(r2.photos[0].pubUrl).toBe(
 			`https://cdn.example.com/listing_photos/${id20}.jpg`
 		)
 	})
@@ -410,6 +403,5 @@ describe('fetchPhotosByListingIds grouping (via getAvailableListings)', () => {
 
 		expect(results).toHaveLength(1)
 		expect(results[0].photos).toEqual([])
-		expect(results[0].coverPhotoUrl).toBeNull()
 	})
 })

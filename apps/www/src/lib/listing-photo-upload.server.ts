@@ -11,7 +11,6 @@ export const ALLOWED_MIME_TYPES = [
 export type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number]
 
 export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
-export const MAX_PHOTOS_PER_LISTING = 3
 
 const MIME_TO_EXT = {
 	'image/jpeg': '.jpg',
