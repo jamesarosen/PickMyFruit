@@ -9,7 +9,7 @@ export type ListingCardData = {
 	name: string
 	city: string
 	state: string
-	coverPhotoUrl: string | null
+	photos: { pubUrl: string }[]
 	type?: string | null
 	variety?: string | null
 	quantity?: string | null
@@ -31,7 +31,7 @@ export default function ListingCard(props: { listing: ListingCardData }) {
 				<h3>{l().name}</h3>
 
 				<Show
-					when={l().coverPhotoUrl}
+					when={l().photos[0]?.pubUrl}
 					fallback={
 						<span
 							class="listing-card-thumb listing-card-thumb--placeholder"

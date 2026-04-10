@@ -19,7 +19,6 @@ function makeListing(overrides: Partial<PublicListing> = {}): PublicListing {
 		state: 'CA',
 		approximateH3Index: '872830828ffffff',
 		notes: null,
-		coverPhotoUrl: null,
 		photos: [],
 		createdAt: new Date(),
 		updatedAt: new Date(),

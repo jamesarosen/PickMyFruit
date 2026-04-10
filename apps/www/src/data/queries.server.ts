@@ -159,7 +159,7 @@ export async function getUserListings(
 			const photoMap = await fetchPhotosByListingIds(results.map((l) => l.id))
 			return results.map((listing) => {
 				const photos = photoMap.get(listing.id) ?? []
-				return { ...listing, photos, coverPhotoUrl: photos[0]?.pubUrl ?? null }
+				return { ...listing, photos }
 			})
 		}
 	)

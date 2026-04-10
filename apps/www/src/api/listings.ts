@@ -89,11 +89,7 @@ export const getListingForViewer = createServerFn({ method: 'GET' })
 			const listing = await getListingById(id)
 			if (listing && listing.userId === session.user.id) {
 				const photos = await getPhotosForListing(id)
-				const ownerView: OwnerListingView = {
-					...listing,
-					coverPhotoUrl: photos[0]?.pubUrl ?? null,
-					photos,
-				}
+				const ownerView: OwnerListingView = { ...listing, photos }
 				return ownerView
 			}
 		}

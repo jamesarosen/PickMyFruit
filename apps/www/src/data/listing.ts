@@ -18,15 +18,12 @@ export type PublicListing = Omit<
 	| 'zip'
 > & {
 	approximateH3Index: string
-	/** Public URL of the first photo by order, or null if none. */
-	coverPhotoUrl: string | null
 	/** All photos for this listing, ordered by `order`. */
 	photos: PublicPhoto[]
 }
 
 /** Full listing row plus public photo fields — returned to the listing owner only. */
 export type OwnerListingView = Listing & {
-	coverPhotoUrl: string | null
 	photos: PublicPhoto[]
 }
 
@@ -60,7 +57,6 @@ export function toPublicListing(
 	return {
 		...safe,
 		approximateH3Index,
-		coverPhotoUrl: photos[0]?.pubUrl ?? null,
 		photos,
 	}
 }
