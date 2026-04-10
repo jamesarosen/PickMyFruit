@@ -53,7 +53,9 @@ ARG SENTRY_RELEASE
 ARG VITE_SENTRY_RELEASE=${SENTRY_RELEASE}
 
 # Build the www application.
-RUN cd apps/www && pnpm build
+# Nitro's Rollup bundling phase (~3400 modules) can exceed Node's default
+# ~2 GB heap. Set a higher limit to avoid OOM during Docker builds.
+RUN cd apps/www && NODE_OPTIONS="--max-old-space-size=4096" pnpm build
 
 # Upload sourcemaps to Sentry and delete them so they are absent from the
 # final image. Runs after the full build so both client (.output/public/)
