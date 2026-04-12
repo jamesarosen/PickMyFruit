@@ -40,9 +40,23 @@ This gives users confidence that the system understood their location without re
 
 ### Geocoding
 
-Nominatim (free, no API key) until rate-limited. Error handling:
-- 200 with empty results → return `null` (no match found)
-- 429 / 5xx → throw a typed `GeocodingError`; callers surface a retry message; Sentry captures the error with the queried address and response status
+Nominatim (free, no API key) until rate-limited. The existing `apps/www/src/lib/geocoding.ts` handles listing creation; the notifications branch had a separate `geocode.ts` with a simpler string-query interface and AbortSignal support but swallowed 429/5xx as `null`. These are combined into `geocoding.ts` in PR 1.
+
+Combined `geocoding.ts` design:
+- Accepts either `GeocodingInput` (structured, for listing creation) or a plain string query (for the subscription form search)
+- 10-second timeout + optional caller-supplied `AbortSignal`
+- 200 with empty results → returns `null`
+- 429 / 5xx → throws `GeocodingError`; callers surface a retry message; Sentry captures the error with the queried address and HTTP status
+- User-Agent from `NOMINATIM_USER_AGENT` env var (required; Nominatim ToS requires an identifying contact)
+
+```ts
+export class GeocodingError extends Error {
+  constructor(public readonly status: number, address: string) {
+    super(`Geocoding failed (HTTP ${status}) for: ${address}`)
+    this.name = 'GeocodingError'
+  }
+}
+```
 
 ### HMAC-Signed Unsubscribe URLs
 
@@ -103,16 +117,16 @@ The runner processes throttle periods **sequentially**, not in parallel, to avoi
 
 **Files:**
 - `apps/www/src/data/schema.ts` — `notificationSubscriptions` table
-- `apps/www/drizzle/000N_add_notification_subscriptions.sql` — migration (generated)
+- `apps/www/drizzle/0007_add_notification_subscriptions.sql` — migration (generated; main is at 0006)
 - `apps/www/src/lib/validation.ts` — `createSubscriptionSchema`, `updateSubscriptionSchema`
 - `apps/www/src/lib/hmac.ts` — `signUnsubscribeUrl`, `verifyUnsubscribeUrl` (no userId in URL)
-- `apps/www/src/lib/geocode.ts` — `geocodeAddress` with typed `GeocodingError` for 429/5xx
+- `apps/www/src/lib/geocoding.ts` — combine existing structured-input version with notifications branch's string-query + AbortSignal version; add `GeocodingError`, timeout, env-var User-Agent
 - `apps/www/src/lib/subscription-matcher.ts` — `subscriptionMatchesListing`
 - `apps/www/src/lib/subscription-labels.ts` — human-readable throttle period labels
 - `apps/www/src/data/queries.ts` — `createSubscription`, `getSubscriptions`, `updateSubscription`, `deleteSubscription`, `getSubscriptionsDue`, `getAvailableListings`, `markSubscriptionNotified`
 - `apps/www/src/api/notifications.ts` — server functions wrapping the above queries
 - `apps/www/src/lib/env.server.ts` — add `HMAC_SECRET`, `CRON_SECRET`
-- Tests: `queries.notifications.test.ts`, `subscription-matcher.test.ts`, `hmac.test.ts`, `geocode.test.ts`, `validation.test.ts`
+- Tests: `queries.notifications.test.ts`, `subscription-matcher.test.ts`, `hmac.test.ts`, `geocoding.test.ts`, `validation.test.ts`
 
 **Schema:**
 ```sql
@@ -155,13 +169,13 @@ CREATE TRIGGER enforce_subscription_limit ...  -- see above
 | Subscription limit race condition | SQLite `BEFORE INSERT` trigger (100% enforcement) |
 | `centerH3`/`resolution` mismatch on partial update | Validation schema rejects any update that includes one but not both |
 | Composite index missing from `db:push` dev environment | Add index to `schema.ts` Drizzle definition, not only migration SQL |
-| Geocoding 429/503 swallowed silently | `GeocodingError` type; Sentry capture with address + status in callers |
+| Geocoding 429/5xx swallowed silently (bug in notifications branch) | `GeocodingError` thrown; callers capture to Sentry with address + status |
 
 **Testing approach:**
 - Integration tests against a real test DB (same pattern as `queries.notifications.test.ts`)
 - `subscription-matcher.test.ts`: `test.each` over boundary cells (in ring, on edge, outside)
 - `hmac.test.ts`: sign → verify round-trip; tampered sig rejected; different subscriptionId rejected
-- `geocode.test.ts`: 200+results, 200+empty, 429 throws `GeocodingError`, 500 throws `GeocodingError`, Sentry capture verified
+- `geocoding.test.ts`: 200+results, 200+empty returns `null`, 429 throws `GeocodingError`, 500 throws `GeocodingError`, AbortSignal cancels in-flight request, Sentry capture verified for error cases
 
 ---
 
@@ -174,8 +188,9 @@ CREATE TRIGGER enforce_subscription_limit ...  -- see above
 - `apps/www/src/lib/email-templates.ts` — `buildNotificationEmailSubject`, `buildNotificationEmailHtml`
 - `apps/www/src/routes/api/cron.notify.ts` — HTTP endpoint, validates `CRON_SECRET`, calls `runAll`
 - `apps/www/src/bin/notify.ts` — thin CLI wrapper for local dev / manual triggering
-- `apps/www/fly.toml` — `supercronic` process and cron schedule
-- `apps/www/Dockerfile` — install `supercronic`, add crontab
+- `apps/www/fly.toml` — `supercronic` process and `NOTIFY_CRON_SCHEDULE` secret
+- `apps/www/Dockerfile` — install `supercronic`, add crontab driven by `NOTIFY_CRON_SCHEDULE`
+- `.env.development` — `NOTIFY_CRON_SCHEDULE=* * * * *` (every minute in dev)
 - Tests: `notification-runner.test.ts`, `email-templates.notifications.test.ts`
 
 **Notification runner contract:**
@@ -277,8 +292,9 @@ CREATE TRIGGER enforce_subscription_limit ...  -- see above
 
 ## Environment Variables
 
-| Variable | Required in prod | Purpose |
-|----------|-----------------|---------|
-| `HMAC_SECRET` | Yes | Signs unsubscribe and mark-unavailable URLs |
-| `CRON_SECRET` | Yes | Authenticates `POST /api/cron/notify` requests |
-| `NOMINATIM_USER_AGENT` | Yes | Required by Nominatim ToS (app name + contact) |
+| Variable | Required in prod | Dev default | Purpose |
+|----------|-----------------|-------------|---------|
+| `HMAC_SECRET` | Yes | — | Signs unsubscribe and mark-unavailable URLs |
+| `CRON_SECRET` | Yes | — | Authenticates `POST /api/cron/notify` requests |
+| `NOMINATIM_USER_AGENT` | Yes | — | Required by Nominatim ToS (app name + contact email) |
+| `NOTIFY_CRON_SCHEDULE` | Yes | `* * * * *` | crontab schedule for `supercronic`; prod uses `0 * * * *` (hourly) |
