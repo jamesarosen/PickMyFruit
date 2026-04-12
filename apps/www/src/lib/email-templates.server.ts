@@ -161,9 +161,9 @@ export function buildNotificationEmailHtml(
 export async function sendNotificationEmail(
 	input: NotificationEmailData
 ): Promise<void> {
-	if (serverEnv.EMAIL_PROVIDER === 'silent') return
+	if (serverEnv.email.PROVIDER === 'silent') return
 
-	if (serverEnv.EMAIL_PROVIDER === 'console') {
+	if (serverEnv.email.PROVIDER === 'console') {
 		logger.info(
 			{
 				to: input.to,
@@ -176,9 +176,9 @@ export async function sendNotificationEmail(
 		return
 	}
 
-	if (serverEnv.EMAIL_PROVIDER === 'resend') {
+	if (serverEnv.email.PROVIDER === 'resend') {
 		const { Resend } = await import('resend')
-		const resend = new Resend(serverEnv.RESEND_API_KEY)
+		const resend = new Resend(serverEnv.email.RESEND_API_KEY)
 
 		const { error } = await resend.emails.send({
 			from: serverEnv.EMAIL_FROM,
@@ -192,13 +192,15 @@ export async function sendNotificationEmail(
 		})
 
 		if (error) {
-			throw new Error(`Notification email send failed: ${error.name} — ${error.message}`)
+			throw new Error(
+				`Notification email send failed: ${error.name} — ${error.message}`
+			)
 		}
 		return
 	}
 
 	throw new Error(
-		`Unhandled EMAIL_PROVIDER: ${(serverEnv as { EMAIL_PROVIDER: string }).EMAIL_PROVIDER}`
+		`Unhandled EMAIL_PROVIDER: ${serverEnv.email.PROVIDER}`
 	)
 }
 
