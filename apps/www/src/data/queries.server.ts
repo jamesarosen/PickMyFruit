@@ -41,13 +41,22 @@ function reportH3Error(listingId: number, error: unknown) {
 /**
  * Fetches non-deleted photos for a set of listing IDs in a single query and
  * groups them by listing ID, ordered by `order` ascending.
- * Capped at 100 IDs to stay within SQLite's variable limit.
+ * Throws when more than 100 IDs are requested so call sites fail fast instead
+ * of silently dropping photos.
  */
+const MAX_PHOTO_LOOKUP_LISTING_IDS = 100
+
 async function fetchPhotosByListingIds(
 	listingIds: number[]
 ): Promise<Map<number, PublicPhoto[]>> {
 	if (listingIds.length === 0) return new Map()
-	const ids = listingIds.slice(0, 100)
+	if (listingIds.length > MAX_PHOTO_LOOKUP_LISTING_IDS) {
+		throw new DataInvariantError(
+			`fetchPhotosByListingIds: expected at most ${MAX_PHOTO_LOOKUP_LISTING_IDS} listing IDs, received ${listingIds.length}`
+		)
+	}
+
+	const uniqueIds = [...new Set(listingIds)]
 	const rows = await db
 		.select({
 			id: listingPhotos.id,
@@ -56,7 +65,7 @@ async function fetchPhotosByListingIds(
 			order: listingPhotos.order,
 		})
 		.from(listingPhotos)
-		.where(inArray(listingPhotos.listingId, ids))
+		.where(inArray(listingPhotos.listingId, uniqueIds))
 		.orderBy(listingPhotos.order)
 
 	const map = new Map<number, PublicPhoto[]>()

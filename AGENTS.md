@@ -133,6 +133,12 @@ The only service is the **Solid JS web application** in `apps/www`. It uses an e
 | DB schema sync (dev) | `pnpm db:push` (from `apps/www`) |
 | Quality gate (all checks) | `bash bin/quality-gate.sh` |
 
+### Commit gate (required)
+
+- Before every commit, run `bash bin/code-quality.sh` from the repo root.
+- Do not commit unless `bash bin/code-quality.sh` passes.
+- If it fails, fix the reported formatting, linting, or test issue, then rerun `bash bin/code-quality.sh` until it passes.
+
 ### Gotchas
 
 - **Node version**: `.npmrc` sets `use-node-version=24.9.0` — pnpm scripts automatically use Node 24.9.0 regardless of the system Node version. Ensure Node 24 is installed via nvm.
