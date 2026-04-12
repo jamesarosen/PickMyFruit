@@ -75,6 +75,14 @@ export const Route = createFileRoute('/api/listings')({
 					const message = error instanceof Error ? error.message : 'Geocoding failed'
 					return Response.json({ error: message }, { status: 400 })
 				}
+				if (!geocodeResult) {
+					return Response.json(
+						{
+							error: 'Address not found. Please check the address and try again.',
+						},
+						{ status: 400 }
+					)
+				}
 
 				// Create the listing
 				try {

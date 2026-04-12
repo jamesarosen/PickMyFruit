@@ -57,6 +57,10 @@ const outputSchema = z
 	.object({
 		BETTER_AUTH_SECRET: z.string().min(32),
 		BETTER_AUTH_URL: z.string(),
+		CRON_SECRET: z
+			.string()
+			.min(32)
+			.prefault('dev-cron-secret-not-for-production-use-here'),
 		DATABASE_AUTH_TOKEN: z.string().optional(),
 		DATABASE_URL: z.string().min(1),
 		EMAIL_FROM: z
@@ -65,6 +69,10 @@ const outputSchema = z
 		HMAC_SECRET: z.string().min(32),
 		MIGRATE_ON_REQUEST: z.stringbool().prefault('false'),
 		NODE_ENV: z.string().prefault('development'),
+		NOMINATIM_USER_AGENT: z
+			.string()
+			.min(1)
+			.prefault('PickMyFruitDev/1.0 (dev@localhost)'),
 		email: emailSchema,
 		storage: storageSchema,
 	})

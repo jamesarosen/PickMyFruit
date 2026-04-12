@@ -4,14 +4,27 @@ import {
 	inquiries,
 	listingPhotos,
 	user,
+	notificationSubscriptions,
 	type Listing,
 	type NewListing,
 	type Inquiry,
 	type NewInquiry,
 	type AddressFields,
 	type ListingPhoto,
+	type NotificationSubscription,
 } from './schema'
-import { eq, desc, and, ne, isNull, gt, inArray, sql } from 'drizzle-orm'
+import {
+	eq,
+	desc,
+	and,
+	ne,
+	isNull,
+	gt,
+	lt,
+	or,
+	inArray,
+	sql,
+} from 'drizzle-orm'
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 import { Sentry } from '@/lib/sentry'
 import { storage } from '@/lib/storage.server'
@@ -527,6 +540,288 @@ export async function markListingUnavailable(id: number): Promise<boolean> {
 				.where(and(eq(listings.id, id), isNull(listings.deletedAt)))
 				.returning({ id: listings.id })
 			return result.length > 0
+		}
+	)
+}
+
+/** Returns all available listings with full fields (for notification matching). */
+export async function getAvailableListingsForNotifications(
+	limit: number = 500
+): Promise<Listing[]> {
+	return Sentry.startSpan(
+		{
+			name: 'getAvailableListingsForNotifications',
+			op: 'db.query',
+			attributes: { limit },
+		},
+		async (span) => {
+			const rows = await db
+				.select()
+				.from(listings)
+				.where(
+					and(
+						eq(listings.status, ListingStatus.available),
+						isNull(listings.deletedAt)
+					)
+				)
+				.orderBy(desc(listings.createdAt))
+				.limit(limit)
+			if (rows.length === limit) {
+				const { logger } = await import('@/lib/logger.server')
+				logger.warn({ limit }, 'getAvailableListingsForNotifications hit limit')
+			}
+			span.setAttribute('listing_count', rows.length)
+			return rows
+		}
+	)
+}
+
+// ============================================================================
+// Notification Subscription Functions
+// ============================================================================
+
+/** Creates a subscription. Throws UserError('subscription_limit_exceeded') if at limit. */
+export async function createNotificationSubscription(
+	data: Omit<
+		NotificationSubscription,
+		'id' | 'lastNotifiedAt' | 'enabled' | 'createdAt' | 'updatedAt' | 'deletedAt'
+	>
+): Promise<NotificationSubscription> {
+	return Sentry.startSpan(
+		{ name: 'createNotificationSubscription', op: 'db.query' },
+		async () => {
+			const { UserError } = await import('@/lib/user-error')
+
+			// Application-layer limit check (works with db:push that lacks the trigger)
+			const count = await db
+				.select({ n: sql<number>`count(*)` })
+				.from(notificationSubscriptions)
+				.where(
+					and(
+						eq(notificationSubscriptions.userId, data.userId),
+						isNull(notificationSubscriptions.deletedAt)
+					)
+				)
+			if (Number(count[0].n) >= 10) {
+				throw new UserError(
+					'subscription_limit_exceeded',
+					'You have reached the limit of 10 subscriptions.'
+				)
+			}
+
+			try {
+				const result = await db
+					.insert(notificationSubscriptions)
+					.values({
+						...data,
+						createdAt: new Date(),
+						updatedAt: new Date(),
+					})
+					.returning()
+				return result[0]
+			} catch (error) {
+				if (
+					error instanceof Error &&
+					error.message.includes('subscription_limit_exceeded')
+				) {
+					throw new UserError(
+						'subscription_limit_exceeded',
+						'You have reached the limit of 10 subscriptions.'
+					)
+				}
+				throw error
+			}
+		}
+	)
+}
+
+/** Returns all non-deleted subscriptions for a user, newest first. */
+export async function getUserNotificationSubscriptions(
+	userId: string
+): Promise<NotificationSubscription[]> {
+	return Sentry.startSpan(
+		{ name: 'getUserNotificationSubscriptions', op: 'db.query' },
+		async () => {
+			return db
+				.select()
+				.from(notificationSubscriptions)
+				.where(
+					and(
+						eq(notificationSubscriptions.userId, userId),
+						isNull(notificationSubscriptions.deletedAt)
+					)
+				)
+				.orderBy(desc(notificationSubscriptions.createdAt))
+		}
+	)
+}
+
+/** Returns a single non-deleted subscription owned by the user, or undefined. */
+export async function getUserNotificationSubscription(
+	userId: string,
+	id: number
+): Promise<NotificationSubscription | undefined> {
+	return Sentry.startSpan(
+		{
+			name: 'getUserNotificationSubscription',
+			op: 'db.query',
+			attributes: { id },
+		},
+		async () => {
+			const result = await db
+				.select()
+				.from(notificationSubscriptions)
+				.where(
+					and(
+						eq(notificationSubscriptions.id, id),
+						eq(notificationSubscriptions.userId, userId),
+						isNull(notificationSubscriptions.deletedAt)
+					)
+				)
+				.limit(1)
+			return result[0]
+		}
+	)
+}
+
+/** Updates a subscription owned by the user. Returns updated row or undefined if not found. */
+export async function updateNotificationSubscription(
+	userId: string,
+	id: number,
+	updates: Partial<
+		Pick<
+			NotificationSubscription,
+			| 'label'
+			| 'centerH3'
+			| 'resolution'
+			| 'ringSize'
+			| 'placeName'
+			| 'produceTypes'
+			| 'throttlePeriod'
+			| 'enabled'
+		>
+	>
+): Promise<NotificationSubscription | undefined> {
+	return Sentry.startSpan(
+		{
+			name: 'updateNotificationSubscription',
+			op: 'db.query',
+			attributes: { id },
+		},
+		async () => {
+			const result = await db
+				.update(notificationSubscriptions)
+				.set({ ...updates, updatedAt: new Date() })
+				.where(
+					and(
+						eq(notificationSubscriptions.id, id),
+						eq(notificationSubscriptions.userId, userId),
+						isNull(notificationSubscriptions.deletedAt)
+					)
+				)
+				.returning()
+			return result[0]
+		}
+	)
+}
+
+/** Soft-deletes a subscription owned by the user. No-op if already deleted. */
+export async function deleteNotificationSubscription(
+	userId: string,
+	id: number
+): Promise<void> {
+	return Sentry.startSpan(
+		{
+			name: 'deleteNotificationSubscription',
+			op: 'db.query',
+			attributes: { id },
+		},
+		async () => {
+			await db
+				.update(notificationSubscriptions)
+				.set({ deletedAt: new Date() })
+				.where(
+					and(
+						eq(notificationSubscriptions.id, id),
+						eq(notificationSubscriptions.userId, userId),
+						isNull(notificationSubscriptions.deletedAt)
+					)
+				)
+		}
+	)
+}
+
+/** Soft-deletes a subscription by ID (no ownership check — for HMAC-authenticated unsubscribe). */
+export async function deleteNotificationSubscriptionById(
+	id: number
+): Promise<void> {
+	return Sentry.startSpan(
+		{
+			name: 'deleteNotificationSubscriptionById',
+			op: 'db.query',
+			attributes: { id },
+		},
+		async () => {
+			await db
+				.update(notificationSubscriptions)
+				.set({ deletedAt: new Date() })
+				.where(
+					and(
+						eq(notificationSubscriptions.id, id),
+						isNull(notificationSubscriptions.deletedAt)
+					)
+				)
+		}
+	)
+}
+
+/**
+ * Returns active subscriptions due for notification for the given throttle period.
+ * A subscription is due when it has never been notified or was last notified
+ * before the cutoff.
+ */
+export async function getNotificationSubscriptionsDue(
+	throttlePeriod: 'immediately' | 'weekly',
+	cutoff: Date
+): Promise<NotificationSubscription[]> {
+	const cutoffSecs = Math.floor(cutoff.getTime() / 1000)
+	return Sentry.startSpan(
+		{
+			name: 'getNotificationSubscriptionsDue',
+			op: 'db.query',
+			attributes: { throttlePeriod },
+		},
+		async () => {
+			return db
+				.select()
+				.from(notificationSubscriptions)
+				.where(
+					and(
+						eq(notificationSubscriptions.throttlePeriod, throttlePeriod),
+						eq(notificationSubscriptions.enabled, true),
+						isNull(notificationSubscriptions.deletedAt),
+						or(
+							isNull(notificationSubscriptions.lastNotifiedAt),
+							lt(
+								sql`cast(strftime('%s', ${notificationSubscriptions.lastNotifiedAt}) as integer)`,
+								cutoffSecs
+							)
+						)
+					)
+				)
+		}
+	)
+}
+
+/** Updates last_notified_at to now for a subscription. */
+export async function markSubscriptionNotified(id: number): Promise<void> {
+	return Sentry.startSpan(
+		{ name: 'markSubscriptionNotified', op: 'db.query', attributes: { id } },
+		async () => {
+			await db
+				.update(notificationSubscriptions)
+				.set({ lastNotifiedAt: new Date() })
+				.where(eq(notificationSubscriptions.id, id))
 		}
 	)
 }

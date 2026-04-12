@@ -26,6 +26,7 @@ import { Route as ApiUploadsSplatRouteImport } from './routes/api/uploads/$'
 import { Route as ApiListingsIdRouteImport } from './routes/api/listings.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiListingsIdUnavailableRouteImport } from './routes/api/listings.$id.unavailable'
+import { Route as ApiCronNotifyRouteImport } from './routes/api/cron.notify'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -113,6 +114,11 @@ const ApiListingsIdUnavailableRoute =
     path: '/unavailable',
     getParentRoute: () => ApiListingsIdRoute,
   } as any)
+const ApiCronNotifyRoute = ApiCronNotifyRouteImport.update({
+  id: '/api/cron/notify',
+  path: '/api/cron/notify',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/api/listings/$id': typeof ApiListingsIdRouteWithChildren
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
+  '/api/cron/notify': typeof ApiCronNotifyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/api/listings/$id': typeof ApiListingsIdRouteWithChildren
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
+  '/api/cron/notify': typeof ApiCronNotifyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -171,6 +179,7 @@ export interface FileRoutesById {
   '/api/listings/$id': typeof ApiListingsIdRouteWithChildren
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
+  '/api/cron/notify': typeof ApiCronNotifyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
     | '/api/listings/$id'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
+    | '/api/cron/notify'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -211,6 +221,7 @@ export interface FileRouteTypes {
     | '/api/listings/$id'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
+    | '/api/cron/notify'
   id:
     | '__root__'
     | '/'
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
     | '/api/listings/$id'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
+    | '/api/cron/notify'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -248,6 +260,7 @@ export interface RootRouteChildren {
   ListingsNewRoute: typeof ListingsNewRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiUploadsSplatRoute: typeof ApiUploadsSplatRoute
+  ApiCronNotifyRoute: typeof ApiCronNotifyRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -371,6 +384,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ApiListingsIdUnavailableRouteImport
       parentRoute: typeof ApiListingsIdRoute
     }
+    '/api/cron/notify': {
+      id: '/api/cron/notify'
+      path: '/api/cron/notify'
+      fullPath: '/api/cron/notify'
+      preLoaderRoute: typeof ApiCronNotifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -414,6 +434,7 @@ const rootRouteChildren: RootRouteChildren = {
   ListingsNewRoute: ListingsNewRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiUploadsSplatRoute: ApiUploadsSplatRoute,
+  ApiCronNotifyRoute: ApiCronNotifyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
