@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/solid-start'
 import { getRequestHeaders } from '@tanstack/solid-start/server'
 import { z } from 'zod'
 import { errorMiddleware } from '@/lib/server-error-middleware'
+import { Sentry } from '@/lib/sentry'
 import type { AddressFields } from '@/data/schema'
 import type { OwnerListingView } from '@/data/listing'
 
@@ -17,7 +18,17 @@ export const getMyListings = createServerFn({ method: 'GET' })
 		}
 
 		const { getUserListings } = await import('@/data/queries.server')
-		return getUserListings(session.user.id)
+		const listings = await getUserListings(session.user.id)
+		if (listings.length > 15) {
+			Sentry.captureMessage('User has more than 15 listings', {
+				level: 'warning',
+				extra: {
+					userId: session.user.id,
+					listingCount: listings.length,
+				},
+			})
+		}
+		return listings
 	})
 
 /** Returns the current user's most recent address, or undefined. */
