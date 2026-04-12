@@ -161,7 +161,9 @@ export function buildNotificationEmailHtml(
 export async function sendNotificationEmail(
 	input: NotificationEmailData
 ): Promise<void> {
-	if (serverEnv.email.PROVIDER === 'silent') return
+	if (serverEnv.email.PROVIDER === 'silent') {
+		return
+	}
 
 	if (serverEnv.email.PROVIDER === 'console') {
 		logger.info(
@@ -199,9 +201,7 @@ export async function sendNotificationEmail(
 		return
 	}
 
-	throw new Error(
-		`Unhandled EMAIL_PROVIDER: ${serverEnv.email.PROVIDER}`
-	)
+	throw new Error(`Unhandled EMAIL_PROVIDER: ${serverEnv.email.PROVIDER}`)
 }
 
 function escapeHtml(text: string): string {
@@ -222,7 +222,9 @@ export async function sendInquiryEmail(
 		unavailableUrl: buildUnavailableUrl(input.baseUrl, input.listing.id),
 	}
 
-	if (serverEnv.email.PROVIDER === 'silent') return
+	if (serverEnv.email.PROVIDER === 'silent') {
+		return
+	}
 
 	if (serverEnv.email.PROVIDER === 'console') {
 		/**

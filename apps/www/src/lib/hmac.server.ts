@@ -22,11 +22,10 @@ export function signUrl(listingId: number): {
 /** Verifies an HMAC signature, rejecting expired or tampered URLs. */
 export function verifySignature(
 	listingId: number,
-	nonce: string,
-	ts: number,
-	sig: string,
+	query: { nonce: string; ts: number; sig: string },
 	now: number = Date.now()
 ): boolean {
+	const { nonce, ts, sig } = query
 	const age = now - ts
 	if (age < 0 || age > SIGNATURE_MAX_AGE_MS) {
 		return false
@@ -71,6 +70,8 @@ export function verifyUnsubscribeSignature(
 	const expected = createHmac('sha256', serverEnv.HMAC_SECRET)
 		.update(message)
 		.digest('hex')
-	if (sig.length !== expected.length) return false
+	if (sig.length !== expected.length) {
+		return false
+	}
 	return timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
 }

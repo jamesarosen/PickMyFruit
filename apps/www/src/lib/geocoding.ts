@@ -1,6 +1,5 @@
 import { latLngToCell } from 'h3-js'
 import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
-import { serverEnv } from '@/lib/env.server'
 
 /** Thrown when Nominatim returns a 429 or 5xx status. */
 export class GeocodingError extends Error {
@@ -51,6 +50,8 @@ async function doGeocode(
 	const controller = new AbortController()
 	const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
 	signal?.addEventListener('abort', () => controller.abort(), { once: true })
+
+	const { serverEnv } = await import('@/lib/env.server')
 
 	let response: Response
 	try {

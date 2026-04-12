@@ -1,6 +1,4 @@
 import { Sentry } from '@/lib/sentry'
-import { logger } from '@/lib/logger.server'
-import { serverEnv } from '@/lib/env.server'
 import type { Listing } from '@/data/schema'
 
 /** Summary returned by each run. */
@@ -26,6 +24,8 @@ export async function runForThrottlePeriod(
 	throttlePeriod: 'immediately' | 'weekly',
 	cutoff: Date
 ): Promise<RunSummary> {
+	const { logger } = await import('@/lib/logger.server')
+	const { serverEnv } = await import('@/lib/env.server')
 	const {
 		getNotificationSubscriptionsDue,
 		getAvailableListingsForNotifications,
@@ -45,29 +45,24 @@ export async function runForThrottlePeriod(
 	)
 	const allListings: Listing[] = await getAvailableListingsForNotifications(500)
 
-	const summary: RunSummary = {
-		period: throttlePeriod,
-		sent: 0,
-		skipped: 0,
-		errors: 0,
-	}
+	type SubResult = 'sent' | 'skipped' | { error: unknown }
 
-	for (const sub of subscriptions) {
+	async function processSubscription(
+		sub: (typeof subscriptions)[number]
+	): Promise<SubResult> {
 		try {
 			const matchingListings = allListings.filter((listing) =>
 				subscriptionMatchesListing(sub, listing)
 			)
 
 			if (matchingListings.length === 0) {
-				summary.skipped++
-				continue
+				return 'skipped'
 			}
 
 			const owner = await getUserById(sub.userId)
 			if (!owner) {
 				logger.warn({ subscriptionId: sub.id }, 'Subscription owner not found')
-				summary.skipped++
-				continue
+				return 'skipped'
 			}
 
 			const unsubscribeUrl = signUnsubscribeUrl(baseUrl, sub.id)
@@ -91,9 +86,29 @@ export async function runForThrottlePeriod(
 			})
 
 			await markSubscriptionNotified(sub.id)
-			summary.sent++
+			return 'sent'
 		} catch (error) {
 			Sentry.captureException(error, { extra: { subscriptionId: sub.id } })
+			return { error }
+		}
+	}
+
+	const results = await Promise.all(
+		subscriptions.map((sub) => processSubscription(sub))
+	)
+
+	const summary: RunSummary = {
+		period: throttlePeriod,
+		sent: 0,
+		skipped: 0,
+		errors: 0,
+	}
+	for (const result of results) {
+		if (result === 'sent') {
+			summary.sent++
+		} else if (result === 'skipped') {
+			summary.skipped++
+		} else {
 			summary.errors++
 		}
 	}

@@ -46,8 +46,11 @@ export const getMySubscriptions = createServerFn({ method: 'GET' })
 		const headers = getRequestHeaders()
 		const { auth } = await import('@/lib/auth.server')
 		const session = await auth.api.getSession({ headers })
-		if (!session?.user) return []
-		const { getUserNotificationSubscriptions } = await import('@/data/queries.server')
+		if (!session?.user) {
+			return []
+		}
+		const { getUserNotificationSubscriptions } =
+			await import('@/data/queries.server')
 		return getUserNotificationSubscriptions(session.user.id)
 	})
 
@@ -62,7 +65,8 @@ export const getMySubscription = createServerFn({ method: 'GET' })
 		if (!session?.user) {
 			throw new UserError('UNAUTHORIZED', 'Authentication required.')
 		}
-		const { getUserNotificationSubscription } = await import('@/data/queries.server')
+		const { getUserNotificationSubscription } =
+			await import('@/data/queries.server')
 		const sub = await getUserNotificationSubscription(session.user.id, id)
 		if (!sub) {
 			throw new UserError('NOT_FOUND', 'Subscription not found.')
@@ -83,7 +87,8 @@ export const createMySubscription = createServerFn({ method: 'POST' })
 		if (!session?.user) {
 			throw new UserError('UNAUTHORIZED', 'Authentication required.')
 		}
-		const { createNotificationSubscription } = await import('@/data/queries.server')
+		const { createNotificationSubscription } =
+			await import('@/data/queries.server')
 		return createNotificationSubscription({
 			userId: session.user.id,
 			label: data.label ?? null,
@@ -110,11 +115,22 @@ export const updateMySubscription = createServerFn({ method: 'POST' })
 		if (!session?.user) {
 			throw new UserError('UNAUTHORIZED', 'Authentication required.')
 		}
-		const { updateNotificationSubscription } = await import('@/data/queries.server')
+		const { updateNotificationSubscription } =
+			await import('@/data/queries.server')
 
-		const updates: Partial<Pick<NotificationSubscription,
-			'label' | 'centerH3' | 'resolution' | 'ringSize' | 'placeName' | 'produceTypes' | 'throttlePeriod' | 'enabled'
-		>> = {}
+		const updates: Partial<
+			Pick<
+				NotificationSubscription,
+				| 'label'
+				| 'centerH3'
+				| 'resolution'
+				| 'ringSize'
+				| 'placeName'
+				| 'produceTypes'
+				| 'throttlePeriod'
+				| 'enabled'
+			>
+		> = {}
 		if (input.data.label !== undefined) updates.label = input.data.label ?? null
 		if (input.data.centerH3 !== undefined) updates.centerH3 = input.data.centerH3
 		if (input.data.resolution !== undefined)
@@ -154,6 +170,7 @@ export const deleteMySubscription = createServerFn({ method: 'POST' })
 		if (!session?.user) {
 			throw new UserError('UNAUTHORIZED', 'Authentication required.')
 		}
-		const { deleteNotificationSubscription } = await import('@/data/queries.server')
+		const { deleteNotificationSubscription } =
+			await import('@/data/queries.server')
 		await deleteNotificationSubscription(session.user.id, id)
 	})

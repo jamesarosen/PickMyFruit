@@ -13,7 +13,18 @@ import {
 	type ListingPhoto,
 	type NotificationSubscription,
 } from './schema'
-import { eq, desc, and, ne, isNull, gt, lt, or, inArray, sql } from 'drizzle-orm'
+import {
+	eq,
+	desc,
+	and,
+	ne,
+	isNull,
+	gt,
+	lt,
+	or,
+	inArray,
+	sql,
+} from 'drizzle-orm'
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 import { Sentry } from '@/lib/sentry'
 import { storage } from '@/lib/storage.server'
@@ -548,7 +559,10 @@ export async function getAvailableListingsForNotifications(
 				.select()
 				.from(listings)
 				.where(
-					and(eq(listings.status, ListingStatus.available), isNull(listings.deletedAt))
+					and(
+						eq(listings.status, ListingStatus.available),
+						isNull(listings.deletedAt)
+					)
 				)
 				.orderBy(desc(listings.createdAt))
 				.limit(limit)
@@ -648,7 +662,11 @@ export async function getUserNotificationSubscription(
 	id: number
 ): Promise<NotificationSubscription | undefined> {
 	return Sentry.startSpan(
-		{ name: 'getUserNotificationSubscription', op: 'db.query', attributes: { id } },
+		{
+			name: 'getUserNotificationSubscription',
+			op: 'db.query',
+			attributes: { id },
+		},
 		async () => {
 			const result = await db
 				.select()
@@ -685,7 +703,11 @@ export async function updateNotificationSubscription(
 	>
 ): Promise<NotificationSubscription | undefined> {
 	return Sentry.startSpan(
-		{ name: 'updateNotificationSubscription', op: 'db.query', attributes: { id } },
+		{
+			name: 'updateNotificationSubscription',
+			op: 'db.query',
+			attributes: { id },
+		},
 		async () => {
 			const result = await db
 				.update(notificationSubscriptions)
@@ -709,7 +731,11 @@ export async function deleteNotificationSubscription(
 	id: number
 ): Promise<void> {
 	return Sentry.startSpan(
-		{ name: 'deleteNotificationSubscription', op: 'db.query', attributes: { id } },
+		{
+			name: 'deleteNotificationSubscription',
+			op: 'db.query',
+			attributes: { id },
+		},
 		async () => {
 			await db
 				.update(notificationSubscriptions)
@@ -726,7 +752,9 @@ export async function deleteNotificationSubscription(
 }
 
 /** Soft-deletes a subscription by ID (no ownership check — for HMAC-authenticated unsubscribe). */
-export async function deleteNotificationSubscriptionById(id: number): Promise<void> {
+export async function deleteNotificationSubscriptionById(
+	id: number
+): Promise<void> {
 	return Sentry.startSpan(
 		{
 			name: 'deleteNotificationSubscriptionById',
