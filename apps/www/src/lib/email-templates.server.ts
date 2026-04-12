@@ -81,6 +81,127 @@ export function buildInquiryEmailHtml(data: InquiryEmailData): string {
 </html>`
 }
 
+interface NotificationEmailData {
+	to: string
+	subscription: {
+		id: number
+		placeName: string
+		throttlePeriod: 'immediately' | 'weekly'
+	}
+	listings: Array<{
+		id: number
+		name: string
+		type: string
+		city: string
+		state: string
+	}>
+	unsubscribeUrl: string
+	baseUrl: string
+}
+
+/** Subject line for a subscription notification email. */
+export function buildNotificationEmailSubject(
+	data: NotificationEmailData
+): string {
+	const n = data.listings.length
+	const noun = n === 1 ? 'produce listing' : 'produce listings'
+	if (data.subscription.throttlePeriod === 'weekly') {
+		return `${n} ${noun} near you this week`
+	}
+	return `${n} new ${noun} near you`
+}
+
+/** HTML body for a subscription notification email. */
+export function buildNotificationEmailHtml(
+	data: NotificationEmailData
+): string {
+	const listingItems = data.listings
+		.map(
+			(listing) => `
+  <li style="margin: 0 0 12px 0;">
+    <a href="${data.baseUrl}/listings/${listing.id}" style="color: #4a7c23; font-weight: bold;">
+      ${escapeHtml(listing.name)}
+    </a>
+    <span style="color: #666; margin-left: 4px;">— ${escapeHtml(listing.city)}, ${escapeHtml(listing.state)}</span>
+  </li>`
+		)
+		.join('')
+
+	return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h1 style="color: #2d5016; margin-bottom: 16px;">${escapeHtml(buildNotificationEmailSubject(data))}</h1>
+
+  <p>New produce is available near ${escapeHtml(data.subscription.placeName)}:</p>
+
+  <ul style="padding-left: 20px;">
+    ${listingItems}
+  </ul>
+
+  <p>
+    <a href="${data.baseUrl}/listings" style="color: #4a7c23;">Browse all listings</a>
+  </p>
+
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
+
+  <p style="color: #666; font-size: 14px;">
+    <a href="${data.baseUrl}/notifications" style="color: #4a7c23;">Manage your notification subscriptions</a>
+    &nbsp;·&nbsp;
+    <a href="${escapeHtml(data.unsubscribeUrl)}" style="color: #4a7c23;">Unsubscribe from this subscription</a>
+  </p>
+</body>
+</html>`
+}
+
+/** Sends a notification email for a subscription. Throws on failure. */
+export async function sendNotificationEmail(
+	input: NotificationEmailData
+): Promise<void> {
+	if (serverEnv.EMAIL_PROVIDER === 'silent') return
+
+	if (serverEnv.EMAIL_PROVIDER === 'console') {
+		logger.info(
+			{
+				to: input.to,
+				subscriptionId: input.subscription.id,
+				listingCount: input.listings.length,
+				unsubscribeUrl: input.unsubscribeUrl,
+			},
+			'Notification email (EMAIL_PROVIDER=console)'
+		)
+		return
+	}
+
+	if (serverEnv.EMAIL_PROVIDER === 'resend') {
+		const { Resend } = await import('resend')
+		const resend = new Resend(serverEnv.RESEND_API_KEY)
+
+		const { error } = await resend.emails.send({
+			from: serverEnv.EMAIL_FROM,
+			to: input.to,
+			subject: buildNotificationEmailSubject(input),
+			html: buildNotificationEmailHtml(input),
+			headers: {
+				'List-Unsubscribe': `<${input.unsubscribeUrl}>`,
+				'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+			},
+		})
+
+		if (error) {
+			throw new Error(`Notification email send failed: ${error.name} — ${error.message}`)
+		}
+		return
+	}
+
+	throw new Error(
+		`Unhandled EMAIL_PROVIDER: ${(serverEnv as { EMAIL_PROVIDER: string }).EMAIL_PROVIDER}`
+	)
+}
+
 function escapeHtml(text: string): string {
 	return text
 		.replace(/&/g, '&amp;')

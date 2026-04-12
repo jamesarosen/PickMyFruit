@@ -202,3 +202,46 @@ export const listingPhotos = sqliteTable(
 
 export type ListingPhoto = typeof listingPhotos.$inferSelect
 export type NewListingPhoto = typeof listingPhotos.$inferInsert
+
+// ============================================================================
+// Notification Subscriptions Table
+// ============================================================================
+
+export const notificationSubscriptions = sqliteTable(
+	'notification_subscriptions',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		label: text('label'),
+		centerH3: text('center_h3').notNull(),
+		resolution: integer('resolution').notNull(),
+		ringSize: integer('ring_size').notNull(),
+		placeName: text('place_name').notNull(),
+		/** JSON array of produce-type slugs; NULL means all types. */
+		produceTypes: text('produce_types'),
+		throttlePeriod: text('throttle_period').notNull(),
+		lastNotifiedAt: integer('last_notified_at', { mode: 'timestamp' }),
+		enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		deletedAt: integer('deleted_at', { mode: 'timestamp' }),
+	},
+	(table) => [
+		index('notification_subscriptions_user_id_idx').on(table.userId),
+		index('notification_subscriptions_throttle_notified_idx').on(
+			table.throttlePeriod,
+			table.lastNotifiedAt
+		),
+	]
+)
+
+export type NotificationSubscription =
+	typeof notificationSubscriptions.$inferSelect
+export type NewNotificationSubscription =
+	typeof notificationSubscriptions.$inferInsert

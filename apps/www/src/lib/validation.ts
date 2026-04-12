@@ -70,6 +70,50 @@ export const profileNameSchema = z
 	.string()
 	.max(100, 'Name must be 100 characters or fewer')
 
+// ============================================================================
+// Subscription Schemas
+// ============================================================================
+
+export const createSubscriptionSchema = z.object({
+	label: z.preprocess(
+		(val) => (val === '' || val === null ? undefined : val),
+		z.string().max(100).optional()
+	),
+	centerH3: z.string().min(1),
+	resolution: z.number().int().min(6).max(8),
+	ringSize: z.number().int().min(0).max(6),
+	placeName: z.string().min(1).max(500),
+	produceTypes: z.array(z.string()).nullable().optional(),
+	throttlePeriod: z.enum(['immediately', 'weekly']),
+})
+
+export type CreateSubscriptionData = z.infer<typeof createSubscriptionSchema>
+
+export const updateSubscriptionSchema = z
+	.object({
+		label: z.preprocess(
+			(val) => (val === '' || val === null ? undefined : val),
+			z.string().max(100).optional()
+		),
+		centerH3: z.string().optional(),
+		resolution: z.number().int().min(6).max(8).optional(),
+		ringSize: z.number().int().min(0).max(6).optional(),
+		placeName: z.string().max(500).optional(),
+		produceTypes: z.array(z.string()).nullable().optional(),
+		throttlePeriod: z.enum(['immediately', 'weekly']).optional(),
+		enabled: z.boolean().optional(),
+	})
+	.refine(
+		(data) => {
+			const hasCenter = data.centerH3 !== undefined
+			const hasResolution = data.resolution !== undefined
+			return hasCenter === hasResolution
+		},
+		{ message: 'centerH3 and resolution must both be provided or both omitted' }
+	)
+
+export type UpdateSubscriptionData = z.infer<typeof updateSubscriptionSchema>
+
 export const ListingStatus = {
 	available: 'available',
 	unavailable: 'unavailable',
