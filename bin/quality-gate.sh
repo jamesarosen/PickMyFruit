@@ -30,6 +30,17 @@ if [ $exit_code -ne 0 ]; then
 	exit 2
 fi
 
+echo "[quality-gate] Validating SQL migrations..."
+errors=$(pnpm db:validate:sql 2>&1)
+exit_code=$?
+if [ $exit_code -ne 0 ]; then
+	echo "[quality-gate] SQL validation failed" >&2
+	echo "$errors" >&2
+	echo "" >&2
+	echo "Review and fix these SQL errors before proceeding." >&2
+	exit 2
+fi
+
 echo "[quality-gate] Running tests..."
 errors=$(pnpm test:run 2>&1)
 exit_code=$?
