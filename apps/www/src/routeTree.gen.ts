@@ -17,6 +17,8 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as CssTestRouteImport } from './routes/css-test'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as NotificationsIndexRouteImport } from './routes/notifications/index'
+import { Route as NotificationsNewRouteImport } from './routes/notifications/new'
 import { Route as ListingsNewRouteImport } from './routes/listings/new'
 import { Route as ListingsMineRouteImport } from './routes/listings/mine'
 import { Route as ListingsIdRouteImport } from './routes/listings.$id'
@@ -24,9 +26,9 @@ import { Route as ApiListingsRouteImport } from './routes/api/listings'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiUploadsSplatRouteImport } from './routes/api/uploads/$'
 import { Route as ApiListingsIdRouteImport } from './routes/api/listings.$id'
+import { Route as ApiCronNotifyRouteImport } from './routes/api/cron.notify'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiListingsIdUnavailableRouteImport } from './routes/api/listings.$id.unavailable'
-import { Route as ApiCronNotifyRouteImport } from './routes/api/cron.notify'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -68,6 +70,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotificationsIndexRoute = NotificationsIndexRouteImport.update({
+  id: '/notifications/',
+  path: '/notifications/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsNewRoute = NotificationsNewRouteImport.update({
+  id: '/notifications/new',
+  path: '/notifications/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ListingsNewRoute = ListingsNewRouteImport.update({
   id: '/listings/new',
   path: '/listings/new',
@@ -103,6 +115,11 @@ const ApiListingsIdRoute = ApiListingsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiListingsRoute,
 } as any)
+const ApiCronNotifyRoute = ApiCronNotifyRouteImport.update({
+  id: '/api/cron/notify',
+  path: '/api/cron/notify',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -114,11 +131,6 @@ const ApiListingsIdUnavailableRoute =
     path: '/unavailable',
     getParentRoute: () => ApiListingsIdRoute,
   } as any)
-const ApiCronNotifyRoute = ApiCronNotifyRouteImport.update({
-  id: '/api/cron/notify',
-  path: '/api/cron/notify',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -134,11 +146,13 @@ export interface FileRoutesByFullPath {
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
+  '/notifications/new': typeof NotificationsNewRoute
+  '/notifications/': typeof NotificationsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/notify': typeof ApiCronNotifyRoute
   '/api/listings/$id': typeof ApiListingsIdRouteWithChildren
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
-  '/api/cron/notify': typeof ApiCronNotifyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -154,11 +168,13 @@ export interface FileRoutesByTo {
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
+  '/notifications/new': typeof NotificationsNewRoute
+  '/notifications': typeof NotificationsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/notify': typeof ApiCronNotifyRoute
   '/api/listings/$id': typeof ApiListingsIdRouteWithChildren
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
-  '/api/cron/notify': typeof ApiCronNotifyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -175,11 +191,13 @@ export interface FileRoutesById {
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
+  '/notifications/new': typeof NotificationsNewRoute
+  '/notifications/': typeof NotificationsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/notify': typeof ApiCronNotifyRoute
   '/api/listings/$id': typeof ApiListingsIdRouteWithChildren
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
-  '/api/cron/notify': typeof ApiCronNotifyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -197,11 +215,13 @@ export interface FileRouteTypes {
     | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
+    | '/notifications/new'
+    | '/notifications/'
     | '/api/auth/$'
+    | '/api/cron/notify'
     | '/api/listings/$id'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
-    | '/api/cron/notify'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -217,11 +237,13 @@ export interface FileRouteTypes {
     | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
+    | '/notifications/new'
+    | '/notifications'
     | '/api/auth/$'
+    | '/api/cron/notify'
     | '/api/listings/$id'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
-    | '/api/cron/notify'
   id:
     | '__root__'
     | '/'
@@ -237,11 +259,13 @@ export interface FileRouteTypes {
     | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
+    | '/notifications/new'
+    | '/notifications/'
     | '/api/auth/$'
+    | '/api/cron/notify'
     | '/api/listings/$id'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
-    | '/api/cron/notify'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -258,9 +282,11 @@ export interface RootRouteChildren {
   ListingsIdRoute: typeof ListingsIdRoute
   ListingsMineRoute: typeof ListingsMineRoute
   ListingsNewRoute: typeof ListingsNewRoute
+  NotificationsNewRoute: typeof NotificationsNewRoute
+  NotificationsIndexRoute: typeof NotificationsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
-  ApiUploadsSplatRoute: typeof ApiUploadsSplatRoute
   ApiCronNotifyRoute: typeof ApiCronNotifyRoute
+  ApiUploadsSplatRoute: typeof ApiUploadsSplatRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -321,6 +347,20 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notifications/': {
+      id: '/notifications/'
+      path: '/notifications'
+      fullPath: '/notifications/'
+      preLoaderRoute: typeof NotificationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications/new': {
+      id: '/notifications/new'
+      path: '/notifications/new'
+      fullPath: '/notifications/new'
+      preLoaderRoute: typeof NotificationsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/listings/new': {
       id: '/listings/new'
       path: '/listings/new'
@@ -370,6 +410,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ApiListingsIdRouteImport
       parentRoute: typeof ApiListingsRoute
     }
+    '/api/cron/notify': {
+      id: '/api/cron/notify'
+      path: '/api/cron/notify'
+      fullPath: '/api/cron/notify'
+      preLoaderRoute: typeof ApiCronNotifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -383,13 +430,6 @@ declare module '@tanstack/solid-router' {
       fullPath: '/api/listings/$id/unavailable'
       preLoaderRoute: typeof ApiListingsIdUnavailableRouteImport
       parentRoute: typeof ApiListingsIdRoute
-    }
-    '/api/cron/notify': {
-      id: '/api/cron/notify'
-      path: '/api/cron/notify'
-      fullPath: '/api/cron/notify'
-      preLoaderRoute: typeof ApiCronNotifyRouteImport
-      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -432,9 +472,11 @@ const rootRouteChildren: RootRouteChildren = {
   ListingsIdRoute: ListingsIdRoute,
   ListingsMineRoute: ListingsMineRoute,
   ListingsNewRoute: ListingsNewRoute,
+  NotificationsNewRoute: NotificationsNewRoute,
+  NotificationsIndexRoute: NotificationsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
-  ApiUploadsSplatRoute: ApiUploadsSplatRoute,
   ApiCronNotifyRoute: ApiCronNotifyRoute,
+  ApiUploadsSplatRoute: ApiUploadsSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,0 +1,61 @@
+@layer page {
+	.notifications-page {
+		max-width: 800px;
+		margin: 0 auto;
+		padding: 40px 20px 80px;
+	}
+
+	.notifications-page .notifications-page__header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		margin-bottom: 24px;
+	}
+
+	.notifications-page .notifications-page__header h1 {
+		margin: 0;
+		font-size: 32px;
+		color: var(--color-foreground);
+	}
+
+	.notifications-page .notifications-page__add-link {
+		display: inline-block;
+		background: var(--color-primary);
+		color: var(--color-background);
+		padding: 10px 16px;
+		border-radius: 8px;
+		text-decoration: none;
+		font-weight: 600;
+	}
+
+	.notifications-page .notifications-page__list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: grid;
+		gap: 12px;
+	}
+
+	.notifications-page .notifications-page__item {
+		border: 1px solid oklch(from var(--color-quiet) l c h / 0.2);
+		border-radius: 10px;
+		padding: 16px;
+		background: var(--color-background);
+	}
+
+	.notifications-page .notifications-page__item h2 {
+		margin: 0 0 8px;
+		font-size: 20px;
+	}
+
+	.notifications-page .notifications-page__item p {
+		margin: 4px 0;
+		color: var(--color-foreground);
+	}
+
+	.notifications-page .notifications-page__empty {
+		margin: 0;
+		color: var(--color-quiet);
+	}
+}
