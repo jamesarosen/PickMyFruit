@@ -69,6 +69,9 @@ jobs:
       - name: Run typecheck
         run: pnpm typecheck
 
+      - name: Validate SQL migrations
+        run: pnpm db:validate:sql
+
       - name: Run tests
         run: pnpm test:ci
 

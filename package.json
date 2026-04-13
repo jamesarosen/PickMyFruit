@@ -9,7 +9,7 @@
 	"scripts": {
 		"clean": "pnpm -r --if-present clean",
 		"build": "pnpm -r build",
-		"db:validate:sql": "syntaqlite validate \"apps/www/drizzle/*.sql\"",
+		"db:validate:sql": "pnpm exec syntaqlite validate \"apps/www/drizzle/*.sql\"",
 		"format": "pnpm -r format",
 		"format:check": "pnpm -r format:check",
 		"format:write": "pnpm -r format:write",
@@ -40,5 +40,8 @@
 				"arm64"
 			]
 		}
+	},
+	"devDependencies": {
+		"syntaqlite": "^0.3.0"
 	}
 }
