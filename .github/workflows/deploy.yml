@@ -60,6 +60,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install syntaqlite CLI
+        run: ./bin/install-syntaqlite.sh
+
       - name: Run format check
         run: pnpm format:check
 

@@ -6,11 +6,7 @@ settings:
 
 importers:
 
-  .:
-    devDependencies:
-      syntaqlite:
-        specifier: ^0.3.0
-        version: 0.3.0
+  .: {}
 
   apps/www:
     dependencies:
@@ -5234,9 +5230,6 @@ packages:
 
   symbol-tree@3.2.4:
     resolution: {integrity: sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==}
-
-  syntaqlite@0.3.0:
-    resolution: {integrity: sha512-EysvTR4h96B+CC9g7T+/83JfmZopFqjIPVnKKGhrAblrciMZ9lSkJEnRbMbDvjMQJQW/KltWR952elhI7724ZA==}
 
   system-architecture@0.1.0:
     resolution: {integrity: sha512-ulAk51I9UVUyJgxlv9M6lFot2WP3e7t8Kz9+IS6D4rVba1tR9kON+Ey69f+1R4Q8cd45Lod6a4IcJIxnzGc/zA==}
@@ -11321,8 +11314,6 @@ snapshots:
       uuid: 10.0.0
 
   symbol-tree@3.2.4: {}
-
-  syntaqlite@0.3.0: {}
 
   system-architecture@0.1.0: {}
 
