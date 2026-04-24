@@ -18,12 +18,19 @@ export type PublicListing = Omit<
 	| 'zip'
 > & {
 	approximateH3Index: string
-	/** All photos for this listing, ordered by `order`. */
+	/**
+	 * All photos for this listing.
+	 * @invariant Sorted by `order` ascending — `photos[0]` is the cover photo.
+	 */
 	photos: PublicPhoto[]
 }
 
 /** Full listing row plus public photo fields — returned to the listing owner only. */
 export type OwnerListingView = Listing & {
+	/**
+	 * All photos for this listing.
+	 * @invariant Sorted by `order` ascending — `photos[0]` is the cover photo.
+	 */
 	photos: PublicPhoto[]
 }
 
