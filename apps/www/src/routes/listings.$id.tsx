@@ -26,14 +26,22 @@ const listingSearchSchema = z.object({
 	marked: z.enum(['unavailable']).optional(),
 })
 
+/**
+ * Fallback embed image used when a listing has no cover photo. Matches the
+ * `<Apple />` placeholder shown on `ListingCard` so the crawler preview and
+ * the in-app card feel visually consistent. Served from `public/`.
+ */
+const PLACEHOLDER_EMBED = {
+	url: '/og-listing-placeholder.png',
+	width: '1200',
+	height: '630',
+	alt: 'Pick My Fruit listing',
+}
+
 export const Route = createFileRoute('/listings/$id')({
 	validateSearch: listingSearchSchema,
 	loader: ({ params }) => getListingForViewer({ data: Number(params.id) }),
 	head: ({ loaderData }) => {
-		const coverUrl = coverPhotoUrl(loaderData)
-		if (!coverUrl) {
-			return {}
-		}
 		// TODO: generate richer embed images for listings. Open Graph / Twitter /
 		// Slack crawlers prefer different aspect ratios and resolutions (e.g.
 		// 1200x630 landscape for large cards, 1:1 square for summary cards, plus
@@ -44,10 +52,22 @@ export const Route = createFileRoute('/listings/$id')({
 		//   - emit og:image:width / og:image:height matching the served rendition.
 		// For now we reuse the existing public JPEG URL, which is good enough for
 		// most crawlers but ignores the above nuances.
+		const coverUrl = coverPhotoUrl(loaderData)
+		if (coverUrl) {
+			return {
+				meta: [
+					{ property: 'og:image', content: coverUrl },
+					{ name: 'twitter:image', content: coverUrl },
+				],
+			}
+		}
 		return {
 			meta: [
-				{ property: 'og:image', content: coverUrl },
-				{ name: 'twitter:image', content: coverUrl },
+				{ property: 'og:image', content: PLACEHOLDER_EMBED.url },
+				{ property: 'og:image:width', content: PLACEHOLDER_EMBED.width },
+				{ property: 'og:image:height', content: PLACEHOLDER_EMBED.height },
+				{ property: 'og:image:alt', content: PLACEHOLDER_EMBED.alt },
+				{ name: 'twitter:image', content: PLACEHOLDER_EMBED.url },
 			],
 		}
 	},
