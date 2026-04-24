@@ -18,6 +18,7 @@ const EXPECTED_TABLES = [
 	'inquiries',
 	'listing_photos',
 	'listings',
+	'notification_subscriptions',
 	'session',
 	'user',
 	'verification',

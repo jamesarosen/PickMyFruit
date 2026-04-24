@@ -30,13 +30,13 @@ describe('verifySignature', () => {
 	it('accepts a valid, fresh signature', () => {
 		const id = faker.number.int({ min: 1, max: 9999 })
 		const { nonce, ts, sig } = signUrl(id)
-		expect(verifySignature(id, nonce, ts, sig)).toBe(true)
+		expect(verifySignature(id, { nonce, ts, sig })).toBe(true)
 	})
 
 	it('rejects a tampered listing ID', () => {
 		const id = faker.number.int({ min: 1, max: 4999 })
 		const { nonce, ts, sig } = signUrl(id)
-		expect(verifySignature(id + 5000, nonce, ts, sig)).toBe(false)
+		expect(verifySignature(id + 5000, { nonce, ts, sig })).toBe(false)
 	})
 
 	it('rejects a tampered nonce', () => {
@@ -44,41 +44,41 @@ describe('verifySignature', () => {
 		const { nonce, ts, sig } = signUrl(id)
 		const tampered = randomUUID()
 		expect(tampered).not.toBe(nonce)
-		expect(verifySignature(id, tampered, ts, sig)).toBe(false)
+		expect(verifySignature(id, { nonce: tampered, ts, sig })).toBe(false)
 	})
 
 	it('rejects a tampered timestamp', () => {
 		const id = faker.number.int({ min: 1, max: 9999 })
 		const { nonce, ts, sig } = signUrl(id)
-		expect(verifySignature(id, nonce, ts + 1, sig)).toBe(false)
+		expect(verifySignature(id, { nonce, ts: ts + 1, sig })).toBe(false)
 	})
 
 	it('rejects a tampered signature', () => {
 		const id = faker.number.int({ min: 1, max: 9999 })
 		const { nonce, ts } = signUrl(id)
 		const other = signUrl(id + 1)
-		expect(verifySignature(id, nonce, ts, other.sig)).toBe(false)
+		expect(verifySignature(id, { nonce, ts, sig: other.sig })).toBe(false)
 	})
 
 	it('rejects a signature older than max age', () => {
 		const id = faker.number.int({ min: 1, max: 9999 })
 		const { nonce, ts, sig } = signUrl(id)
 		const afterExpiry = ts + SIGNATURE_MAX_AGE_MS + 1
-		expect(verifySignature(id, nonce, ts, sig, afterExpiry)).toBe(false)
+		expect(verifySignature(id, { nonce, ts, sig }, afterExpiry)).toBe(false)
 	})
 
 	it('accepts a signature just under max age', () => {
 		const id = faker.number.int({ min: 1, max: 9999 })
 		const { nonce, ts, sig } = signUrl(id)
 		const justUnderMaxAge = ts + SIGNATURE_MAX_AGE_MS - 1000
-		expect(verifySignature(id, nonce, ts, sig, justUnderMaxAge)).toBe(true)
+		expect(verifySignature(id, { nonce, ts, sig }, justUnderMaxAge)).toBe(true)
 	})
 
 	it('rejects a timestamp from the future', () => {
 		const id = faker.number.int({ min: 1, max: 9999 })
 		const { nonce, ts, sig } = signUrl(id)
 		const beforeSigning = ts - 1000
-		expect(verifySignature(id, nonce, ts, sig, beforeSigning)).toBe(false)
+		expect(verifySignature(id, { nonce, ts, sig }, beforeSigning)).toBe(false)
 	})
 })
 

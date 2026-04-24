@@ -57,7 +57,7 @@ export const Route = createFileRoute('/api/listings/$id/unavailable')({
 					)
 				}
 
-				if (!verifySignature(id, nonce, ts, sig)) {
+				if (!verifySignature(id, { nonce, ts, sig })) {
 					Sentry.captureMessage('Invalid HMAC signature', {
 						level: 'warning',
 						extra: { listingId: id, ageMs: age },
