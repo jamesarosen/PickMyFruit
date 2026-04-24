@@ -29,8 +29,48 @@ const listingSearchSchema = z.object({
 export const Route = createFileRoute('/listings/$id')({
 	validateSearch: listingSearchSchema,
 	loader: ({ params }) => getListingForViewer({ data: Number(params.id) }),
+	head: ({ loaderData }) => {
+		const coverUrl = coverPhotoUrl(loaderData)
+		if (!coverUrl) {
+			return {}
+		}
+		// TODO: generate richer embed images for listings. Open Graph / Twitter /
+		// Slack crawlers prefer different aspect ratios and resolutions (e.g.
+		// 1200x630 landscape for large cards, 1:1 square for summary cards, plus
+		// higher-density variants). We should:
+		//   - serve multiple renditions per photo (small/large, landscape/square),
+		//   - auto-focus the subject (object-fit / smart crop) so fruit stays in
+		//     frame across aspect ratios,
+		//   - emit og:image:width / og:image:height matching the served rendition,
+		//   - pick the best cover image rather than just the first-ordered photo.
+		// For now we reuse the existing public JPEG URL, which is good enough for
+		// most crawlers but ignores the above nuances.
+		return {
+			meta: [
+				{ property: 'og:image', content: coverUrl },
+				{ name: 'twitter:image', content: coverUrl },
+			],
+		}
+	},
 	component: ListingDetailPage,
 })
+
+/**
+ * Returns the absolute public URL of the listing's cover photo, or undefined
+ * if the listing has no photos. The cover photo is the first entry ordered by
+ * `order` ascending (see `getPhotosForListing`).
+ */
+function coverPhotoUrl(
+	row: Listing | PublicListing | OwnerListingView | undefined
+): string | undefined {
+	if (!row || !('photos' in row) || row.photos.length === 0) {
+		return undefined
+	}
+	const first = row.photos.reduce((best, photo) =>
+		photo.order < best.order ? photo : best
+	)
+	return first.pubUrl
+}
 
 const STATUS_DEBOUNCE_MS = 300
 
