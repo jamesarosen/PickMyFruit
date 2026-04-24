@@ -32,7 +32,7 @@ test.describe('Authentication', () => {
 		await expect(emailInput).toHaveValue(testUser.email)
 
 		// Submit the form (same as first test)
-		const submitButton = page.locator('button.submit-button')
+		const submitButton = page.getByRole('button', { name: /send sign-in link/i })
 		const responsePromise = page.waitForResponse((resp) =>
 			resp.url().includes('/api/auth/sign-in/magic-link')
 		)

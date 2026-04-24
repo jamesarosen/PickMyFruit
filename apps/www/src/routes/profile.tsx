@@ -72,7 +72,11 @@ function ProfilePage() {
 						required
 					/>
 					<div class="form-actions">
-						<button type="submit" class="submit-button" disabled={submitting()}>
+						<button
+							type="submit"
+							class="button button--primary"
+							disabled={submitting()}
+						>
 							{submitting() ? 'Saving…' : 'Save'}
 						</button>
 						<Show when={saved()}>

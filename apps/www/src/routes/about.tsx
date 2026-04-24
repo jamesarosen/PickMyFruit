@@ -67,7 +67,7 @@ function AboutPage() {
 					</section>
 
 					<section class="about-ctas">
-						<Link to="/listings/new" class="cta-button">
+						<Link to="/listings/new" class="button button--primary button--lg">
 							List My Fruit Tree
 						</Link>
 						<p class="contact-cta">

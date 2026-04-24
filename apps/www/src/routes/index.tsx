@@ -65,7 +65,7 @@ function HomePage() {
 								<br />
 								Starting in Napa and available everywhere.
 							</p>
-							<Link to="/listings/new" class="cta-button">
+							<Link to="/listings/new" class="button button--primary button--lg">
 								Share What I'm Growing
 							</Link>
 						</div>
@@ -91,7 +91,7 @@ function HomePage() {
 									<p>Surplus feeds families</p>
 								</div>
 							</div>
-							<Link to="/listings/new" class="cta-button">
+							<Link to="/listings/new" class="button button--primary button--lg">
 								Add a Listing
 							</Link>
 						</div>

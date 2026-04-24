@@ -28,28 +28,6 @@
 		color: var(--color-quiet);
 	}
 
-	.inquiry-submit {
-		width: 100%;
-		padding: 14px 28px;
-		background: var(--color-primary);
-		color: var(--color-background);
-		border: none;
-		border-radius: 8px;
-		font-size: 16px;
-		font-weight: 600;
-		cursor: pointer;
-		transition: background-color 0.2s;
-	}
-
-	.inquiry-submit:hover:not(:disabled) {
-		background: oklch(from var(--color-primary) calc(l - 0.08) c h);
-	}
-
-	.inquiry-submit:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-
 	.name-interstitial h3 {
 		font-size: 20px;
 		font-weight: 600;
@@ -81,10 +59,6 @@
 		flex-direction: column;
 		gap: 12px;
 		align-items: flex-start;
-	}
-
-	.name-interstitial-actions .inquiry-submit {
-		width: 100%;
 	}
 
 	.name-interstitial-skip {

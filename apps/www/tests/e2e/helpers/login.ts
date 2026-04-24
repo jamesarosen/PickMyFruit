@@ -17,7 +17,7 @@ export async function loginViaUI(page: Page, testUser: TestUser) {
 	const responsePromise = page.waitForResponse((resp) =>
 		resp.url().includes('/api/auth/sign-in/magic-link')
 	)
-	await page.locator('button.submit-button').click()
+	await page.getByRole('button', { name: /send sign-in link/i }).click()
 	await responsePromise
 
 	await expect(

@@ -29,7 +29,7 @@ function EmptyState() {
 		<div class="empty-state">
 			<h2>No listings yet</h2>
 			<p>Share something from your garden with the community!</p>
-			<Link to="/listings/new" class="add-button">
+			<Link to="/listings/new" class="button button--primary">
 				Add a Listing
 			</Link>
 		</div>
@@ -59,7 +59,7 @@ function MyGardenPage() {
 					</div>
 
 					<div class="page-actions">
-						<Link to="/listings/new" class="add-button">
+						<Link to="/listings/new" class="button button--primary">
 							Add Another Tree
 						</Link>
 					</div>
