@@ -5,8 +5,10 @@ import { addPhotoToListing, deletePhoto } from '@/api/listing-photos'
 import {
 	LISTING_PHOTO_ACCEPT,
 	MAX_PHOTOS_PER_LISTING,
+	validateListingPhotoFile,
 } from '@/lib/listing-photos'
 import { Sentry } from '@/lib/sentry'
+import { UserError } from '@/lib/user-error'
 import type { PublicPhoto } from '@/data/listing'
 import { createErrorSignal, ErrorMessage } from '@/components/ErrorMessage'
 
@@ -46,6 +48,12 @@ export default function ListingPhotosSection(props: {
 			setError(new Error('Maximum number of photos reached'))
 			return
 		}
+		const rejectionMessage = validateListingPhotoFile(file)
+		if (rejectionMessage) {
+			setError(new UserError('INVALID_PHOTO', rejectionMessage))
+			fileInputRef.value = ''
+			return
+		}
 		setUploading(true)
 		setAnnouncement('Uploading photo…')
 		setError(null)
@@ -58,12 +66,41 @@ export default function ListingPhotosSection(props: {
 			setAnnouncement('Photo uploaded')
 			await router.invalidate()
 		} catch (err) {
-			Sentry.captureException(err)
 			setAnnouncement('')
-			setError(err)
+			if (isOpaqueUploadError(err)) {
+				// "Invariant failed" is thrown by TanStack Start's fetcher when the
+				// response is missing a content-type header, which happens when a
+				// proxy rejects the request (e.g. 413 Payload Too Large with an
+				// empty body). Capture to Sentry with file context so we can tell
+				// whether users are hitting edge limits, and show a helpful
+				// fallback instead of leaking the internal invariant message.
+				Sentry.captureException(err, {
+					extra: {
+						context: 'listing-photo-upload',
+						fileName: file.name,
+						fileType: file.type,
+						fileSize: file.size,
+					},
+				})
+				setError(
+					new Error(
+						'We couldn’t upload that photo. Please try a smaller JPEG, PNG, or WebP.'
+					)
+				)
+			} else {
+				// Server-thrown UserError messages (e.g. INVALID_MIME_TYPE) are
+				// already user-safe; surface them as-is.
+				setError(err)
+			}
 		} finally {
 			setUploading(false)
 		}
+	}
+
+	function isOpaqueUploadError(err: unknown): boolean {
+		if (err instanceof UserError) return false
+		const message = err instanceof Error ? err.message : ''
+		return /invariant failed/i.test(message)
 	}
 
 	async function removePhoto(photoId: string) {
