@@ -13,6 +13,7 @@ import {
 	statusSemanticColor,
 } from '@/lib/listing-status'
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
+import { buildListingMeta } from '@/lib/listing-meta'
 import { Sentry } from '@/lib/sentry'
 import { getListingForViewer } from '@/api/listings'
 import type { Listing } from '@/data/schema'
@@ -53,21 +54,33 @@ export const Route = createFileRoute('/listings/$id')({
 		// For now we reuse the existing public JPEG URL, which is good enough for
 		// most crawlers but ignores the above nuances.
 		const coverUrl = coverPhotoUrl(loaderData)
-		if (coverUrl) {
-			return {
-				meta: [
+		const textMeta = buildListingMeta(loaderData)
+		const imageMeta = coverUrl
+			? [
 					{ property: 'og:image', content: coverUrl },
 					{ name: 'twitter:image', content: coverUrl },
-				],
-			}
+				]
+			: [
+					{ property: 'og:image', content: PLACEHOLDER_EMBED.url },
+					{ property: 'og:image:width', content: PLACEHOLDER_EMBED.width },
+					{ property: 'og:image:height', content: PLACEHOLDER_EMBED.height },
+					{ property: 'og:image:alt', content: PLACEHOLDER_EMBED.alt },
+					{ name: 'twitter:image', content: PLACEHOLDER_EMBED.url },
+				]
+
+		if (!textMeta) {
+			return { meta: imageMeta }
 		}
+
 		return {
 			meta: [
-				{ property: 'og:image', content: PLACEHOLDER_EMBED.url },
-				{ property: 'og:image:width', content: PLACEHOLDER_EMBED.width },
-				{ property: 'og:image:height', content: PLACEHOLDER_EMBED.height },
-				{ property: 'og:image:alt', content: PLACEHOLDER_EMBED.alt },
-				{ name: 'twitter:image', content: PLACEHOLDER_EMBED.url },
+				{ title: `${textMeta.title} - Pick My Fruit` },
+				{ name: 'description', content: textMeta.description },
+				{ property: 'og:title', content: textMeta.title },
+				{ property: 'og:description', content: textMeta.description },
+				{ name: 'twitter:title', content: textMeta.title },
+				{ name: 'twitter:description', content: textMeta.description },
+				...imageMeta,
 			],
 		}
 	},
