@@ -81,7 +81,12 @@ async function fetchPhotosByListingIds(
 	return map
 }
 
-/** Fetches available listings with sensitive fields stripped. */
+/**
+ * Fetches available listings with sensitive fields stripped.
+ * @invariant Each listing's `photos` are sorted by `order` ascending — the
+ * element at index 0 is the cover photo. Callers may rely on this without
+ * re-sorting.
+ */
 export async function getAvailableListings(
 	limit: number = 10
 ): Promise<PublicListing[]> {
@@ -110,7 +115,12 @@ export async function getAvailableListings(
 	)
 }
 
-/** Fetches available listings ordered by proximity to a point. */
+/**
+ * Fetches available listings ordered by proximity to a point.
+ * @invariant Each listing's `photos` are sorted by `order` ascending — the
+ * element at index 0 is the cover photo. Callers may rely on this without
+ * re-sorting.
+ */
 export async function getNearbyListings(
 	lat: number,
 	lng: number,
@@ -153,6 +163,12 @@ export async function createListing(data: NewListing): Promise<Listing> {
 	)
 }
 
+/**
+ * Fetches all non-deleted listings owned by the given user.
+ * @invariant Each listing's `photos` are sorted by `order` ascending — the
+ * element at index 0 is the cover photo. Callers may rely on this without
+ * re-sorting.
+ */
 export async function getUserListings(
 	userId: string
 ): Promise<OwnerListingView[]> {
@@ -188,7 +204,13 @@ export async function getListingById(id: number): Promise<Listing | undefined> {
 	)
 }
 
-/** Fetches a listing by ID, returning only public-safe fields. Excludes private and deleted listings. */
+/**
+ * Fetches a listing by ID, returning only public-safe fields. Excludes private
+ * and deleted listings.
+ * @invariant The returned listing's `photos` are sorted by `order` ascending —
+ * the element at index 0 is the cover photo. Callers may rely on this without
+ * re-sorting.
+ */
 export async function getPublicListingById(
 	id: number
 ): Promise<PublicListing | undefined> {
@@ -300,7 +322,12 @@ export async function addPhotoToListing(
 	)
 }
 
-/** Returns public photo data for a listing, ordered by `order`. rawKey is never exposed. */
+/**
+ * Returns public photo data for a listing. rawKey is never exposed.
+ * @invariant The returned photos are sorted by `order` ascending — the
+ * element at index 0 is the cover photo. Callers may rely on this without
+ * re-sorting.
+ */
 export async function getPhotosForListing(
 	listingId: number
 ): Promise<PublicPhoto[]> {

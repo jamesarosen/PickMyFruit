@@ -41,8 +41,7 @@ export const Route = createFileRoute('/listings/$id')({
 		//   - serve multiple renditions per photo (small/large, landscape/square),
 		//   - auto-focus the subject (object-fit / smart crop) so fruit stays in
 		//     frame across aspect ratios,
-		//   - emit og:image:width / og:image:height matching the served rendition,
-		//   - pick the best cover image rather than just the first-ordered photo.
+		//   - emit og:image:width / og:image:height matching the served rendition.
 		// For now we reuse the existing public JPEG URL, which is good enough for
 		// most crawlers but ignores the above nuances.
 		return {
@@ -56,20 +55,17 @@ export const Route = createFileRoute('/listings/$id')({
 })
 
 /**
- * Returns the absolute public URL of the listing's cover photo, or undefined
- * if the listing has no photos. The cover photo is the first entry ordered by
- * `order` ascending (see `getPhotosForListing`).
+ * Returns the public URL of the listing's cover photo, or undefined if the
+ * listing has no photos. Relies on the data-layer invariant that `photos` is
+ * sorted by `order` ascending, so `photos[0]` is the cover photo.
  */
 function coverPhotoUrl(
 	row: Listing | PublicListing | OwnerListingView | undefined
 ): string | undefined {
-	if (!row || !('photos' in row) || row.photos.length === 0) {
+	if (!row || !('photos' in row)) {
 		return undefined
 	}
-	const first = row.photos.reduce((best, photo) =>
-		photo.order < best.order ? photo : best
-	)
-	return first.pubUrl
+	return row.photos[0]?.pubUrl
 }
 
 const STATUS_DEBOUNCE_MS = 300

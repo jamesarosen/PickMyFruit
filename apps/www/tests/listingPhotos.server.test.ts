@@ -74,6 +74,8 @@ const {
 	deleteListingPhoto,
 	getPublicListingById,
 	getAvailableListings,
+	getNearbyListings,
+	getUserListings,
 	DataInvariantError,
 } = await import('../src/data/queries.server')
 
@@ -195,6 +197,24 @@ describe('getPhotosForListing', () => {
 		expect(result).toEqual([])
 	})
 
+	it('preserves ascending `order` from the DB so photos[0] is the cover', async () => {
+		const id0 = faker.string.uuid()
+		const id1 = faker.string.uuid()
+		const id2 = faker.string.uuid()
+		// DB is queried with orderBy(listingPhotos.order) so rows arrive sorted;
+		// the function must preserve that ordering end-to-end.
+		mockSelectOrderBy.mockResolvedValue([
+			{ id: id0, ext: '.jpg', order: 0 },
+			{ id: id1, ext: '.jpg', order: 1 },
+			{ id: id2, ext: '.jpg', order: 2 },
+		])
+
+		const result = await getPhotosForListing(1)
+
+		expect(result.map((p) => p.id)).toEqual([id0, id1, id2])
+		expect(result.map((p) => p.order)).toEqual([0, 1, 2])
+	})
+
 	it('pub URL is always .jpg regardless of raw ext', async () => {
 		const listingId = faker.number.int({ min: 1, max: 9999 })
 		const id1 = faker.string.uuid()
@@ -312,6 +332,27 @@ describe('getPublicListingById', () => {
 		expect(result!.photos[0].order).toBe(0)
 	})
 
+	it('returns photos sorted by `order` ascending so photos[0] is the cover', async () => {
+		const listingId = 42
+		const idA = faker.string.uuid()
+		const idB = faker.string.uuid()
+		const idC = faker.string.uuid()
+
+		mockSelectWithLimit([makeListingRow(listingId)])
+		// The DB query uses orderBy(listingPhotos.order); simulate that by
+		// supplying rows in ascending-order sequence.
+		mockSelectWithOrderBy([
+			{ id: idA, listingId, ext: '.jpg', order: 0 },
+			{ id: idB, listingId, ext: '.jpg', order: 1 },
+			{ id: idC, listingId, ext: '.jpg', order: 2 },
+		])
+
+		const result = await getPublicListingById(listingId)
+
+		expect(result!.photos.map((p) => p.id)).toEqual([idA, idB, idC])
+		expect(result!.photos.map((p) => p.order)).toEqual([0, 1, 2])
+	})
+
 	it('returns a PublicListing with empty photos when listing has no photos', async () => {
 		const listingId = 7
 		mockSelectWithLimit([makeListingRow(listingId)])
@@ -403,5 +444,116 @@ describe('fetchPhotosByListingIds grouping (via getAvailableListings)', () => {
 
 		expect(results).toHaveLength(1)
 		expect(results[0].photos).toEqual([])
+	})
+
+	it('preserves `order` ascending so photos[0] is the cover', async () => {
+		const listingId = 7
+		mockSelectWithOrderByAndLimit([makeListingRow(listingId)])
+
+		const id0 = faker.string.uuid()
+		const id1 = faker.string.uuid()
+		const id2 = faker.string.uuid()
+		// fetchPhotosByListingIds queries DB with orderBy(listingPhotos.order);
+		// simulate that by providing rows in ascending-order sequence.
+		mockSelectWithOrderBy([
+			{ id: id0, listingId, ext: '.jpg', order: 0 },
+			{ id: id1, listingId, ext: '.jpg', order: 1 },
+			{ id: id2, listingId, ext: '.jpg', order: 2 },
+		])
+
+		const results = await getAvailableListings(10)
+
+		expect(results[0].photos.map((p) => p.id)).toEqual([id0, id1, id2])
+		expect(results[0].photos.map((p) => p.order)).toEqual([0, 1, 2])
+	})
+})
+
+// ============================================================================
+// getNearbyListings — photo ordering invariant
+// ============================================================================
+
+describe('getNearbyListings photo ordering', () => {
+	/** Sets up a mock chain for db.select().from().where().orderBy().limit(). */
+	function mockSelectWithOrderByAndLimit(rows: unknown[]) {
+		const mockLimit = vi.fn().mockResolvedValue(rows)
+		const mockOrderBy = vi.fn().mockReturnValue({ limit: mockLimit })
+		const mockWhere = vi.fn().mockReturnValue({ orderBy: mockOrderBy })
+		const mockFrom = vi.fn().mockReturnValue({ where: mockWhere })
+		mockSelect.mockReturnValueOnce({ from: mockFrom })
+	}
+
+	/** Sets up a mock chain for db.select().from().where().orderBy(). */
+	function mockSelectWithOrderBy(rows: unknown[]) {
+		const mockOrderBy = vi.fn().mockResolvedValue(rows)
+		const mockWhere = vi.fn().mockReturnValue({ orderBy: mockOrderBy })
+		const mockFrom = vi.fn().mockReturnValue({ where: mockWhere })
+		mockSelect.mockReturnValueOnce({ from: mockFrom })
+	}
+
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	it('returns photos sorted by `order` ascending so photos[0] is the cover', async () => {
+		const listingId = 3
+		mockSelectWithOrderByAndLimit([makeListingRow(listingId)])
+
+		const id0 = faker.string.uuid()
+		const id1 = faker.string.uuid()
+		mockSelectWithOrderBy([
+			{ id: id0, listingId, ext: '.jpg', order: 0 },
+			{ id: id1, listingId, ext: '.jpg', order: 1 },
+		])
+
+		const results = await getNearbyListings(38.3, -122.3, 12)
+
+		expect(results[0].photos.map((p) => p.id)).toEqual([id0, id1])
+		expect(results[0].photos.map((p) => p.order)).toEqual([0, 1])
+	})
+})
+
+// ============================================================================
+// getUserListings — photo ordering invariant
+// ============================================================================
+
+describe('getUserListings photo ordering', () => {
+	/** Sets up a mock chain for db.select().from().where().orderBy(). */
+	function mockSelectWithOrderBy(rows: unknown[]) {
+		const mockOrderBy = vi.fn().mockResolvedValue(rows)
+		const mockWhere = vi.fn().mockReturnValue({ orderBy: mockOrderBy })
+		const mockFrom = vi.fn().mockReturnValue({ where: mockWhere })
+		mockSelect.mockReturnValueOnce({ from: mockFrom })
+	}
+
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	it('returns each listing with photos sorted by `order` ascending', async () => {
+		const userId = faker.string.uuid()
+		const listingA = makeListingRow(1, { userId })
+		const listingB = makeListingRow(2, { userId })
+		// getUserListings: first select ends at .orderBy(desc(listings.createdAt)) (no .limit())
+		mockSelectWithOrderBy([listingA, listingB])
+
+		const idA0 = faker.string.uuid()
+		const idA1 = faker.string.uuid()
+		const idB0 = faker.string.uuid()
+		// fetchPhotosByListingIds: interleaved rows simulating globally sorted
+		// result from the DB. The grouping must preserve ascending order
+		// per listing.
+		mockSelectWithOrderBy([
+			{ id: idA0, listingId: 1, ext: '.jpg', order: 0 },
+			{ id: idB0, listingId: 2, ext: '.jpg', order: 0 },
+			{ id: idA1, listingId: 1, ext: '.jpg', order: 1 },
+		])
+
+		const results = await getUserListings(userId)
+
+		const a = results.find((r) => r.id === 1)!
+		const b = results.find((r) => r.id === 2)!
+		expect(a.photos.map((p) => p.id)).toEqual([idA0, idA1])
+		expect(a.photos.map((p) => p.order)).toEqual([0, 1])
+		expect(b.photos.map((p) => p.id)).toEqual([idB0])
 	})
 })
