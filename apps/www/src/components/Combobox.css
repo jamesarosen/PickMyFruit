@@ -125,21 +125,34 @@
 	@media (max-width: 480px) {
 		/* [data-popper-positioner] is Kobalte's floating-ui wrapper — the element
 		   that receives inline position/transform styles. We must target it, not
-		   .combobox__content, to override those inline styles. */
+		   .combobox__content, to override those inline styles.
+		   The positioner is `position: fixed`, so `bottom` is measured from the
+		   layout viewport. --visual-viewport-bottom-inset (set by
+		   trackVisualViewport) lifts the sheet above the on-screen keyboard and
+		   autofill bar, and keeps it anchored as the visual viewport shifts. */
 		[data-popper-positioner]:has(.combobox__content) {
 			position: fixed !important;
-			inset: auto 0 0 0 !important;
+			top: auto !important;
+			right: 0 !important;
+			bottom: var(--visual-viewport-bottom-inset, 0px) !important;
+			left: 0 !important;
 			transform: none !important;
 			width: 100% !important;
 		}
 
 		.combobox__content {
 			border-radius: 16px 16px 0 0;
-			max-height: 60vh;
+			/* Cap to 60% of the visible area so the sheet never exceeds the
+			   space above the keyboard; fall back to 60vh before the tracker
+			   initialises or on browsers without VisualViewport. */
+			max-height: min(60vh, calc(var(--visual-viewport-height, 100vh) * 0.6));
 		}
 
 		.combobox__listbox {
-			max-height: calc(60vh - 16px);
+			max-height: min(
+				calc(60vh - 16px),
+				calc(var(--visual-viewport-height, 100vh) * 0.6 - 16px)
+			);
 		}
 	}
 }
