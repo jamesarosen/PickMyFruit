@@ -16,8 +16,10 @@ import { latLngToCell } from 'h3-js'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const wwwRoot = resolve(__dirname, '../../..')
 
-// Uses same test.db as playwright webServer - absolute path for consistency
-const TEST_DB_URL = `file:${resolve(wwwRoot, 'data/test.db')}`
+// Uses the same DB as the Playwright web server. Docker-backed tests override
+// this path so the host-side fixtures seed the DB mounted into the container.
+const TEST_DB_URL =
+	process.env.E2E_DATABASE_URL ?? `file:${resolve(wwwRoot, 'data/test.db')}`
 
 export interface TestUser {
 	id: string
