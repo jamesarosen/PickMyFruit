@@ -12,7 +12,6 @@ import { HydrationScript } from 'solid-js/web'
 import { PageFooter } from '@/components/PageFooter'
 import { getSession } from '@/lib/session'
 import { Sentry } from '@/lib/sentry'
-import { trackVisualViewport } from '@/lib/visual-viewport'
 import '../styles/base.css'
 import '../styles/colors.css'
 import '../styles/focus.css'
@@ -95,11 +94,6 @@ function RootShell(props: { children: Solid.JSX.Element }) {
 }
 
 function RootComponent() {
-	Solid.onMount(() => {
-		const dispose = trackVisualViewport()
-		Solid.onCleanup(dispose)
-	})
-
 	return (
 		<>
 			<Outlet />

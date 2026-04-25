@@ -59,12 +59,25 @@
 		box-shadow: 0 4px 16px oklch(from var(--color-foreground) l c h / 0.12);
 		z-index: 100;
 		overflow: hidden;
+		/* Kobalte's `fitViewport` middleware exposes the space available between
+		   the trigger and the closest viewport edge (after flipping), in CSS
+		   pixels of the *visual* viewport. Floating UI reads window.visualViewport
+		   directly so this naturally accounts for the iOS keyboard and the URL
+		   bar without any JS scroll handlers. The 100dvh fallback keeps height
+		   sensible on browsers that don't yet expose the variable, and
+		   `safe-area-inset-bottom` keeps the popover above the home indicator
+		   when it flips below the trigger. */
+		max-height: min(
+			var(--kb-popper-content-available-height, 100dvh),
+			calc(100dvh - env(safe-area-inset-bottom) - env(safe-area-inset-top))
+		);
 	}
 
 	.combobox__listbox {
-		max-height: 300px;
+		max-height: inherit;
 		overflow-y: auto;
 		padding: 4px 0;
+		overscroll-behavior: contain;
 	}
 
 	.combobox__section {
@@ -122,37 +135,17 @@
 		visibility: hidden;
 	}
 
+	/* On narrow viewports we let Floating UI keep its natural anchored
+	   positioning (above or below the trigger via `flip`), but cap the popover
+	   to a comfortable fraction of the visible viewport. We avoid overriding
+	   `top`/`bottom` so the popper stays in sync with the trigger as the page
+	   scrolls and as the iOS visual viewport shifts — those overrides were the
+	   source of the previous "sticks to bottom, jumps off-screen on scroll up"
+	   jitter. */
 	@media (max-width: 480px) {
-		/* [data-popper-positioner] is Kobalte's floating-ui wrapper — the element
-		   that receives inline position/transform styles. We must target it, not
-		   .combobox__content, to override those inline styles.
-		   The positioner is `position: fixed`, so `bottom` is measured from the
-		   layout viewport. --visual-viewport-bottom-inset (set by
-		   trackVisualViewport) lifts the sheet above the on-screen keyboard and
-		   autofill bar, and keeps it anchored as the visual viewport shifts. */
-		[data-popper-positioner]:has(.combobox__content) {
-			position: fixed !important;
-			top: auto !important;
-			right: 0 !important;
-			bottom: var(--visual-viewport-bottom-inset, 0px) !important;
-			left: 0 !important;
-			transform: none !important;
-			width: 100% !important;
-		}
-
 		.combobox__content {
-			border-radius: 16px 16px 0 0;
-			/* Cap to 60% of the visible area so the sheet never exceeds the
-			   space above the keyboard; fall back to 60vh before the tracker
-			   initialises or on browsers without VisualViewport. */
-			max-height: min(60vh, calc(var(--visual-viewport-height, 100vh) * 0.6));
-		}
-
-		.combobox__listbox {
-			max-height: min(
-				calc(60vh - 16px),
-				calc(var(--visual-viewport-height, 100vh) * 0.6 - 16px)
-			);
+			border-radius: 12px;
+			max-height: min(var(--kb-popper-content-available-height, 60dvh), 60dvh);
 		}
 	}
 }
