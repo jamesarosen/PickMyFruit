@@ -1,0 +1,143 @@
+/**
+ * CSS-first reusable tinted-surface primitives. Two related shapes that share
+ * one color recipe (10% tint of `--badge-color` on the background, the same
+ * color on the foreground):
+ *
+ *   .notice  Block-level surface for inline status sections (e.g. "Request
+ *            sent!", "This listing is unavailable"). Padded card.
+ *   .badge   Compact inline pill (e.g. a status indicator next to a heading).
+ *
+ * Color is driven by ARIA role first, with explicit variant classes for cases
+ * where no single role applies. Picking colors from `role` keeps the visual
+ * tone in lockstep with the assistive-tech announcement (alert = error tint,
+ * status = success tint, note = neutral tint).
+ *
+ *   role="alert"   → error tint
+ *   role="status"  → success/secondary tint
+ *   role="note"    → quiet/neutral tint
+ *
+ *   .notice--success    secondary green tint
+ *   .notice--warning    accent gold tint
+ *   .notice--error      error red tint
+ *   .notice--neutral    quiet gray tint
+ *
+ *   .badge--available   secondary green tint
+ *   .badge--unavailable quiet gray tint
+ *   .badge--private     accent gold tint
+ *
+ * Modifiers:
+ *   .notice--bar        Less padding, side-by-side flex layout (toast/banner
+ *                       row with optional dismiss control).
+ *   .notice--centered   Center text and stack content for "splash" notices.
+ */
+@layer components {
+	.notice,
+	.badge {
+		--badge-color: var(--color-quiet);
+		background: oklch(from var(--badge-color) l c h / 0.1);
+		color: var(--badge-color);
+	}
+
+	.notice {
+		padding: 24px;
+		border-radius: 12px;
+	}
+
+	.notice :is(h2, h3, h4) {
+		color: var(--badge-color);
+		font-size: 20px;
+		font-weight: 600;
+		margin: 0 0 8px;
+	}
+
+	.notice :is(p, a) {
+		color: var(--color-foreground);
+		margin: 0;
+	}
+
+	.notice :is(p, a) + :is(p, a) {
+		margin-top: 12px;
+	}
+
+	.notice[role='alert'] {
+		--badge-color: var(--color-error);
+	}
+
+	.notice[role='status'] {
+		--badge-color: var(--color-secondary);
+	}
+
+	.notice[role='note'] {
+		--badge-color: var(--color-quiet);
+	}
+
+	.notice--success {
+		--badge-color: var(--color-secondary);
+	}
+
+	.notice--warning {
+		--badge-color: var(--color-accent);
+	}
+
+	.notice--error {
+		--badge-color: var(--color-error);
+	}
+
+	.notice--neutral {
+		--badge-color: var(--color-quiet);
+	}
+
+	.notice--centered {
+		text-align: center;
+	}
+
+	.notice--bar {
+		align-items: center;
+		display: flex;
+		font-size: 14px;
+		gap: 16px;
+		justify-content: space-between;
+		padding: 16px 20px;
+		border-radius: 8px;
+	}
+
+	.notice--bar :is(p, a) {
+		color: inherit;
+	}
+
+	.badge {
+		display: inline-block;
+		font-size: 14px;
+		font-weight: 600;
+		padding: 6px 14px;
+		border-radius: 16px;
+		text-transform: capitalize;
+	}
+
+	.badge--available {
+		--badge-color: var(--color-secondary);
+	}
+
+	.badge--unavailable {
+		--badge-color: var(--color-quiet);
+	}
+
+	.badge--private {
+		--badge-color: var(--color-accent);
+	}
+
+	.notice--bar .banner-dismiss {
+		background: none;
+		border: none;
+		color: inherit;
+		cursor: pointer;
+		flex-shrink: 0;
+		font-size: 14px;
+		padding: 0;
+		text-decoration: underline;
+	}
+
+	.notice--bar .banner-dismiss:hover {
+		text-decoration: none;
+	}
+}

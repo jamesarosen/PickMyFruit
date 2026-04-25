@@ -78,43 +78,4 @@
 	.inquiry-error {
 		margin-bottom: 16px;
 	}
-
-	.inquiry-success,
-	.inquiry-rate-limited {
-		padding: 24px;
-		border-radius: 12px;
-		text-align: center;
-	}
-
-	.inquiry-success {
-		background: oklch(from var(--color-secondary) l c h / 0.1);
-	}
-
-	.inquiry-success h3 {
-		color: var(--color-secondary);
-		font-size: 20px;
-		font-weight: 600;
-		margin: 0 0 8px 0;
-	}
-
-	.inquiry-success p {
-		color: var(--color-foreground);
-		margin: 0;
-	}
-
-	.inquiry-rate-limited {
-		background: oklch(from var(--color-accent) l c h / 0.1);
-	}
-
-	.inquiry-rate-limited h3 {
-		color: var(--color-accent);
-		font-size: 20px;
-		font-weight: 600;
-		margin: 0 0 8px 0;
-	}
-
-	.inquiry-rate-limited p {
-		color: var(--color-foreground);
-		margin: 0;
-	}
 }

@@ -62,7 +62,7 @@ function ProfilePage() {
 			<main id="main-content" class="profile-page">
 				<h1>Profile</h1>
 				<form class="profile-form" onSubmit={handleSubmit}>
-					<ErrorMessage class="form-message error" error={submitError()} />
+					<ErrorMessage error={submitError()} />
 					<Input disabled label="Email Address" value={user()?.email} />
 					<Input
 						label="Your name"

@@ -264,14 +264,14 @@ export default function InquiryForm(props: InquiryFormProps) {
 			</Show>
 
 			<Show when={formState() === 'success'}>
-				<div class="inquiry-success">
+				<div class="notice notice--centered" role="status">
 					<h3>Request sent!</h3>
 					<p>The owner has been notified and will reach out to you soon.</p>
 				</div>
 			</Show>
 
 			<Show when={formState() === 'rate-limited'}>
-				<div class="inquiry-rate-limited">
+				<div class="notice notice--centered notice--warning">
 					<h3>Already contacted</h3>
 					<p>
 						You've already reached out to this owner recently. Please wait 24 hours
