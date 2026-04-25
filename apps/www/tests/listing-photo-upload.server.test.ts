@@ -28,7 +28,7 @@ vi.mock('mime-bytes', () => ({
 
 const mockConcurrency = vi.fn()
 const mockJpeg = vi.fn()
-const mockWithExif = vi.fn()
+const mockAutoOrient = vi.fn()
 const mockSharp = vi.fn()
 
 vi.mock('sharp', () => ({
@@ -42,7 +42,7 @@ vi.mock('../src/lib/env.server', () => ({
 }))
 
 // Must import after mocking
-const { validatePhotoFile, uploadListingPhoto, exifOrientationForPublicCopy } =
+const { validatePhotoFile, uploadListingPhoto } =
 	await import('../src/lib/listing-photo-upload.server')
 
 // ============================================================================
@@ -63,20 +63,6 @@ function makeStorage(): StorageAdapter {
 // ============================================================================
 // validatePhotoFile
 // ============================================================================
-
-describe('exifOrientationForPublicCopy', () => {
-	it.each([
-		[1, '1'],
-		[6, '6'],
-		[8, '8'],
-		[undefined, '1'],
-		[0, '1'],
-		[9, '1'],
-		[1.5, '1'],
-	])('maps %p to %s', (input, expected) => {
-		expect(exifOrientationForPublicCopy(input)).toBe(expected)
-	})
-})
 
 describe('validatePhotoFile', () => {
 	const smallBuf = Buffer.from('fake')
@@ -132,16 +118,9 @@ describe('uploadListingPhoto', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 		mockJpeg.mockReturnValue(new PassThrough())
-		mockWithExif.mockReturnValue({ jpeg: mockJpeg })
-		mockSharp.mockImplementation((input: unknown) => {
-			if (Buffer.isBuffer(input)) {
-				return {
-					metadata: vi.fn().mockResolvedValue({ orientation: 1 }),
-				}
-			}
-			return {
-				withExif: mockWithExif,
-			}
+		mockAutoOrient.mockReturnValue({ jpeg: mockJpeg })
+		mockSharp.mockReturnValue({
+			autoOrient: mockAutoOrient,
 		})
 	})
 
@@ -187,11 +166,8 @@ describe('uploadListingPhoto', () => {
 			storage,
 		})
 
-		expect(mockSharp).toHaveBeenCalledWith(rawBuffer, { sequentialRead: true })
 		expect(mockSharp).toHaveBeenCalledWith({ sequentialRead: true })
-		expect(mockWithExif).toHaveBeenCalledWith({
-			IFD0: { Orientation: '1' },
-		})
+		expect(mockAutoOrient).toHaveBeenCalled()
 		expect(mockJpeg).toHaveBeenCalled()
 
 		const { calls } = (storage.upload as ReturnType<typeof vi.fn>).mock

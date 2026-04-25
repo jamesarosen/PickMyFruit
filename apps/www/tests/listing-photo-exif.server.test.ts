@@ -71,7 +71,7 @@ describe('EXIF stripping (real sharp)', () => {
 	})
 
 	it(
-		'retains EXIF Orientation on the public copy while stripping other EXIF',
+		'auto-orients pixels and drops orientation metadata on the public copy',
 		{
 			timeout: 30_000,
 		},
@@ -119,12 +119,16 @@ describe('EXIF stripping (real sharp)', () => {
 
 			expect(pubBuffer).toBeDefined()
 
+			const pubMeta = await sharp(pubBuffer!).metadata()
+			expect(pubMeta.width).toBe(4)
+			expect(pubMeta.height).toBe(8)
+			expect(pubMeta.orientation).toBeUndefined()
+
 			const tmpPath = join(tmpdir(), `pmf-orient-test-${Date.now()}.jpg`)
 			writeFileSync(tmpPath, pubBuffer!)
 			try {
 				const tags = await exiftool.read(tmpPath)
-				expect(tags.Orientation).toBe(6)
-				expect(tags.Make).toBeUndefined()
+				expect(tags.Orientation).toBeUndefined()
 				expect(tags.GPSLatitude).toBeUndefined()
 			} finally {
 				unlinkSync(tmpPath)

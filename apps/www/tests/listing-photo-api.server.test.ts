@@ -54,20 +54,13 @@ vi.mock('../src/lib/storage.server', () => ({
 // ============================================================================
 
 const mockSharpJpeg = vi.fn(() => ({ pipe: vi.fn() }))
-const mockSharpWithExif = vi.fn(() => ({ jpeg: mockSharpJpeg }))
+const mockSharpAutoOrient = vi.fn(() => ({ jpeg: mockSharpJpeg }))
 
 vi.mock('sharp', () => ({
 	default: Object.assign(
-		vi.fn((input: unknown) => {
-			if (Buffer.isBuffer(input)) {
-				return {
-					metadata: vi.fn().mockResolvedValue({ orientation: 1 }),
-				}
-			}
-			return {
-				withExif: mockSharpWithExif,
-			}
-		}),
+		vi.fn(() => ({
+			autoOrient: mockSharpAutoOrient,
+		})),
 		{ concurrency: vi.fn() }
 	),
 }))
