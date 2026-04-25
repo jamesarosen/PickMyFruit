@@ -21,6 +21,24 @@ const MIME_TO_EXT = {
 
 export type ALLOWED_EXT = (typeof MIME_TO_EXT)[keyof typeof MIME_TO_EXT]
 
+/**
+ * Maps Sharp-reported EXIF orientation (1–8) to the sole IFD0 tag written on
+ * public JPEGs. Any other value falls back to 1 (normal orientation).
+ */
+export function exifOrientationForPublicCopy(
+	orientation: number | undefined
+): string {
+	if (
+		typeof orientation === 'number' &&
+		Number.isInteger(orientation) &&
+		orientation >= 1 &&
+		orientation <= 8
+	) {
+		return String(orientation)
+	}
+	return '1'
+}
+
 /** Applies production Sharp memory controls once per process. */
 export async function configureSharp(): Promise<void> {
 	const sharp = (await import('sharp')).default
@@ -84,8 +102,19 @@ export async function uploadListingPhoto(opts: {
 	try {
 		await configureSharp()
 		const sharp = (await import('sharp')).default
+		const inputMeta = await sharp(opts.rawBuffer, {
+			sequentialRead: true,
+		}).metadata()
+		const orientation = exifOrientationForPublicCopy(inputMeta.orientation)
 		const cleanStream = Readable.from(opts.rawBuffer).pipe(
-			sharp({ sequentialRead: true }).jpeg()
+			sharp({ sequentialRead: true })
+				// Allow-list: only IFD0 Orientation so GPS and other EXIF/XMP are omitted.
+				.withExif({
+					IFD0: {
+						Orientation: orientation,
+					},
+				})
+				.jpeg()
 		)
 		// Public copy served from CDN
 		await opts.storage.upload('pub', pubPathKey, cleanStream, {
