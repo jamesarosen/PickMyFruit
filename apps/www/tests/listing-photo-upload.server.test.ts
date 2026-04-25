@@ -7,6 +7,7 @@
  *   - unrecognized magic bytes rejected
  *   - auth guard (tested in listing-photo-api.server.test.ts against the server fn)
  */
+import { PassThrough } from 'node:stream'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { StorageAdapter } from '../src/lib/storage.server'
 
@@ -22,16 +23,15 @@ vi.mock('mime-bytes', () => ({
 
 // ============================================================================
 // Mock sharp — avoids native binary in unit tests.
-// Production calls .jpeg().toBuffer() — mock both methods in the chain.
+// Production streams through .jpeg() — mock the transform chain.
 // ============================================================================
 
-const mockToBuffer = vi.fn()
+const mockConcurrency = vi.fn()
 const mockJpeg = vi.fn()
+const mockSharp = vi.fn()
 
 vi.mock('sharp', () => ({
-	default: vi.fn(() => ({
-		jpeg: mockJpeg,
-	})),
+	default: Object.assign(mockSharp, { concurrency: mockConcurrency }),
 }))
 
 // Must import after mocking
@@ -46,6 +46,8 @@ function makeStorage(): StorageAdapter {
 	return {
 		upload: vi.fn().mockResolvedValue(undefined),
 		read: vi.fn(),
+		readStream: vi.fn(),
+		readWebStream: vi.fn(),
 		publicUrl: vi.fn((path: string) => `/api/uploads/pub/${path}`),
 		delete: vi.fn().mockResolvedValue(undefined),
 	}
@@ -108,8 +110,8 @@ describe('validatePhotoFile', () => {
 describe('uploadListingPhoto', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
-		mockJpeg.mockReturnValue({ toBuffer: mockToBuffer })
-		mockToBuffer.mockResolvedValue(Buffer.from('clean-image'))
+		mockJpeg.mockReturnValue(new PassThrough())
+		mockSharp.mockReturnValue({ jpeg: mockJpeg })
 	})
 
 	it('uploads the raw buffer to raw/ dir preserving input extension', async () => {
@@ -129,10 +131,9 @@ describe('uploadListingPhoto', () => {
 		expect(rawCall[2]).toBe(rawBuffer)
 	})
 
-	it('converts to JPEG and uploads the clean buffer to pub/ dir', async () => {
+	it('sets sharp concurrency from SHARP_CONCURRENCY before processing', async () => {
 		const storage = makeStorage()
-		const cleanBuffer = Buffer.from('clean-image')
-		mockToBuffer.mockResolvedValue(cleanBuffer)
+		process.env.SHARP_CONCURRENCY = '1'
 
 		await uploadListingPhoto({
 			rawBuffer: Buffer.from('raw-img'),
@@ -141,14 +142,27 @@ describe('uploadListingPhoto', () => {
 			storage,
 		})
 
-		// sharp().jpeg().toBuffer() was called — JPEG conversion + metadata strip
-		expect(mockJpeg).toHaveBeenCalled()
-		expect(mockToBuffer).toHaveBeenCalled()
+		expect(mockConcurrency).toHaveBeenCalledWith(1)
+	})
 
-		const calls = (storage.upload as ReturnType<typeof vi.fn>).mock.calls
+	it('converts to JPEG and streams the clean image to pub/ dir', async () => {
+		const storage = makeStorage()
+
+		await uploadListingPhoto({
+			rawBuffer: Buffer.from('raw-img'),
+			mimeType: 'image/png',
+			fileExt: '.png',
+			storage,
+		})
+
+		expect(mockSharp).toHaveBeenCalledWith({ sequentialRead: true })
+		expect(mockJpeg).toHaveBeenCalled()
+
+		const { calls } = (storage.upload as ReturnType<typeof vi.fn>).mock
 		const pubCall = calls.find((c: unknown[]) => c[0] === 'pub')
 		expect(pubCall).toBeDefined()
-		expect(pubCall![2]).toBe(cleanBuffer)
+		expect(Buffer.isBuffer(pubCall![2])).toBeFalsy()
+		expect(pubCall![2]).toHaveProperty('pipe')
 	})
 
 	it('pub path is always .jpg regardless of input extension', async () => {
@@ -161,7 +175,7 @@ describe('uploadListingPhoto', () => {
 			storage,
 		})
 
-		const calls = (storage.upload as ReturnType<typeof vi.fn>).mock.calls
+		const { calls } = (storage.upload as ReturnType<typeof vi.fn>).mock
 		const rawPath = calls.find((c: unknown[]) => c[0] === 'raw')?.[1]
 		const pubPath = calls.find((c: unknown[]) => c[0] === 'pub')?.[1]
 		// Raw preserves input extension; pub is always JPEG

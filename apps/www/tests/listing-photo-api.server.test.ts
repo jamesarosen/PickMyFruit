@@ -43,6 +43,7 @@ vi.mock('../src/lib/storage.server', () => ({
 	storage: {
 		upload: vi.fn().mockResolvedValue(undefined),
 		read: vi.fn(),
+		readStream: vi.fn(),
 		publicUrl: vi.fn((key: string) => `/api/uploads/pub/${key}`),
 		delete: vi.fn().mockResolvedValue(undefined),
 	},
@@ -53,11 +54,12 @@ vi.mock('../src/lib/storage.server', () => ({
 // ============================================================================
 
 vi.mock('sharp', () => ({
-	default: vi.fn(() => ({
-		jpeg: vi.fn().mockResolvedValue({
-			toBuffer: vi.fn().mockResolvedValue(Buffer.from('clean')),
-		}),
-	})),
+	default: Object.assign(
+		vi.fn(() => ({
+			jpeg: vi.fn(() => ({ pipe: vi.fn() })),
+		})),
+		{ concurrency: vi.fn() }
+	),
 }))
 
 // Must import after mocking

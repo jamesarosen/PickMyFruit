@@ -1,5 +1,6 @@
 import { v7 as uuidv7 } from 'uuid'
 import { detectFromBuffer } from 'mime-bytes'
+import { Readable } from 'node:stream'
 import type { StorageAdapter } from '@/lib/storage.server'
 import { UserError } from '@/lib/user-error'
 
@@ -19,6 +20,15 @@ const MIME_TO_EXT = {
 } as const
 
 export type ALLOWED_EXT = (typeof MIME_TO_EXT)[keyof typeof MIME_TO_EXT]
+
+/** Applies production Sharp memory controls once per process. */
+export async function configureSharp(): Promise<void> {
+	const sharp = (await import('sharp')).default
+	const concurrency = Number(process.env.SHARP_CONCURRENCY ?? '1')
+	if (Number.isInteger(concurrency) && concurrency > 0) {
+		sharp.concurrency(concurrency)
+	}
+}
 
 /**
  * Validates that a buffer is an allowed image type and within the size limit.
@@ -73,15 +83,14 @@ export async function uploadListingPhoto(opts: {
 		mimeType: opts.mimeType,
 	})
 
-	// Strip EXIF and convert to JPEG before serving publicly.
-	// sharp strips all metadata by default; .jpeg() ensures uniform JPEG output
-	// regardless of input format (PNG, WebP, etc.).
-	const sharp = (await import('sharp')).default
-	let cleanBuffer: Buffer
 	try {
-		cleanBuffer = await sharp(opts.rawBuffer).jpeg().toBuffer()
+		await configureSharp()
+		const sharp = (await import('sharp')).default
+		const cleanStream = Readable.from(opts.rawBuffer).pipe(
+			sharp({ sequentialRead: true }).jpeg()
+		)
 		// Public copy served from CDN
-		await opts.storage.upload('pub', pubPathKey, cleanBuffer, {
+		await opts.storage.upload('pub', pubPathKey, cleanStream, {
 			mimeType: 'image/jpeg',
 		})
 	} catch (err) {
