@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mkdtemp, rm, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { Readable } from 'node:stream'
+import { text } from 'node:stream/consumers'
 import {
 	LocalStorageAdapter,
 	TigrisStorageAdapter,
@@ -46,6 +48,21 @@ describe(LocalStorageAdapter, () => {
 			)
 			expect(written).toEqual(Buffer.from('x'))
 		})
+
+		it('pipes stream uploads to disk', async () => {
+			await adapter.upload(
+				'pub',
+				'listings/1/streamed.jpg',
+				Readable.from(['streamed-', 'image']),
+				{ mimeType: 'image/jpeg' }
+			)
+
+			const written = await readFile(
+				join(tmpDir, 'uploads', 'pub', 'listings/1/streamed.jpg'),
+				'utf8'
+			)
+			expect(written).toBe('streamed-image')
+		})
 	})
 
 	describe('upload + read (private access)', () => {
@@ -57,6 +74,30 @@ describe(LocalStorageAdapter, () => {
 
 			const result = await adapter.read('raw', 'listings/1/test.png')
 			expect(result).toEqual(buf)
+		})
+
+		it('readStream returns a readable stream for an object', async () => {
+			await adapter.upload('raw', 'listings/1/test.png', Buffer.from('raw'), {
+				mimeType: 'image/png',
+			})
+
+			await expect(
+				text(await adapter.readStream('raw', 'listings/1/test.png'))
+			).resolves.toBe('raw')
+		})
+
+		it('readWebStream returns a response body stream without buffering through read()', async () => {
+			await adapter.upload('pub', 'listings/1/test.jpg', Buffer.from('public'), {
+				mimeType: 'image/jpeg',
+			})
+
+			const readSpy = vi.spyOn(adapter, 'read')
+			const response = new Response(
+				await adapter.readWebStream('pub', 'listings/1/test.jpg')
+			)
+
+			expect(await response.text()).toBe('public')
+			expect(readSpy).not.toHaveBeenCalled()
 		})
 	})
 

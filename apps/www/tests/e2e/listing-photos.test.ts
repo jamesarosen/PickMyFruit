@@ -19,6 +19,13 @@ test.describe('Listing photos', () => {
 			.setInputFiles('tests/fixtures/test-photo.png')
 		await uploadDone
 
-		await expect(page.getByRole('img', { name: /listing photo/i })).toBeVisible()
+		const photo = page.getByRole('img', { name: /listing photo/i })
+		await expect(photo).toBeVisible()
+		const photoSrc = await photo.getAttribute('src')
+		expect(photoSrc).toContain('/api/uploads/pub/listing_photos/')
+
+		const photoResponse = await page.request.get(photoSrc!)
+		expect(photoResponse.ok()).toBeTruthy()
+		expect(photoResponse.headers()['content-type']).toContain('image/jpeg')
 	})
 })

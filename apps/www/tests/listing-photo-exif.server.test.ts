@@ -9,8 +9,9 @@ import { describe, it, expect, afterAll } from 'vitest'
 import { readFileSync, writeFileSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { Readable } from 'node:stream'
 import { exiftool } from 'exiftool-vendored'
-import type { StorageAdapter } from '../src/lib/storage.server'
+import type { StorageAdapter, StorageBody } from '../src/lib/storage.server'
 
 // No vi.mock('sharp') — exercises the real native binary.
 const { uploadListingPhoto } =
@@ -23,13 +24,23 @@ describe('EXIF stripping (real sharp)', () => {
 	it('removes GPS tags from the public copy', { timeout: 30_000 }, async () => {
 		const rawBuffer = readFileSync(join(__dirname, 'fixtures/flower-bees.jpg'))
 
-		// Capture the buffer passed to storage.upload('pub', ...)
+		// Capture the streamed body passed to storage.upload('pub', ...)
 		let pubBuffer: Buffer | undefined
 		const storage: StorageAdapter = {
-			upload: async (dir: string, _key: string, buf: Buffer) => {
-				if (dir === 'pub') pubBuffer = buf
+			upload: async (dir: string, _key: string, body: StorageBody) => {
+				if (dir === 'pub') {
+					pubBuffer = Buffer.isBuffer(body)
+						? body
+						: Buffer.concat(await Readable.from(body).toArray())
+				}
 			},
 			read: async () => {
+				throw new Error('not implemented')
+			},
+			readStream: async () => {
+				throw new Error('not implemented')
+			},
+			readWebStream: async () => {
 				throw new Error('not implemented')
 			},
 			publicUrl: (key: string) => `/api/uploads/pub/${key}`,

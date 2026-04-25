@@ -60,6 +60,7 @@ primary_region = 'sjc'
   EMAIL_PROVIDER = 'resend'
   MIGRATE_ON_REQUEST = 'true'
   NODE_ENV = 'production'
+  SHARP_CONCURRENCY = '1'
   STORAGE_PROVIDER = 'tigris'
 
 # VM resources - Start with minimal for MVP
