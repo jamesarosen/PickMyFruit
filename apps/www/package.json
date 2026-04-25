@@ -20,7 +20,6 @@
 		"test:ci": "vitest run --reporter=default --reporter=github-actions",
 		"test:watch": "vitest",
 		"test:e2e": "playwright test",
-		"test:e2e:docker-memory": "playwright test --config playwright.docker-memory.config.ts",
 		"test:e2e:ui": "playwright test --ui",
 		"typecheck": "tsc --noEmit",
 		"clean": "rm -rf .output dist .nitro .test-dbs && git checkout HEAD -- src/routeTree.gen.ts",

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mkdtemp, rm, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -84,6 +84,20 @@ describe(LocalStorageAdapter, () => {
 			await expect(
 				text(await adapter.readStream('raw', 'listings/1/test.png'))
 			).resolves.toBe('raw')
+		})
+
+		it('readWebStream returns a response body stream without buffering through read()', async () => {
+			await adapter.upload('pub', 'listings/1/test.jpg', Buffer.from('public'), {
+				mimeType: 'image/jpeg',
+			})
+
+			const readSpy = vi.spyOn(adapter, 'read')
+			const response = new Response(
+				await adapter.readWebStream('pub', 'listings/1/test.jpg')
+			)
+
+			expect(await response.text()).toBe('public')
+			expect(readSpy).not.toHaveBeenCalled()
 		})
 	})
 

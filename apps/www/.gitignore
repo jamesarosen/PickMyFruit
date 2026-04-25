@@ -30,7 +30,6 @@ pnpm-debug.log*
 /playwright-report/
 /playwright/.cache/
 /test-uploads/
-/.docker-memory/
 
 # Test databases
 .test-dbs/
