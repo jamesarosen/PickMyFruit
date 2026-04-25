@@ -1,3 +1,4 @@
+import { clsx } from 'clsx'
 import { createSignal, Show, type JSX } from 'solid-js'
 
 type BannerVariant = 'success' | 'error' | 'warning'
@@ -24,7 +25,7 @@ export default function Banner(props: BannerProps) {
 	return (
 		<Show when={!dismissed()}>
 			<div
-				class={`notice notice--bar ${VARIANT_CLASS[props.variant]}`}
+				class={clsx('notice', 'notice--bar', VARIANT_CLASS[props.variant])}
 				role="status"
 			>
 				<div>{props.children}</div>
