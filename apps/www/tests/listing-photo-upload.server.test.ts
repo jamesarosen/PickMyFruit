@@ -34,6 +34,12 @@ vi.mock('sharp', () => ({
 	default: Object.assign(mockSharp, { concurrency: mockConcurrency }),
 }))
 
+vi.mock('../src/lib/env.server', () => ({
+	serverEnv: {
+		SHARP_CONCURRENCY: 1,
+	},
+}))
+
 // Must import after mocking
 const { validatePhotoFile, uploadListingPhoto } =
 	await import('../src/lib/listing-photo-upload.server')

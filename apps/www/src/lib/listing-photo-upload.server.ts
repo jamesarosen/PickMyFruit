@@ -24,10 +24,8 @@ export type ALLOWED_EXT = (typeof MIME_TO_EXT)[keyof typeof MIME_TO_EXT]
 /** Applies production Sharp memory controls once per process. */
 export async function configureSharp(): Promise<void> {
 	const sharp = (await import('sharp')).default
-	const concurrency = Number(process.env.SHARP_CONCURRENCY ?? '1')
-	if (Number.isInteger(concurrency) && concurrency > 0) {
-		sharp.concurrency(concurrency)
-	}
+	const { serverEnv } = await import('@/lib/env.server')
+	sharp.concurrency(serverEnv.SHARP_CONCURRENCY)
 }
 
 /**

@@ -65,6 +65,7 @@ const outputSchema = z
 		HMAC_SECRET: z.string().min(32),
 		MIGRATE_ON_REQUEST: z.stringbool().prefault('false'),
 		NODE_ENV: z.string().prefault('development'),
+		SHARP_CONCURRENCY: z.coerce.number().int().positive().prefault(1),
 		email: emailSchema,
 		storage: storageSchema,
 	})
