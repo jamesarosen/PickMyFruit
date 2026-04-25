@@ -14,6 +14,7 @@ import { exiftool } from 'exiftool-vendored'
 import type { StorageAdapter, StorageBody } from '../src/lib/storage.server'
 
 // No vi.mock('sharp') — exercises the real native binary.
+const sharp = (await import('sharp')).default
 const { uploadListingPhoto } =
 	await import('../src/lib/listing-photo-upload.server')
 
@@ -68,4 +69,70 @@ describe('EXIF stripping (real sharp)', () => {
 			unlinkSync(tmpPath)
 		}
 	})
+
+	it(
+		'auto-orients pixels and drops orientation metadata on the public copy',
+		{
+			timeout: 30_000,
+		},
+		async () => {
+			const rawBuffer = await sharp({
+				create: {
+					width: 8,
+					height: 4,
+					channels: 3,
+					background: { r: 10, g: 20, b: 30 },
+				},
+			})
+				.withMetadata({ orientation: 6 })
+				.jpeg()
+				.toBuffer()
+
+			let pubBuffer: Buffer | undefined
+			const storage: StorageAdapter = {
+				upload: async (dir: string, _key: string, body: StorageBody) => {
+					if (dir === 'pub') {
+						pubBuffer = Buffer.isBuffer(body)
+							? body
+							: Buffer.concat(await Readable.from(body).toArray())
+					}
+				},
+				read: async () => {
+					throw new Error('not implemented')
+				},
+				readStream: async () => {
+					throw new Error('not implemented')
+				},
+				readWebStream: async () => {
+					throw new Error('not implemented')
+				},
+				publicUrl: (key: string) => `/api/uploads/pub/${key}`,
+				delete: async () => {},
+			}
+
+			await uploadListingPhoto({
+				rawBuffer,
+				mimeType: 'image/jpeg',
+				fileExt: '.jpg',
+				storage,
+			})
+
+			expect(pubBuffer).toBeDefined()
+
+			const pubMeta = await sharp(pubBuffer!).metadata()
+			expect(pubMeta.width).toBe(4)
+			expect(pubMeta.height).toBe(8)
+			expect(pubMeta.orientation).toBeUndefined()
+
+			const tmpPath = join(tmpdir(), `pmf-orient-test-${Date.now()}.jpg`)
+			writeFileSync(tmpPath, pubBuffer!)
+			try {
+				const tags = await exiftool.read(tmpPath)
+				expect(tags.Orientation).toBeUndefined()
+				expect(tags.GPSLatitude).toBeUndefined()
+			} finally {
+				unlinkSync(tmpPath)
+			}
+		}
+	)
 })

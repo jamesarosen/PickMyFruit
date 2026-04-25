@@ -53,10 +53,13 @@ vi.mock('../src/lib/storage.server', () => ({
 // Mock sharp — avoids native binary
 // ============================================================================
 
+const mockSharpJpeg = vi.fn(() => ({ pipe: vi.fn() }))
+const mockSharpAutoOrient = vi.fn(() => ({ jpeg: mockSharpJpeg }))
+
 vi.mock('sharp', () => ({
 	default: Object.assign(
 		vi.fn(() => ({
-			jpeg: vi.fn(() => ({ pipe: vi.fn() })),
+			autoOrient: mockSharpAutoOrient,
 		})),
 		{ concurrency: vi.fn() }
 	),

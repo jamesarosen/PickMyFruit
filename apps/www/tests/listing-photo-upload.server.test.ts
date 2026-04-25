@@ -28,6 +28,7 @@ vi.mock('mime-bytes', () => ({
 
 const mockConcurrency = vi.fn()
 const mockJpeg = vi.fn()
+const mockAutoOrient = vi.fn()
 const mockSharp = vi.fn()
 
 vi.mock('sharp', () => ({
@@ -117,7 +118,10 @@ describe('uploadListingPhoto', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 		mockJpeg.mockReturnValue(new PassThrough())
-		mockSharp.mockReturnValue({ jpeg: mockJpeg })
+		mockAutoOrient.mockReturnValue({ jpeg: mockJpeg })
+		mockSharp.mockReturnValue({
+			autoOrient: mockAutoOrient,
+		})
 	})
 
 	it('uploads the raw buffer to raw/ dir preserving input extension', async () => {
@@ -153,15 +157,17 @@ describe('uploadListingPhoto', () => {
 
 	it('converts to JPEG and streams the clean image to pub/ dir', async () => {
 		const storage = makeStorage()
+		const rawBuffer = Buffer.from('raw-img')
 
 		await uploadListingPhoto({
-			rawBuffer: Buffer.from('raw-img'),
+			rawBuffer,
 			mimeType: 'image/png',
 			fileExt: '.png',
 			storage,
 		})
 
 		expect(mockSharp).toHaveBeenCalledWith({ sequentialRead: true })
+		expect(mockAutoOrient).toHaveBeenCalled()
 		expect(mockJpeg).toHaveBeenCalled()
 
 		const { calls } = (storage.upload as ReturnType<typeof vi.fn>).mock

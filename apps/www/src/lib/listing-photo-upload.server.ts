@@ -85,7 +85,7 @@ export async function uploadListingPhoto(opts: {
 		await configureSharp()
 		const sharp = (await import('sharp')).default
 		const cleanStream = Readable.from(opts.rawBuffer).pipe(
-			sharp({ sequentialRead: true }).jpeg()
+			sharp({ sequentialRead: true }).autoOrient().jpeg()
 		)
 		// Public copy served from CDN
 		await opts.storage.upload('pub', pubPathKey, cleanStream, {
