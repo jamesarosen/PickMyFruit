@@ -12,7 +12,9 @@ export default defineConfig({
 		...baseConfig.use,
 		baseURL: `http://localhost:${dockerPort}`,
 	},
-	projects: [{ name: 'docker-memory-chromium', use: { ...devices['Desktop Chrome'] } }],
+	projects: [
+		{ name: 'docker-memory-chromium', use: { ...devices['Desktop Chrome'] } },
+	],
 	webServer: {
 		command: 'pnpm vite-node tests/e2e/docker-memory-web-server.ts',
 		url: `http://localhost:${dockerPort}/api/health`,
