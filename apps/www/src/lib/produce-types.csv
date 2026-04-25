@@ -63,6 +63,23 @@ tamarillo,fruit,Tamarillo,Tamarillos,tamarillo,tamarillos,An egg-shaped South Am
 tangerine,fruit,Tangerine,Tangerines,tangerine,tangerines,A small bright citrus fruit with an easy-peel sweet flavor.
 walnut,fruit,Walnut,Walnuts,walnut,walnuts,A rich tree nut harvested in fall.
 watermelon,fruit,Watermelon,Watermelons,watermelon,watermelons,A refreshing large summer fruit with sweet juicy flesh.
+almond,fruit,Almond,Almonds,almond,almonds,A versatile tree nut with a mild sweet flavor eaten raw or roasted.
+banana,fruit,Banana,Bananas,banana,bananas,A sweet tropical fruit harvested year-round in warm climates.
+breadfruit,fruit,Breadfruit,Breadfruits,breadfruit,breadfruits,A large starchy tropical fruit used as a cooked staple food.
+chestnut,fruit,Chestnut,Chestnuts,chestnut,chestnuts,A starchy nut roasted or used in savory and sweet dishes.
+coconut,fruit,Coconut,Coconuts,coconut,coconuts,A large tropical drupe with edible white flesh and refreshing water.
+date,fruit,Date,Dates,date,dates,A sweet chewy stone fruit harvested from date palm trees.
+dragon-fruit,fruit,Dragon Fruit,Dragon Fruit,dragon fruit,dragon fruit,A tropical cactus fruit with bright skin and speckled white or red flesh.
+hazelnut,fruit,Hazelnut,Hazelnuts,hazelnut,hazelnuts,A small round nut with a sweet rich flavor popular in confections.
+jackfruit,fruit,Jackfruit,Jackfruits,jackfruit,jackfruits,A massive tropical fruit with sweet yellow pods or savory young flesh.
+longan,fruit,Longan,Longans,longan,longans,A small tropical fruit with sweet translucent flesh and a large seed.
+macadamia,fruit,Macadamia,Macadamias,macadamia,macadamias,A rich creamy nut grown in Hawaii and warm climates.
+mango,fruit,Mango,Mangoes,mango,mangoes,A tropical stone fruit with sweet golden flesh.
+pecan,fruit,Pecan,Pecans,pecan,pecans,A rich buttery tree nut widely grown in the American South.
+pineapple,fruit,Pineapple,Pineapples,pineapple,pineapples,A spiky tropical fruit with sweet juicy yellow flesh.
+pistachio,fruit,Pistachio,Pistachios,pistachio,pistachios,A small green nut with a buttery flavor popular as a snack.
+starfruit,fruit,Starfruit,Starfruits,starfruit,starfruits,A star-shaped tropical fruit with a crisp sweet-tart flavor.
+tamarind,fruit,Tamarind,Tamarinds,tamarind,tamarinds,A tart tropical pod fruit used in sauces, candy, and beverages.
 basil,herb,Basil,Basil,basil,basil,A fragrant tender annual herb essential in Italian and Asian cuisines.
 bay-laurel,herb,Bay Laurel,Bay Laurel,bay laurel,bay laurel,An aromatic evergreen shrub leaf used to flavor soups and stews.
 calendula,herb,Calendula,Calendula,calendula,calendula,A bright edible flower with anti-inflammatory and skin-soothing properties.
@@ -103,6 +120,7 @@ valerian,herb,Valerian,Valerian,valerian,valerian,A medicinal herb with sedative
 vietnamese-coriander,herb,Vietnamese Coriander,Vietnamese Coriander,vietnamese coriander,vietnamese coriander,A peppery lime-flavored herb used in Southeast Asian salads and soups.
 winter-savory,herb,Winter Savory,Winter Savory,winter savory,winter savory,A pungent perennial savory used in bean and meat dishes.
 yarrow,herb,Yarrow,Yarrow,yarrow,yarrow,A feathery-leaved medicinal herb with clusters of small white flowers.
+ginger,herb,Ginger,Ginger,ginger,ginger,An aromatic rhizome used fresh or dried in cooking and teas.
 comb-honey,honey,Comb Honey,Comb Honey,comb honey,comb honey,Fresh honeycomb with wax cells still intact and naturally drizzling.
 honey,honey,Honey,Honey,honey,honey,Pure raw honey harvested from backyard or local hives.
 infused-honey,honey,Infused Honey,Infused Honey,infused honey,infused honey,Honey infused with herbs or spices for a unique flavor.
@@ -206,3 +224,11 @@ watercress,vegetable,Watercress,Watercress,watercress,watercress,A peppery aquat
 winter-squash,vegetable,Winter Squash,Winter Squash,winter squash,winter squash,A hard-skinned squash harvested mature and stored for months.
 yam,vegetable,Yam,Yams,yam,yams,A starchy tropical tuber with dry earthy flesh.
 zucchini,vegetable,Zucchini,Zucchini,zucchini,zucchini,A prolific summer squash best harvested young and tender.
+amaranth,vegetable,Amaranth,Amaranth,amaranth,amaranth,A nutritious grain and leafy green used in many traditional cuisines.
+bitter-melon,vegetable,Bitter Melon,Bitter Melons,bitter melon,bitter melons,A bumpy tropical gourd prized for its distinctive bitter flavor.
+cassava,vegetable,Cassava,Cassava,cassava,cassava,A starchy tropical root used for tapioca and flour.
+chayote,vegetable,Chayote,Chayotes,chayote,chayotes,A mild pear-shaped gourd used fresh or cooked in many Latin cuisines.
+nopal,vegetable,Nopal,Nopales,nopal,nopales,A flat cactus pad used as a vegetable in Mexican cooking.
+pea,vegetable,Pea,Peas,pea,peas,A sweet shelling legume harvested fresh or dried.
+purslane,vegetable,Purslane,Purslane,purslane,purslane,A succulent edible weed rich in omega-3s used fresh in salads.
+taro,vegetable,Taro,Taro,taro,taro,A starchy tropical root cooked like potato in many Asian cuisines.
