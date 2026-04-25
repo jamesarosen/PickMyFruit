@@ -28,26 +28,5 @@
 			gap: 12px;
 			align-items: center;
 		}
-
-		& .submit-button {
-			background: var(--color-primary);
-			color: var(--color-background);
-			border: none;
-			padding: 12px 24px;
-			border-radius: 8px;
-			font-size: 16px;
-			font-weight: 600;
-			cursor: pointer;
-			transition: background-color 0.2s;
-
-			&:hover:not(:disabled) {
-				background: oklch(from var(--color-primary) calc(l - 0.08) c h);
-			}
-
-			&:disabled {
-				opacity: 0.6;
-				cursor: not-allowed;
-			}
-		}
 	}
 }

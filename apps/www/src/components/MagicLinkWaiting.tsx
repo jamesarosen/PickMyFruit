@@ -65,7 +65,11 @@ export default function MagicLinkWaiting(props: MagicLinkWaitingProps) {
 						placeholder="Paste token here"
 						disabled={isVerifying()}
 					/>
-					<button type="submit" class="verify-button" disabled={isVerifying()}>
+					<button
+						type="submit"
+						class="button button--primary button--sm"
+						disabled={isVerifying()}
+					>
 						{isVerifying() ? 'Verifying…' : 'Verify'}
 					</button>
 				</div>
@@ -101,7 +105,11 @@ export default function MagicLinkWaiting(props: MagicLinkWaitingProps) {
 					defaultMessage="Failed to resend. Please try again."
 					error={resendError()}
 				/>
-				<button type="button" class="cancel-button" onClick={props.onCancel}>
+				<button
+					type="button"
+					class="button button--ghost button--block"
+					onClick={props.onCancel}
+				>
 					Use different email
 				</button>
 			</div>

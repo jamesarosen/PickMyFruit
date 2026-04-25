@@ -1,0 +1,83 @@
+/**
+ * CSS-first reusable button. Applies equally to <button> and <a>; pick a
+ * variant class (e.g. .button--primary) and optionally a size modifier.
+ *
+ * Variants:
+ *   .button--primary  Solid filled button using --color-primary.
+ *   .button--ghost    Outlined secondary/cancel button on transparent bg.
+ *
+ * Size modifiers (default is comfortable mid-size):
+ *   .button--sm       Compact (matches inline tool-row buttons).
+ *   .button--lg       Hero CTA size.
+ *   .button--block    Full-width (for column-stacked forms).
+ */
+@layer components {
+	.button {
+		--_button-bg: transparent;
+		--_button-fg: currentColor;
+		--_button-border-color: transparent;
+		--_button-px: 28px;
+		--_button-py: 14px;
+		--_button-font-size: 16px;
+
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+
+		background: var(--_button-bg);
+		color: var(--_button-fg);
+		border: 1px solid var(--_button-border-color);
+		border-radius: 8px;
+		padding: var(--_button-py) var(--_button-px);
+		font-size: var(--_button-font-size);
+		font-weight: 600;
+		line-height: 1.2;
+		text-decoration: none;
+		cursor: pointer;
+		transition:
+			background-color 0.2s,
+			border-color 0.2s,
+			color 0.2s;
+	}
+
+	.button:is(:disabled, [aria-disabled='true']) {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.button--primary {
+		--_button-bg: var(--color-primary);
+		--_button-fg: var(--color-background);
+	}
+
+	.button--primary:hover:not(:disabled, [aria-disabled='true']) {
+		--_button-bg: oklch(from var(--color-primary) calc(l - 0.08) c h);
+	}
+
+	.button--ghost {
+		--_button-fg: var(--color-quiet);
+		--_button-border-color: oklch(from var(--color-quiet) l calc(c * 0.3) h);
+	}
+
+	.button--ghost:hover:not(:disabled, [aria-disabled='true']) {
+		--_button-fg: var(--color-foreground);
+		--_button-border-color: var(--color-foreground);
+	}
+
+	.button--sm {
+		--_button-py: 10px;
+		--_button-px: 16px;
+		--_button-font-size: 14px;
+	}
+
+	.button--lg {
+		--_button-py: 16px;
+		--_button-px: 32px;
+	}
+
+	.button--block {
+		display: flex;
+		width: 100%;
+	}
+}

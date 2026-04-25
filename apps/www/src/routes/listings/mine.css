@@ -51,22 +51,6 @@
 			margin-top: 32px;
 		}
 
-		& .add-button {
-			display: inline-block;
-			background: var(--color-primary);
-			color: var(--color-background);
-			padding: 14px 28px;
-			border-radius: 8px;
-			font-weight: 600;
-			font-size: 16px;
-			text-decoration: none;
-			transition: background-color 0.2s;
-
-			&:hover {
-				background: oklch(from var(--color-primary) calc(l - 0.08) c h);
-			}
-		}
-
 		@media (max-width: 600px) {
 			& .listings-grid {
 				grid-template-columns: 1fr;

@@ -43,46 +43,6 @@
 		margin-top: 32px;
 	}
 
-	.form-actions .submit-button {
-		background: var(--color-primary);
-		color: var(--color-background);
-		padding: 14px 28px;
-		border-radius: 8px;
-		border: none;
-		font-weight: 600;
-		font-size: 16px;
-		cursor: pointer;
-		transition: background-color 0.2s;
-	}
-
-	.form-actions .submit-button:hover:not(:disabled) {
-		background: oklch(from var(--color-primary) calc(l - 0.08) c h);
-	}
-
-	.form-actions .submit-button:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-
-	.form-actions .cancel-button {
-		background: transparent;
-		color: var(--color-quiet);
-		padding: 14px 28px;
-		border-radius: 8px;
-		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.3) h);
-		font-weight: 500;
-		font-size: 16px;
-		cursor: pointer;
-		transition:
-			border-color 0.2s,
-			color 0.2s;
-	}
-
-	.form-actions .cancel-button:hover {
-		border-color: var(--color-foreground);
-		color: var(--color-foreground);
-	}
-
 	.form-message {
 		padding: 16px;
 		border-radius: 8px;

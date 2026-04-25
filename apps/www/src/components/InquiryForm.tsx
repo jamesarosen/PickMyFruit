@@ -246,7 +246,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 									maxlength={100}
 								/>
 								<div class="name-interstitial-actions">
-									<button type="submit" class="inquiry-submit">
+									<button type="submit" class="button button--primary button--block">
 										Update name &amp; send inquiry
 									</button>
 									<button
@@ -324,7 +324,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 
 					<button
 						type="submit"
-						class="inquiry-submit"
+						class="button button--primary button--block"
 						disabled={formState() === 'submitting'}
 					>
 						{formState() === 'submitting' ? 'Sending…' : 'Put me in touch'}

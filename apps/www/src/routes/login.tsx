@@ -130,7 +130,11 @@ function LoginPage() {
 									name="email"
 								/>
 
-								<button type="submit" class="submit-button" disabled={isSubmitting()}>
+								<button
+									type="submit"
+									class="button button--primary button--block"
+									disabled={isSubmitting()}
+								>
 									{isSubmitting() ? 'Sending…' : 'Send sign-in link'}
 								</button>
 							</form>

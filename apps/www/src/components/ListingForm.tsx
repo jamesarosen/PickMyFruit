@@ -313,10 +313,14 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 				</fieldset>
 
 				<div class="form-actions">
-					<button type="submit" class="submit-button" disabled={isSubmitting()}>
+					<button
+						type="submit"
+						class="button button--primary"
+						disabled={isSubmitting()}
+					>
 						{isSubmitting() ? 'Submitting…' : 'Share my produce'}
 					</button>
-					<Link to="/" class="cancel-button">
+					<Link to="/" class="button button--ghost">
 						Cancel
 					</Link>
 				</div>
