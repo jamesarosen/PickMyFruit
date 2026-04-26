@@ -119,6 +119,9 @@ export class TigrisStorageAdapter implements StorageAdapter {
 		this.client = new S3Client({
 			region: 'auto',
 			endpoint: opts.endpointUrl,
+			// Default changed to WHEN_SUPPORTED in SDK v3 — streaming bodies then require
+			// x-amz-decoded-content-length, which is undefined for pipe()-based streams.
+			requestChecksumCalculation: 'WHEN_REQUIRED',
 			credentials: {
 				accessKeyId: opts.accessKeyId,
 				secretAccessKey: opts.secretAccessKey,

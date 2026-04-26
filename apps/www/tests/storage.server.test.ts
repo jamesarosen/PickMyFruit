@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { createServer } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import { mkdtemp, rm, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -170,6 +172,43 @@ describe(TigrisStorageAdapter, () => {
 			expect(adapter.publicUrl('listings/1/uuid.jpg')).toBe(
 				'https://test-bucket.fly.storage.tigris.dev/pub/listings/1/uuid.jpg'
 			)
+		})
+	})
+
+	describe('upload', () => {
+		it('uploads a Readable stream without throwing x-amz-decoded-content-length error', async () => {
+			// Regression: AWS SDK v3 defaults to WHEN_SUPPORTED for requestChecksumCalculation,
+			// which requires x-amz-decoded-content-length for streaming bodies. That header is
+			// undefined for pipe()-based streams, causing a TypeError in Node's setHeader.
+			// requestChecksumCalculation: 'WHEN_REQUIRED' on the S3Client fixes this.
+			const server = createServer((req, res) => {
+				req.resume()
+				req.on('end', () => {
+					res.writeHead(200)
+					res.end()
+				})
+			})
+			await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+			const { port } = server.address() as AddressInfo
+			const localAdapter = new TigrisStorageAdapter({
+				bucketName: 'test-bucket',
+				accessKeyId: 'fake',
+				secretAccessKey: 'fake',
+				endpointUrl: `http://127.0.0.1:${port}`,
+			})
+
+			try {
+				const stream = Readable.from(Buffer.from('hello'))
+				await expect(
+					localAdapter.upload('raw', 'test/photo.jpg', stream, {
+						mimeType: 'image/jpeg',
+					})
+				).resolves.toBeUndefined()
+			} finally {
+				await new Promise<void>((resolve, reject) =>
+					server.close((err) => (err ? reject(err) : resolve()))
+				)
+			}
 		})
 	})
 })
