@@ -14,28 +14,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Detects whether the pushed branch has an open PR.
-  # Runs in parallel with `test`; result is consumed by `preview`.
-  context:
-    name: Detect PR
-    runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
-    outputs:
-      pr-number: ${{ steps.pr.outputs.number }}
-    steps:
-      - name: Find open PR for branch
-        id: pr
-        run: |
-          NUMBER=$(gh pr list \
-            --repo "${{ github.repository }}" \
-            --head "${{ github.ref_name }}" \
-            --state open \
-            --json number \
-            --jq '.[0].number' 2>/dev/null || echo '')
-          echo "number=${NUMBER:-}" >> $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ github.token }}
-
   test:
     name: Test and Lint
     runs-on: ubuntu-latest
@@ -127,26 +105,44 @@ jobs:
   preview:
     name: Deploy Preview
     runs-on: ubuntu-latest
-    needs: [test, context]
-    if: needs.context.outputs.pr-number != ''
+    needs: [test]
+    if: github.event_name != 'pull_request'
     environment:
       name: preview
-      url: https://pickmyfruit-pr-${{ needs.context.outputs.pr-number }}.fly.dev
+      url: ${{ steps.pr.outputs.number != '' && format('https://pickmyfruit-pr-{0}.fly.dev', steps.pr.outputs.number) || '' }}
     steps:
+      - name: Find open PR for branch
+        id: pr
+        run: |
+          NUMBER=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --head "${{ github.ref_name }}" \
+            --state open \
+            --json number \
+            --jq '.[0].number' 2>/dev/null || echo '')
+          echo "number=${NUMBER:-}" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - uses: actions/checkout@v4
+        if: steps.pr.outputs.number != ''
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
+        if: steps.pr.outputs.number != ''
 
       - name: Set app name
-        run: echo "APP_NAME=pickmyfruit-pr-${{ needs.context.outputs.pr-number }}" >> $GITHUB_ENV
+        if: steps.pr.outputs.number != ''
+        run: echo "APP_NAME=pickmyfruit-pr-${{ steps.pr.outputs.number }}" >> $GITHUB_ENV
 
       - name: Create app (idempotent)
+        if: steps.pr.outputs.number != ''
         # status 1 means "name taken", which we can ignore; bubble other errors
         run: flyctl apps create $APP_NAME --org personal || [ $? -eq 1 ]
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Set secrets
+        if: steps.pr.outputs.number != ''
         run: |
           flyctl secrets set --app $APP_NAME \
             BETTER_AUTH_SECRET="${{ secrets.PREVIEW_BETTER_AUTH_SECRET }}" \
@@ -156,6 +152,7 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Deploy
+        if: steps.pr.outputs.number != ''
         run: ./bin/deploy.sh
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
