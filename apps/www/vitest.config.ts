@@ -61,7 +61,7 @@ export default defineConfig({
 				test: {
 					name: 'browser-tests',
 					include: [
-						'tests/**/*.ts',
+						'tests/**/*.{ts,tsx}',
 						'!tests/**/*.server.test.ts',
 						'!tests/helpers/**',
 						'!tests/mocks/**',

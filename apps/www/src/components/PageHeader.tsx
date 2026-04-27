@@ -1,12 +1,20 @@
 import { DropdownMenu } from '@kobalte/core/dropdown-menu'
 import {
 	Link,
+	useLocation,
 	useNavigate,
 	useRouteContext,
 	useRouter,
 } from '@tanstack/solid-router'
 import { clsx } from 'clsx'
-import { For, Show, type ParentProps } from 'solid-js'
+import {
+	For,
+	Show,
+	createEffect,
+	createSignal,
+	on,
+	type ParentProps,
+} from 'solid-js'
 import { authClient } from '@/lib/auth-client'
 import { displayName } from '@/lib/display-name'
 import './PageHeader.css'
@@ -56,12 +64,22 @@ function getInitials(name: string): string {
 		.slice(0, 2)
 }
 
-/** A dropdown menu item rendered as a router link with aria-current support. */
+/**
+ * A dropdown menu item rendered as a router link.
+ *
+ * `closeOnSelect={false}` prevents Kobalte from scheduling a `setTimeout(0)`
+ * to unmount the portal on `pointerup`. On iOS Safari the synthetic `click`
+ * fires after that timeout, so the portal would be gone before it arrives and
+ * the tap would silently drop. Keeping the portal mounted lets the click land
+ * on the `<a>`, and the controlled DropdownMenu in PageHeader closes via a
+ * reactive effect once the route changes.
+ */
 function DropdownMenuLink(props: ParentProps<{ to: string; class?: string }>) {
 	return (
 		<DropdownMenu.Item
 			as={Link}
 			to={props.to}
+			closeOnSelect={false}
 			class={clsx('page-header__menu-item', props.class)}
 		>
 			{props.children}
@@ -74,6 +92,17 @@ export default function PageHeader(props: PageHeaderProps) {
 	const router = useRouter()
 	const navigate = useNavigate()
 	const context = useRouteContext({ from: '__root__' })
+	const location = useLocation()
+
+	const [menuOpen, setMenuOpen] = createSignal(false)
+	// Close the menu after navigation (e.g. after an iOS tap on a portal link).
+	createEffect(
+		on(
+			() => location().pathname,
+			() => setMenuOpen(false),
+			{ defer: true }
+		)
+	)
 
 	const hasBreadcrumbs = () => (props.breadcrumbs?.length ?? 0) > 0
 	const user = () => context().session?.user
@@ -97,7 +126,7 @@ export default function PageHeader(props: PageHeaderProps) {
 						<span class="page-header__logo-text">Pick My Fruit</span>
 					</Link>
 
-					<DropdownMenu>
+					<DropdownMenu open={menuOpen()} onOpenChange={setMenuOpen}>
 						{/* aria-label is stable; Kobalte manages aria-expanded and aria-haspopup */}
 						<DropdownMenu.Trigger
 							class="page-header__menu-trigger"
