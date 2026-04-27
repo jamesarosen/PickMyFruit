@@ -213,7 +213,12 @@ async function uploadListingPhotoLocked(
 
 	let phase: 'end' | 'error' = 'end'
 	try {
-		// Store original with full EXIF intact — private, server-side only
+		const rawBytes = (await stat(opts.tempPath)).size
+
+		// Store original with full EXIF intact — private, server-side only.
+		// ContentLength is required so `lib-storage`'s small-body fallback to
+		// PutObject doesn't go out chunked-encoded (Tigris rejects that with
+		// MissingContentLength).
 		await opts.storage.upload(
 			'raw',
 			rawPathKey,
@@ -221,6 +226,7 @@ async function uploadListingPhotoLocked(
 			{
 				mimeType: opts.mimeType,
 				photoId: id,
+				contentLength: rawBytes,
 			}
 		)
 
@@ -263,7 +269,13 @@ async function uploadListingPhotoLocked(
 					// Order matters: rotate first so .resize() targets display-oriented
 					// dimensions. For JPEG input, libvips uses shrink-on-load to decode
 					// at 1/2, 1/4, or 1/8 — the dominant memory win on the pub pipeline.
-					const transform = sharp({
+					//
+					// Encode to a Buffer (not a stream) so the upload has a known
+					// ContentLength. After resize-to-PUB_MAX_DIMENSION the encoded JPEG
+					// is ~0.2–2 MB; the peak-memory cost of buffering is negligible
+					// compared to the libvips working set, and it lets Tigris accept
+					// the body without chunked transfer encoding.
+					const { data: pubBuffer, info } = await sharp(opts.tempPath, {
 						sequentialRead: true,
 						limitInputPixels: MAX_IMAGE_PIXELS,
 					})
@@ -275,18 +287,17 @@ async function uploadListingPhotoLocked(
 							withoutEnlargement: true,
 						})
 						.jpeg({ quality: 85, mozjpeg: true })
-					transform.on('info', (info: import('sharp').OutputInfo) => {
-						span.setAttribute('photo.output_width', info.width)
-						span.setAttribute('photo.output_height', info.height)
-						span.setAttribute('photo.output_bytes', info.size)
-					})
-					const cleanStream = createReadStream(opts.tempPath).pipe(transform)
+						.toBuffer({ resolveWithObject: true })
+					span.setAttribute('photo.output_width', info.width)
+					span.setAttribute('photo.output_height', info.height)
+					span.setAttribute('photo.output_bytes', info.size)
 
 					try {
 						// Public copy served from CDN
-						await opts.storage.upload('pub', pubPathKey, cleanStream, {
+						await opts.storage.upload('pub', pubPathKey, Readable.from(pubBuffer), {
 							mimeType: 'image/jpeg',
 							photoId: id,
+							contentLength: pubBuffer.byteLength,
 						})
 					} finally {
 						const rssAfter = process.memoryUsage().rss

@@ -43,6 +43,14 @@ export interface UploadOptions {
 	mimeType: string
 	/** Optional image UUID, propagated to spans for cross-correlation. */
 	photoId?: string
+	/**
+	 * Body length in bytes when known. `lib-storage`'s `Upload` falls back to
+	 * a single `PutObjectCommand` for bodies smaller than `partSize`; without
+	 * a `Content-Length` header that PutObject goes out chunked-encoded, which
+	 * Tigris rejects with `MissingContentLength`. Set this whenever the size
+	 * can be determined ahead of time (file `stat`, buffered output, …).
+	 */
+	contentLength?: number
 }
 
 /** Contract for all storage backends. */
@@ -188,6 +196,9 @@ export class TigrisStorageAdapter implements StorageAdapter {
 			Key: key,
 			Body: counter.stream,
 			ContentType: opts.mimeType,
+			...(opts.contentLength !== undefined
+				? { ContentLength: opts.contentLength }
+				: {}),
 			...(dir === 'pub' ? { ACL: 'public-read' } : {}),
 		}
 		await Sentry.startSpan(
@@ -205,6 +216,9 @@ export class TigrisStorageAdapter implements StorageAdapter {
 					'storage.part_size_bytes': multipartUploadPartSize,
 					'storage.queue_size': 1,
 					'storage.acl': dir === 'pub' ? 'public-read' : 'private',
+					...(opts.contentLength !== undefined
+						? { 'storage.content_length': opts.contentLength }
+						: {}),
 					...(opts.photoId ? { 'photo.id': opts.photoId } : {}),
 				},
 			},
