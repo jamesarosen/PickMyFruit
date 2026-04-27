@@ -1,18 +1,49 @@
 import { createReadStream, createWriteStream } from 'node:fs'
-import { readFile, mkdir, writeFile, rm } from 'node:fs/promises'
+import { readFile, mkdir, rm } from 'node:fs/promises'
 import { dirname, resolve, sep } from 'node:path'
-import { Readable } from 'node:stream'
+import { Readable, Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import {
 	S3Client,
-	PutObjectCommand,
 	GetObjectCommand,
 	DeleteObjectCommand,
+	type PutObjectCommandInput,
 } from '@aws-sdk/client-s3'
+import { Upload } from '@aws-sdk/lib-storage'
 import { Sentry } from '@/lib/sentry'
 import { serverEnv } from '@/lib/env.server'
 
-export type StorageBody = Buffer | Readable
+/**
+ * Storage uploads always take a stream — buffering happens (if at all) at the
+ * call site, never inside the adapter, so peak memory is visible.
+ */
+export type StorageBody = Readable
+
+const multipartUploadPartSize = 5 * 1024 * 1024
+
+/**
+ * Pass-through Transform that counts bytes flowing through it. Used to record
+ * `storage.bytes_written` on upload spans without buffering or interfering
+ * with downstream backpressure (a plain PassThrough with a 'data' listener
+ * would flip the stream into flowing mode and break the consumer).
+ */
+function makeByteCounter(): { stream: Transform; bytes: () => number } {
+	let count = 0
+	const stream = new Transform({
+		transform(chunk: Buffer, _enc, cb) {
+			count += chunk.length
+			cb(null, chunk)
+		},
+	})
+	return { stream, bytes: () => count }
+}
+
+/** Optional metadata for the upload — used purely for tracing/observability. */
+export interface UploadOptions {
+	mimeType: string
+	/** Optional image UUID, propagated to spans for cross-correlation. */
+	photoId?: string
+}
 
 /** Contract for all storage backends. */
 export interface StorageAdapter {
@@ -21,7 +52,7 @@ export interface StorageAdapter {
 		dir: 'raw' | 'pub',
 		pathWithinDir: string,
 		body: StorageBody,
-		opts: { mimeType: string }
+		opts: UploadOptions
 	): Promise<void>
 	/** Read a file server-side (intended for raw/private objects). */
 	read(dir: 'raw' | 'pub', pathWithinDir: string): Promise<Buffer>
@@ -65,15 +96,30 @@ export class LocalStorageAdapter implements StorageAdapter {
 		dir: 'raw' | 'pub',
 		pathWithinDir: string,
 		body: StorageBody,
-		_opts: { mimeType: string }
+		opts: UploadOptions
 	): Promise<void> {
 		const filePath = this.safeFilePath(dir, pathWithinDir)
-		await mkdir(dirname(filePath), { recursive: true })
-		if (Buffer.isBuffer(body)) {
-			await writeFile(filePath, body)
-			return
-		}
-		await pipeline(body, createWriteStream(filePath))
+		const counter = makeByteCounter()
+		await Sentry.startSpan(
+			{
+				name: 'storage.upload.local',
+				op: 'storage.upload',
+				attributes: {
+					'storage.provider': 'local',
+					'storage.dir': dir,
+					'storage.key': `${dir}/${pathWithinDir}`,
+					'storage.mime_type': opts.mimeType,
+					'storage.streaming': true,
+					'storage.target_path': filePath,
+					...(opts.photoId ? { 'photo.id': opts.photoId } : {}),
+				},
+			},
+			async (span) => {
+				await mkdir(dirname(filePath), { recursive: true })
+				await pipeline(body, counter.stream, createWriteStream(filePath))
+				span.setAttribute('storage.bytes_written', counter.bytes())
+			}
+		)
 	}
 
 	async read(dir: 'raw' | 'pub', pathWithinDir: string): Promise<Buffer> {
@@ -133,16 +179,52 @@ export class TigrisStorageAdapter implements StorageAdapter {
 		dir: 'raw' | 'pub',
 		pathWithinDir: string,
 		body: StorageBody,
-		opts: { mimeType: string }
+		opts: UploadOptions
 	): Promise<void> {
-		await this.client.send(
-			new PutObjectCommand({
-				Bucket: this.bucket,
-				Key: `${dir}/${pathWithinDir}`,
-				Body: body,
-				ContentType: opts.mimeType,
-				...(dir === 'pub' ? { ACL: 'public-read' } : {}),
-			})
+		const key = `${dir}/${pathWithinDir}`
+		const counter = makeByteCounter()
+		const params: PutObjectCommandInput = {
+			Bucket: this.bucket,
+			Key: key,
+			Body: counter.stream,
+			ContentType: opts.mimeType,
+			...(dir === 'pub' ? { ACL: 'public-read' } : {}),
+		}
+		await Sentry.startSpan(
+			{
+				name: 'storage.upload.tigris',
+				op: 'storage.upload',
+				attributes: {
+					'storage.provider': 'tigris',
+					'storage.dir': dir,
+					'storage.key': key,
+					'storage.bucket': this.bucket,
+					'storage.mime_type': opts.mimeType,
+					'storage.streaming': true,
+					'storage.upload_strategy': 'multipart',
+					'storage.part_size_bytes': multipartUploadPartSize,
+					'storage.queue_size': 1,
+					'storage.acl': dir === 'pub' ? 'public-read' : 'private',
+					...(opts.photoId ? { 'photo.id': opts.photoId } : {}),
+				},
+			},
+			async (span) => {
+				// pipeline (not body.pipe) so a source-stream error destroys
+				// counter.stream — Upload then sees the error and rejects, instead
+				// of completing with a truncated-but-valid object.
+				const piped = pipeline(body, counter.stream)
+				const upload = new Upload({
+					client: this.client,
+					params,
+					queueSize: 1,
+					partSize: multipartUploadPartSize,
+				}).done()
+				const [, result] = await Promise.all([piped, upload])
+				span.setAttribute('storage.bytes_written', counter.bytes())
+				if ('ETag' in result && result.ETag) {
+					span.setAttribute('storage.etag', result.ETag)
+				}
+			}
 		)
 	}
 
