@@ -33,7 +33,8 @@
 		"ssh": "fly ssh console"
 	},
 	"dependencies": {
-		"@aws-sdk/client-s3": "^3.1013.0",
+		"@aws-sdk/client-s3": "^3.1035.0",
+		"@aws-sdk/lib-storage": "^3.1035.0",
 		"@kobalte/core": "^0.13.11",
 		"@libsql/client": "^0.17.0",
 		"@sentry/solid": "^10.40.0",

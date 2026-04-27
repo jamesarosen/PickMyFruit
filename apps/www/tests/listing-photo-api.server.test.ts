@@ -61,7 +61,7 @@ vi.mock('sharp', () => ({
 		vi.fn(() => ({
 			autoOrient: mockSharpAutoOrient,
 		})),
-		{ concurrency: vi.fn() }
+		{ concurrency: vi.fn(), cache: vi.fn() }
 	),
 }))
 

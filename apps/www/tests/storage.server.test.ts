@@ -27,7 +27,7 @@ describe(LocalStorageAdapter, () => {
 	describe('upload + publicUrl (public access)', () => {
 		it('writes the file and returns a /api/uploads/ URL', async () => {
 			const buf = Buffer.from('fake-image-data')
-			await adapter.upload('pub', 'listings/1/test.png', buf, {
+			await adapter.upload('pub', 'listings/1/test.png', Readable.from(buf), {
 				mimeType: 'image/png',
 			})
 
@@ -42,9 +42,12 @@ describe(LocalStorageAdapter, () => {
 		})
 
 		it('creates nested directories as needed', async () => {
-			await adapter.upload('pub', 'listings/99/deep/uuid.jpg', Buffer.from('x'), {
-				mimeType: 'image/jpeg',
-			})
+			await adapter.upload(
+				'pub',
+				'listings/99/deep/uuid.jpg',
+				Readable.from(Buffer.from('x')),
+				{ mimeType: 'image/jpeg' }
+			)
 			const written = await readFile(
 				join(tmpDir, 'uploads', 'pub', 'listings/99/deep/uuid.jpg')
 			)
@@ -70,7 +73,7 @@ describe(LocalStorageAdapter, () => {
 	describe('upload + read (private access)', () => {
 		it('writes the file and read returns the original buffer', async () => {
 			const buf = Buffer.from('raw-image-with-exif')
-			await adapter.upload('raw', 'listings/1/test.png', buf, {
+			await adapter.upload('raw', 'listings/1/test.png', Readable.from(buf), {
 				mimeType: 'image/png',
 			})
 
@@ -79,9 +82,12 @@ describe(LocalStorageAdapter, () => {
 		})
 
 		it('readStream returns a readable stream for an object', async () => {
-			await adapter.upload('raw', 'listings/1/test.png', Buffer.from('raw'), {
-				mimeType: 'image/png',
-			})
+			await adapter.upload(
+				'raw',
+				'listings/1/test.png',
+				Readable.from(Buffer.from('raw')),
+				{ mimeType: 'image/png' }
+			)
 
 			await expect(
 				text(await adapter.readStream('raw', 'listings/1/test.png'))
@@ -89,9 +95,12 @@ describe(LocalStorageAdapter, () => {
 		})
 
 		it('readWebStream returns a response body stream without buffering through read()', async () => {
-			await adapter.upload('pub', 'listings/1/test.jpg', Buffer.from('public'), {
-				mimeType: 'image/jpeg',
-			})
+			await adapter.upload(
+				'pub',
+				'listings/1/test.jpg',
+				Readable.from(Buffer.from('public')),
+				{ mimeType: 'image/jpeg' }
+			)
 
 			const readSpy = vi.spyOn(adapter, 'read')
 			const response = new Response(
@@ -118,7 +127,7 @@ describe(LocalStorageAdapter, () => {
 			await adapter.upload(
 				'pub',
 				'listings/1/delete-me.png',
-				Buffer.from('data'),
+				Readable.from(Buffer.from('data')),
 				{
 					mimeType: 'image/png',
 				}
@@ -139,9 +148,12 @@ describe(LocalStorageAdapter, () => {
 	describe('path traversal', () => {
 		it('upload rejects traversal in pathWithinDir', async () => {
 			await expect(
-				adapter.upload('pub', '../../../etc/passwd', Buffer.from('x'), {
-					mimeType: 'text/plain',
-				})
+				adapter.upload(
+					'pub',
+					'../../../etc/passwd',
+					Readable.from(Buffer.from('x')),
+					{ mimeType: 'text/plain' }
+				)
 			).rejects.toThrow('Invalid storage key')
 		})
 
