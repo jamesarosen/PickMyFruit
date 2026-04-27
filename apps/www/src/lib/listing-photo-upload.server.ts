@@ -19,7 +19,7 @@ export const ALLOWED_MIME_TYPES = [
 ] as const
 export type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number]
 
-export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
+export const MAX_FILE_SIZE_BYTES = 30 * 1024 * 1024
 
 export const MAX_IMAGE_PIXELS = 16_000_000
 
@@ -122,7 +122,10 @@ export async function validatePhotoFile(
 		)
 	}
 	if (buffer.byteLength > MAX_FILE_SIZE_BYTES) {
-		throw new UserError('FILE_TOO_LARGE', 'Photo must be 5 MB or smaller')
+		throw new UserError(
+			'FILE_TOO_LARGE',
+			`Photo must be ${MAX_FILE_SIZE_BYTES / (1024 * 1024)} MB or smaller`
+		)
 	}
 	return mimeType as AllowedMimeType
 }
@@ -260,20 +263,22 @@ async function uploadListingPhotoLocked(
 					span.setAttribute('sharp.cache_items_current', cacheSnapshot.items.current)
 
 					span.setAttribute('photo.pub_max_dimension', PUB_MAX_DIMENSION)
-					// Order matters: rotate first so .resize() targets display-oriented
-					// dimensions. For JPEG input, libvips uses shrink-on-load to decode
-					// at 1/2, 1/4, or 1/8 — the dominant memory win on the pub pipeline.
+					// Resize before autoOrient: libvips' JPEG shrink-on-load decodes at
+					// 1/2, 1/4, or 1/8 scale when resize is the first pipeline step —
+					// the dominant memory win. The square fit-inside target (2048×2048)
+					// means final pixel dimensions are identical regardless of order, so
+					// autoOrient on the already-small buffer is safe and cheap.
 					const transform = sharp({
 						sequentialRead: true,
 						limitInputPixels: MAX_IMAGE_PIXELS,
 					})
-						.autoOrient()
 						.resize({
 							width: PUB_MAX_DIMENSION,
 							height: PUB_MAX_DIMENSION,
 							fit: 'inside',
 							withoutEnlargement: true,
 						})
+						.autoOrient()
 						.jpeg({ quality: 85, mozjpeg: true })
 					transform.on('info', (info: import('sharp').OutputInfo) => {
 						span.setAttribute('photo.output_width', info.width)

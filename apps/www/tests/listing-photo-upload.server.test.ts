@@ -46,6 +46,7 @@ const {
 	uploadListingPhoto,
 	assertPhotoUploadCapacity,
 	MAX_UPLOAD_QUEUE_DEPTH,
+	MAX_FILE_SIZE_BYTES,
 } = await import('../src/lib/listing-photo-upload.server')
 
 // One reusable real fixture per format. Tiny so the encode is instant.
@@ -122,20 +123,20 @@ describe('validatePhotoFile', () => {
 		await expect(validatePhotoFile(gifMagic)).rejects.toThrow()
 	})
 
-	it('rejects files over 5 MB', async () => {
+	it('rejects files over the size limit', async () => {
 		const oversized = Buffer.concat([
 			jpegFixture,
-			Buffer.alloc(5 * 1024 * 1024 + 1),
+			Buffer.alloc(MAX_FILE_SIZE_BYTES + 1),
 		])
 		await expect(validatePhotoFile(oversized)).rejects.toThrow()
 	})
 
-	it('accepts files exactly at 5 MB', async () => {
-		const exactlyFiveMb = Buffer.concat([
+	it('accepts files exactly at the size limit', async () => {
+		const atLimit = Buffer.concat([
 			jpegFixture,
-			Buffer.alloc(5 * 1024 * 1024 - jpegFixture.byteLength),
+			Buffer.alloc(MAX_FILE_SIZE_BYTES - jpegFixture.byteLength),
 		])
-		await expect(validatePhotoFile(exactlyFiveMb)).resolves.toBe('image/jpeg')
+		await expect(validatePhotoFile(atLimit)).resolves.toBe('image/jpeg')
 	})
 })
 
