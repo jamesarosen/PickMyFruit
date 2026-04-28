@@ -8,7 +8,7 @@ import InquiryForm from '@/components/InquiryForm'
 import ListingMap from '@/components/ListingMap'
 import ListingPhotosSection from '@/components/ListingPhotosSection'
 import {
-	getStatusClass,
+	getStatusVariant,
 	VISIBILITY_OPTIONS,
 	statusSemanticColor,
 } from '@/lib/listing-status'
@@ -263,7 +263,7 @@ function ListingDetailPage() {
 								<Show
 									when={isOwner()}
 									fallback={
-										<span class={`status-badge ${getStatusClass(l().status)}`}>
+										<span class={`badge badge--${getStatusVariant(l().status)}`}>
 											{l().status}
 										</span>
 									}
@@ -348,7 +348,7 @@ function ListingDetailPage() {
 							</div>
 
 							<Show when={l().status === ListingStatus.unavailable}>
-								<div class="listing-unavailable">
+								<div class="notice notice--centered notice--neutral listing-unavailable">
 									<h3>This listing is currently unavailable</h3>
 									<p>Check back later or browse other available listings.</p>
 									<Link to="/" class="back-link">
@@ -358,7 +358,7 @@ function ListingDetailPage() {
 							</Show>
 
 							<Show when={isOwner()}>
-								<div class="listing-owner-notice">
+								<div class="notice notice--centered notice--success listing-owner-notice">
 									<p>This is your listing.</p>
 									<Link to="/listings/mine" class="back-link">
 										Manage My Listings

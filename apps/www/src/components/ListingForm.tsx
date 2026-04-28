@@ -216,7 +216,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 			}
 		>
 			<form class="listing-form" onSubmit={handleSubmit}>
-				<ErrorMessage class="form-message error" error={submitError()} />
+				<ErrorMessage error={submitError()} />
 
 				<Show when={!isAuthenticated()}>
 					<Input

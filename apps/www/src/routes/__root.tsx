@@ -17,6 +17,7 @@ import '../styles/colors.css'
 import '../styles/focus.css'
 import '../styles/surfaces.css'
 import '../components/button.css'
+import '../components/badge.css'
 
 export const Route = createRootRoute({
 	beforeLoad: async () => {

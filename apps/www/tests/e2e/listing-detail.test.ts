@@ -24,7 +24,7 @@ test.describe('Listing Detail Page', () => {
 		).toBeVisible()
 
 		// Verify status badge
-		await expect(page.locator('.status-badge')).toHaveText(testListing.status)
+		await expect(page.locator('.badge')).toHaveText(testListing.status)
 	})
 
 	test('shows not-found for non-existent listing', async ({ page }) => {

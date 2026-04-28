@@ -43,19 +43,6 @@
 		margin-top: 32px;
 	}
 
-	.form-message {
-		padding: 16px;
-		border-radius: 8px;
-		margin-bottom: 24px;
-		font-size: 14px;
-	}
-
-	.form-message.error {
-		background: oklch(from var(--color-primary) l c h / 0.1);
-		color: var(--color-primary);
-		border: 1px solid oklch(from var(--color-primary) l c h / 0.3);
-	}
-
 	/* Readonly input styling */
 	.form-field input[readonly] {
 		background: oklch(from var(--color-quiet) l c h / 0.1);
