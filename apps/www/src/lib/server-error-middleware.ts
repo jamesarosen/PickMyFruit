@@ -1,4 +1,5 @@
 import { createMiddleware } from '@tanstack/solid-start'
+import { setResponseStatus } from '@tanstack/solid-start/server'
 import { Sentry } from './sentry'
 export { UserError } from './user-error'
 import { UserError } from './user-error'
@@ -16,6 +17,9 @@ export const errorMiddleware = createMiddleware({ type: 'function' }).server(
 			return await next()
 		} catch (error) {
 			if (error instanceof UserError) {
+				if (error.status) {
+					setResponseStatus(error.status)
+				}
 				throw error
 			}
 

@@ -30,7 +30,10 @@ primary_region = 'sjc'
   min_machines_running = 0
   processes = ['app']
 
-  # HTTP request timeouts
+  # HTTP request timeouts.
+  # NOTE: photo uploads are also gated by an in-process queue
+  # (MAX_UPLOAD_QUEUE_DEPTH in apps/www/src/lib/listing-photo-upload.server.ts)
+  # which sheds with 503 well below this proxy-level cap.
   [http_service.concurrency]
     type = 'requests'
     hard_limit = 250
@@ -56,16 +59,35 @@ primary_region = 'sjc'
   initial_size = '1gb'
 
 # Environment variables
+# NODE_OPTIONS and SHARP_CONCURRENCY are mirrored in docker-compose.yml so
+# local runs reproduce production memory behavior. Keep these in sync.
 [env]
   EMAIL_PROVIDER = 'resend'
+  # Cap glibc malloc arenas — fewer per-thread arenas means lower RSS for
+  # native-binary workloads (libvips, AWS SDK threads). Free, well-known.
+  MALLOC_ARENA_MAX = '2'
   MIGRATE_ON_REQUEST = 'true'
   NODE_ENV = 'production'
+  # Cap V8 heap at ~75% of the 512 MB VM so GC fires before Linux OOM-kills,
+  # leaving headroom for libvips native allocations and the OS.
+  NODE_OPTIONS = '--max-old-space-size=384'
+  # Serialize libvips work — the VM is still 1 shared CPU, so parallel image
+  # processing buys memory pressure without real throughput.
+  SHARP_CONCURRENCY = '1'
   STORAGE_PROVIDER = 'tigris'
+  # libuv default is 4. On a 1-CPU shared VM the extra threads buy memory
+  # pressure with no real parallelism. Keep 2 so I/O and TLS can overlap.
+  UV_THREADPOOL_SIZE = '2'
 
-# VM resources - Start with minimal for MVP
+# VM resources
+# Memory and CPU limits are mirrored in docker-compose.yml's deploy.resources.
+# Bumped from 256 MB to 512 MB on 2026-04-27: a single 12 MP iPhone JPEG drives
+# RSS up ~120 MB inside Sharp (libvips decoded RGBA + intermediate buffers),
+# leaving no margin for the rest of the process. 512 MB gives Sharp comfortable
+# headroom while still being a small VM.
 [[vm]]
   size = 'shared-cpu-1x'
-  memory = '256mb'
+  memory = '512mb'
   cpus = 1
 
 # Deployment configuration

@@ -43,6 +43,7 @@ vi.mock('../src/lib/storage.server', () => ({
 	storage: {
 		upload: vi.fn().mockResolvedValue(undefined),
 		read: vi.fn(),
+		readStream: vi.fn(),
 		publicUrl: vi.fn((key: string) => `/api/uploads/pub/${key}`),
 		delete: vi.fn().mockResolvedValue(undefined),
 	},
@@ -52,12 +53,16 @@ vi.mock('../src/lib/storage.server', () => ({
 // Mock sharp — avoids native binary
 // ============================================================================
 
+const mockSharpJpeg = vi.fn(() => ({ pipe: vi.fn() }))
+const mockSharpAutoOrient = vi.fn(() => ({ jpeg: mockSharpJpeg }))
+
 vi.mock('sharp', () => ({
-	default: vi.fn(() => ({
-		jpeg: vi.fn().mockResolvedValue({
-			toBuffer: vi.fn().mockResolvedValue(Buffer.from('clean')),
-		}),
-	})),
+	default: Object.assign(
+		vi.fn(() => ({
+			autoOrient: mockSharpAutoOrient,
+		})),
+		{ concurrency: vi.fn(), cache: vi.fn() }
+	),
 }))
 
 // Must import after mocking

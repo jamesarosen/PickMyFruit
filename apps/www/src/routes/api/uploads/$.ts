@@ -31,9 +31,9 @@ export const Route = createFileRoute('/api/uploads/$')({
 				// Listing photos are intentionally world-readable — no auth check needed here.
 				const pathWithinDir = key.slice('pub/'.length)
 				const { storage } = await import('@/lib/storage.server')
-				let buf: Buffer
+				let body: ReadableStream
 				try {
-					buf = await storage.read('pub', pathWithinDir)
+					body = await storage.readWebStream('pub', pathWithinDir)
 				} catch (err) {
 					// Only a missing file is a 404; other I/O errors (permissions, disk-full) are 500.
 					if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -45,7 +45,7 @@ export const Route = createFileRoute('/api/uploads/$')({
 
 				const ext = key.split('.').pop()?.toLowerCase() ?? ''
 				const contentType = MIME_TYPES[ext] ?? 'application/octet-stream'
-				return new Response(new Uint8Array(buf), {
+				return new Response(body, {
 					headers: {
 						'Content-Type': contentType,
 						'Content-Disposition': 'inline',

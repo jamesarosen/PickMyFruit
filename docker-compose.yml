@@ -20,9 +20,32 @@ services:
         required: false
       - path: .env
         required: false
+    # Memory limits and NODE_OPTIONS / SHARP_CONCURRENCY mirror the Fly
+    # production VM (see fly.toml [[vm]] and [env]) so local runs can reproduce
+    # OOM behavior. Keep these in sync with fly.toml.
     environment:
+      BETTER_AUTH_URL: http://localhost:3000
       NODE_ENV: development
       DATABASE_URL: file:/app/data/development.db
+      # V8 heap capped at ~75% of the VM so GC fires before the OS OOM-kills,
+      # leaving headroom for libvips native allocations.
+      NODE_OPTIONS: --max-old-space-size=384
+      # Serialize libvips — the VM is 1 shared CPU; parallel image work just
+      # bloats RSS without throughput gain.
+      SHARP_CONCURRENCY: "1"
+      # glibc default is up to 8 arenas/CPU, each reserving ~64 MB. Capping at 2
+      # significantly lowers RSS for Node + native-binary workloads.
+      MALLOC_ARENA_MAX: "2"
+      # libuv default is 4. On 1 shared CPU the extra threads buy memory
+      # pressure with no real parallelism. Keep 2 so I/O and TLS can overlap.
+      UV_THREADPOOL_SIZE: "2"
+    deploy:
+      resources:
+        limits:
+          # Mirrors fly.toml [[vm]]. Bumped to 512 MB on 2026-04-27 because a
+          # single 12 MP iPhone JPEG drives RSS up ~120 MB inside Sharp.
+          memory: 512M
+          cpus: "1"
     healthcheck:
       test:
         [
