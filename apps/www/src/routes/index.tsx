@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/solid-router'
-import { For, Show } from 'solid-js'
+import { For, onMount, Show } from 'solid-js'
 import { z } from 'zod'
 import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
@@ -14,6 +14,8 @@ const DEFAULT_CENTER = { lat: 38.2966234, lng: -122.2893688 }
 
 const homeSearchSchema = z.object({
 	area: z.string().optional(),
+	/** TEMP: `?sentrySourcemapTest=1` triggers a client error for Sentry — remove after testing */
+	sentrySourcemapTest: z.literal('1').optional(),
 })
 
 export const Route = createFileRoute('/')({
@@ -29,6 +31,14 @@ function HomePage() {
 	const listings = Route.useLoaderData()
 	const navigate = useNavigate()
 	const search = Route.useSearch()
+
+	// TEMP: client-side Sentry sourcemap verification — remove after testing.
+	// Visit `/?sentrySourcemapTest=1` (production or local) to trigger; plain `/` is unchanged.
+	onMount(() => {
+		if (import.meta.env.SSR) return
+		if (search().sentrySourcemapTest !== '1') return
+		throw new Error('TEMP: deliberate home page error for Sentry sourcemap test')
+	})
 
 	const selectedH3 = () => normalizeArea(search().area ?? null)
 
