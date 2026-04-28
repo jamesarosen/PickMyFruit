@@ -4,7 +4,7 @@ import { Show } from 'solid-js'
 import { faker } from '@faker-js/faker'
 import type { PublicListing } from '../src/data/queries.server'
 import { ListingStatus } from '../src/lib/validation'
-import { getStatusClass } from '../src/lib/listing-status'
+import { getStatusVariant } from '../src/lib/listing-status'
 
 function makeListing(overrides: Partial<PublicListing> = {}): PublicListing {
 	return {
@@ -45,7 +45,7 @@ function renderDetail(listing: PublicListing | null) {
 					<article class="listing-detail">
 						<header class="listing-detail-header">
 							<h1>{l().type}</h1>
-							<span class={`status-badge ${getStatusClass(l().status)}`}>
+							<span class={`badge badge--${getStatusVariant(l().status)}`}>
 								{l().status}
 							</span>
 						</header>
@@ -152,7 +152,7 @@ describe('ListingDetail', () => {
 		const { getByText } = renderDetail(listing)
 
 		const badge = getByText('available')
-		expect(badge).toHaveClass('status-badge', 'status-available')
+		expect(badge).toHaveClass('badge', 'badge--available')
 	})
 
 	it('shows unavailable notice for unavailable listings', () => {
@@ -172,16 +172,16 @@ describe('ListingDetail', () => {
 	})
 })
 
-describe('getStatusClass', () => {
+describe('getStatusVariant', () => {
 	it.each([
-		['available', 'status-available'],
-		['unavailable', 'status-unavailable'],
-		['private', 'status-private'],
+		['available', 'available'],
+		['unavailable', 'unavailable'],
+		['private', 'private'],
 	])('returns %s for status "%s"', (status, expected) => {
-		expect(getStatusClass(status)).toBe(expected)
+		expect(getStatusVariant(status)).toBe(expected)
 	})
 
-	it('returns status-private for unknown status', () => {
-		expect(getStatusClass('claimed')).toBe('status-private')
+	it('returns "private" for unknown status', () => {
+		expect(getStatusVariant('claimed')).toBe('private')
 	})
 })

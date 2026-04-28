@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/solid-router'
 import { Apple } from 'lucide-solid'
 import { Show } from 'solid-js'
-import { getStatusClass } from '@/lib/listing-status'
+import { getStatusVariant } from '@/lib/listing-status'
 import '@/components/ListingCard.css'
 
 export type ListingCardData = {
@@ -54,7 +54,9 @@ export default function ListingCard(props: { listing: ListingCardData }) {
 
 				<Show when={l().status}>
 					{(status) => (
-						<span class={`listing-card-status ${getStatusClass(status())}`}>
+						<span
+							class={`listing-card-status listing-card-status--${getStatusVariant(status())}`}
+						>
 							{status()}
 						</span>
 					)}

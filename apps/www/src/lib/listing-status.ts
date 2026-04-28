@@ -26,13 +26,16 @@ export const statusSemanticColor: Record<ListingStatusValue, string> = {
 	[ListingStatus.private]: 'var(--color-accent)',
 }
 
-const statusClassMap: Record<ListingStatusValue, string> = {
-	[ListingStatus.available]: 'status-available',
-	[ListingStatus.unavailable]: 'status-unavailable',
-	[ListingStatus.private]: 'status-private',
+/** The variant suffix shared by `.badge--…` and `.listing-card-status--…`. */
+export type StatusVariant = 'available' | 'unavailable' | 'private'
+
+const statusVariantMap: Record<ListingStatusValue, StatusVariant> = {
+	[ListingStatus.available]: 'available',
+	[ListingStatus.unavailable]: 'unavailable',
+	[ListingStatus.private]: 'private',
 }
 
-/** Maps a listing status to its CSS class name. */
-export function getStatusClass(status: string): string {
-	return statusClassMap[status as ListingStatusValue] ?? 'status-private'
+/** Maps a listing status string to its variant suffix. */
+export function getStatusVariant(status: string): StatusVariant {
+	return statusVariantMap[status as ListingStatusValue] ?? 'private'
 }

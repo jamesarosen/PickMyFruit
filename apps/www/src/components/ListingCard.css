@@ -67,15 +67,15 @@
 		text-transform: capitalize;
 		margin-bottom: 8px;
 
-		&.status-available {
+		&.listing-card-status--available {
 			color: var(--color-secondary);
 		}
 
-		&.status-unavailable {
+		&.listing-card-status--unavailable {
 			color: var(--color-quiet);
 		}
 
-		&.status-private {
+		&.listing-card-status--private {
 			color: var(--color-accent);
 		}
 	}
