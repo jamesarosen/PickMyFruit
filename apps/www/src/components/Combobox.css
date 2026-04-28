@@ -61,10 +61,30 @@
 		overflow: hidden;
 	}
 
+	/* Pin the listbox to a stable scroll height so the popover keeps a
+	   consistent size while the user types. Without this, the unfiltered list
+	   would render large enough that Floating UI's `flip` middleware places
+	   the popover above the trigger; then as the user typed and the list
+	   shrank, `flip` would re-evaluate and snap the popover back below the
+	   trigger — appearing to "jump to the bottom" mid-typing.
+
+	   `--kb-popper-content-available-height` is exposed by Kobalte's
+	   `fitViewport` middleware (Floating UI's `size`) and reflects the space
+	   available between the trigger and the nearest visible viewport edge in
+	   the chosen placement. Floating UI reads `window.visualViewport` directly,
+	   so this naturally accounts for the iOS keyboard and URL bar without any
+	   JS scroll handlers. The `safe-area-inset-*` clamp keeps the popover
+	   above the iOS home indicator when `flip` does take effect (e.g. trigger
+	   near the viewport bottom). */
 	.combobox__listbox {
-		max-height: 300px;
+		height: min(
+			320px,
+			var(--kb-popper-content-available-height, 320px),
+			calc(100dvh - env(safe-area-inset-bottom) - env(safe-area-inset-top))
+		);
 		overflow-y: auto;
 		padding: 4px 0;
+		overscroll-behavior: contain;
 	}
 
 	.combobox__section {
@@ -122,24 +142,16 @@
 		visibility: hidden;
 	}
 
+	/* On narrow viewports we let Floating UI keep its natural anchored
+	   positioning (above or below the trigger via `flip`), but cap the popover
+	   to a comfortable fraction of the visible viewport. We avoid overriding
+	   `top`/`bottom` so the popper stays in sync with the trigger as the page
+	   scrolls and as the iOS visual viewport shifts — those overrides were the
+	   source of the previous "sticks to bottom, jumps off-screen on scroll up"
+	   jitter. */
 	@media (max-width: 480px) {
-		/* [data-popper-positioner] is Kobalte's floating-ui wrapper — the element
-		   that receives inline position/transform styles. We must target it, not
-		   .combobox__content, to override those inline styles. */
-		[data-popper-positioner]:has(.combobox__content) {
-			position: fixed !important;
-			inset: auto 0 0 0 !important;
-			transform: none !important;
-			width: 100% !important;
-		}
-
 		.combobox__content {
-			border-radius: 16px 16px 0 0;
-			max-height: 60vh;
-		}
-
-		.combobox__listbox {
-			max-height: calc(60vh - 16px);
+			border-radius: 12px;
 		}
 	}
 }
