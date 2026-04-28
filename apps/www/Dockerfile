@@ -52,6 +52,14 @@ ARG SENTRY_PROJECT
 ARG SENTRY_RELEASE
 ARG VITE_SENTRY_RELEASE=${SENTRY_RELEASE}
 
+# ARG is not persisted into RUN's process environment. sentry-cli reads
+# SENTRY_ORG / SENTRY_PROJECT / SENTRY_RELEASE from the env; Vite inlines
+# VITE_SENTRY_RELEASE into the client bundle so events match uploaded artifacts.
+ENV SENTRY_ORG=${SENTRY_ORG} \
+	SENTRY_PROJECT=${SENTRY_PROJECT} \
+	SENTRY_RELEASE=${SENTRY_RELEASE} \
+	VITE_SENTRY_RELEASE=${VITE_SENTRY_RELEASE}
+
 # Build the www application.
 # Nitro's Rollup bundling phase (~3400 modules) can exceed Node's default
 # ~2 GB heap. Set a higher limit to avoid OOM during Docker builds.
@@ -61,8 +69,6 @@ RUN cd apps/www && NODE_OPTIONS="--max-old-space-size=4096" pnpm build
 # final image. Runs after the full build so both client (.output/public/)
 # and server (.output/server/) maps exist. If SENTRY_AUTH_TOKEN is absent
 # (e.g. CI smoke tests), the step is a no-op.
-# SENTRY_ORG, SENTRY_PROJECT, and SENTRY_RELEASE are available from the
-# ARG declarations above; sentry-cli reads them from the environment.
 RUN --mount=type=secret,id=sentry_auth_token \
     export SENTRY_AUTH_TOKEN=$(cat /run/secrets/sentry_auth_token 2>/dev/null || true) && \
     if [ -n "$SENTRY_AUTH_TOKEN" ]; then \
