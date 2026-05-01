@@ -64,4 +64,22 @@ describe('env.server schema', () => {
 		})
 		expect(result.error).toBeTruthy()
 	})
+
+	it('accepts optional MEDIA_ORIGIN as a URL', () => {
+		const result = schema.safeParse({
+			...VALID_DEV_ENV,
+			MEDIA_ORIGIN: 'https://media.pickmyfruit.com',
+		})
+		expect(result.error).toBeFalsy()
+		expect(result.data?.MEDIA_ORIGIN).toBe('https://media.pickmyfruit.com')
+	})
+
+	it('treats empty MEDIA_ORIGIN as unset', () => {
+		const result = schema.safeParse({
+			...VALID_DEV_ENV,
+			MEDIA_ORIGIN: '',
+		})
+		expect(result.error).toBeFalsy()
+		expect(result.data?.MEDIA_ORIGIN).toBeUndefined()
+	})
 })

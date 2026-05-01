@@ -53,6 +53,15 @@ function preprocessEnv(raw: unknown): unknown {
 	}
 }
 
+const mediaOriginSchema = z.preprocess(
+	(val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+	z
+		.string()
+		.url()
+		.transform((url) => url.replace(/\/+$/, ''))
+		.optional()
+)
+
 const outputSchema = z
 	.object({
 		BETTER_AUTH_SECRET: z.string().min(32),
@@ -63,6 +72,7 @@ const outputSchema = z
 			.string()
 			.regex(/^.+\s<[^@]+@[^>]+>$/, 'Must be in "Display Name <email>" format'),
 		HMAC_SECRET: z.string().min(32),
+		MEDIA_ORIGIN: mediaOriginSchema,
 		MIGRATE_ON_REQUEST: z.stringbool().prefault('false'),
 		NODE_ENV: z.string().prefault('development'),
 		SHARP_CONCURRENCY: z.coerce.number().int().positive().prefault(1),

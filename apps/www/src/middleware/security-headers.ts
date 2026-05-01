@@ -1,6 +1,9 @@
 import { createMiddleware } from '@tanstack/solid-start'
 
-function buildCspDirectives(tigrisImgSrc: string | null): string[] {
+function buildCspDirectives(extraImgSrc: string[]): string[] {
+	const imgSrc = ["img-src 'self' data: blob:", ...extraImgSrc]
+		.filter(Boolean)
+		.join(' ')
 	return [
 		"default-src 'self'",
 		// Solid's HydrationScript injects an inline script for SSR hydration.
@@ -11,7 +14,7 @@ function buildCspDirectives(tigrisImgSrc: string | null): string[] {
 		// replaced with 'sha256-VQTei97aMH9YclKPQM3e8rL/RXSmj3lPwKVXZgaN2QA=' to whitelist
 		// only the static @layer ordering <style> block in RootShell.
 		"style-src 'self' 'unsafe-inline'",
-		["img-src 'self' data: blob:", tigrisImgSrc].filter(Boolean).join(' '),
+		imgSrc,
 		"font-src 'self'",
 		[
 			"connect-src 'self'",
@@ -31,19 +34,24 @@ function buildCspDirectives(tigrisImgSrc: string | null): string[] {
 // Resolved once on the first request and cached; avoids a static import of a
 // *.server module from this non-server file while still paying the import cost
 // only once.
-let _tigrisImgSrc: string | null | undefined
+let _cspImgSrcHosts: string[] | undefined
 
-async function resolveTigrisImgSrc(): Promise<string | null> {
-	if (_tigrisImgSrc === undefined) {
+/** Hosts allowed in `img-src` for listing photos (Tigris bucket and optional CDN alias). */
+async function resolveListingImageOriginsForCsp(): Promise<string[]> {
+	if (_cspImgSrcHosts === undefined) {
 		const { serverEnv } = await import('@/lib/env.server')
+		const hosts: string[] = []
 		// Narrow to the specific bucket hostname, so a compromised sibling bucket
 		// cannot be used to exfiltrate data.
-		_tigrisImgSrc =
-			serverEnv.storage.PROVIDER === 'tigris'
-				? `https://${serverEnv.storage.BUCKET_NAME}.fly.storage.tigris.dev`
-				: null
+		if (serverEnv.storage.PROVIDER === 'tigris') {
+			hosts.push(`https://${serverEnv.storage.BUCKET_NAME}.fly.storage.tigris.dev`)
+		}
+		if (serverEnv.MEDIA_ORIGIN) {
+			hosts.push(serverEnv.MEDIA_ORIGIN)
+		}
+		_cspImgSrcHosts = hosts
 	}
-	return _tigrisImgSrc
+	return _cspImgSrcHosts
 }
 
 /**
@@ -53,8 +61,8 @@ async function resolveTigrisImgSrc(): Promise<string | null> {
  * alongside HTTP-to-HTTPS and apex-to-www redirects.
  */
 export async function applySecurityHeaders(headers: Headers): Promise<void> {
-	const tigrisImgSrc = await resolveTigrisImgSrc()
-	const csp = buildCspDirectives(tigrisImgSrc).join('; ')
+	const imgSrcHosts = await resolveListingImageOriginsForCsp()
+	const csp = buildCspDirectives(imgSrcHosts).join('; ')
 	headers.set('Content-Security-Policy', csp)
 	// Legacy fallback for browsers that predate CSP frame-ancestors
 	headers.set('X-Frame-Options', 'DENY')

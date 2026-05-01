@@ -180,9 +180,35 @@ describe(TigrisStorageAdapter, () => {
 	})
 
 	describe('publicUrl', () => {
-		it('returns the CDN URL for a pub/ path', () => {
+		it('returns the bucket CDN URL for a pub/ path when mediaOrigin is unset', () => {
 			expect(adapter.publicUrl('listings/1/uuid.jpg')).toBe(
 				'https://test-bucket.fly.storage.tigris.dev/pub/listings/1/uuid.jpg'
+			)
+		})
+
+		it('returns MEDIA_ORIGIN-based URL for a pub/ path when mediaOrigin is set', () => {
+			const withMedia = new TigrisStorageAdapter({
+				bucketName: 'test-bucket',
+				accessKeyId: 'fake',
+				secretAccessKey: 'fake',
+				endpointUrl: 'https://fly.storage.tigris.dev',
+				mediaOrigin: 'https://media.example.com',
+			})
+			expect(withMedia.publicUrl('listings/1/uuid.jpg')).toBe(
+				'https://media.example.com/pub/listings/1/uuid.jpg'
+			)
+		})
+
+		it('normalizes a trailing slash on mediaOrigin', () => {
+			const withMedia = new TigrisStorageAdapter({
+				bucketName: 'test-bucket',
+				accessKeyId: 'fake',
+				secretAccessKey: 'fake',
+				endpointUrl: 'https://fly.storage.tigris.dev',
+				mediaOrigin: 'https://media.example.com/',
+			})
+			expect(withMedia.publicUrl('x.jpg')).toBe(
+				'https://media.example.com/pub/x.jpg'
 			)
 		})
 	})

@@ -53,4 +53,26 @@ describe('applySecurityHeaders', () => {
 		vi.doUnmock('../src/lib/env.server')
 		vi.resetModules()
 	})
+
+	it('includes MEDIA_ORIGIN in img-src when set alongside Tigris', async () => {
+		vi.resetModules()
+		vi.doMock('../src/lib/env.server', () => ({
+			serverEnv: {
+				MEDIA_ORIGIN: 'https://media.pickmyfruit.com',
+				storage: { PROVIDER: 'tigris', BUCKET_NAME: 'test-bucket' },
+			},
+		}))
+		const { applySecurityHeaders: apply } =
+			await import('../src/middleware/security-headers')
+
+		const headers = new Headers()
+		await apply(headers)
+		const csp = headers.get('Content-Security-Policy')!
+
+		expect(csp).toContain('https://media.pickmyfruit.com')
+		expect(csp).toContain('https://test-bucket.fly.storage.tigris.dev')
+
+		vi.doUnmock('../src/lib/env.server')
+		vi.resetModules()
+	})
 })

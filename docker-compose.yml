@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: apps/www/Dockerfile
       args:
+        VITE_MEDIA_ORIGIN: ${VITE_MEDIA_ORIGIN:-}
         VITE_SENTRY_DSN: ${VITE_SENTRY_DSN}
         VITE_SENTRY_ENABLED: ${VITE_SENTRY_ENABLED}
     ports:
@@ -24,6 +25,7 @@ services:
     # production VM (see fly.toml [[vm]] and [env]) so local runs can reproduce
     # OOM behavior. Keep these in sync with fly.toml.
     environment:
+      MEDIA_ORIGIN: ${MEDIA_ORIGIN:-}
       BETTER_AUTH_URL: http://localhost:3000
       NODE_ENV: development
       DATABASE_URL: file:/app/data/development.db

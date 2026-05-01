@@ -19,6 +19,7 @@ primary_region = 'sjc'
   # Pass VITE_SENTRY_ERROR_SAMPLE_RATE and VITE_SENTRY_TRACES_SAMPLE_RATE
   # similarly to tune sampling without changing defaults in env.client.ts.
   [build.args]
+    VITE_MEDIA_ORIGIN = "https://media.pickmyfruit.com"
     VITE_SENTRY_ENABLED = "true"
 
 # HTTP service configuration
@@ -66,6 +67,7 @@ primary_region = 'sjc'
   # Cap glibc malloc arenas — fewer per-thread arenas means lower RSS for
   # native-binary workloads (libvips, AWS SDK threads). Free, well-known.
   MALLOC_ARENA_MAX = '2'
+  MEDIA_ORIGIN = 'https://media.pickmyfruit.com'
   MIGRATE_ON_REQUEST = 'true'
   NODE_ENV = 'production'
   # Cap V8 heap at ~75% of the 512 MB VM so GC fires before Linux OOM-kills,
