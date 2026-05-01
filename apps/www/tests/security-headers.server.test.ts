@@ -54,11 +54,11 @@ describe('applySecurityHeaders', () => {
 		vi.resetModules()
 	})
 
-	it('includes MEDIA_ORIGIN in img-src when set alongside Tigris', async () => {
+	it('includes VITE_MEDIA_ORIGIN in img-src when set alongside Tigris', async () => {
 		vi.resetModules()
 		vi.doMock('../src/lib/env.server', () => ({
 			serverEnv: {
-				MEDIA_ORIGIN: 'https://media.pickmyfruit.com',
+				VITE_MEDIA_ORIGIN: 'https://media.pickmyfruit.com',
 				storage: { PROVIDER: 'tigris', BUCKET_NAME: 'test-bucket' },
 			},
 		}))

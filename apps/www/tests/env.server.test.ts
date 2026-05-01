@@ -65,21 +65,21 @@ describe('env.server schema', () => {
 		expect(result.error).toBeTruthy()
 	})
 
-	it('accepts optional MEDIA_ORIGIN as a URL', () => {
+	it('accepts optional VITE_MEDIA_ORIGIN as a URL', () => {
 		const result = schema.safeParse({
 			...VALID_DEV_ENV,
-			MEDIA_ORIGIN: 'https://media.pickmyfruit.com',
+			VITE_MEDIA_ORIGIN: 'https://media.pickmyfruit.com',
 		})
 		expect(result.error).toBeFalsy()
-		expect(result.data?.MEDIA_ORIGIN).toBe('https://media.pickmyfruit.com')
+		expect(result.data?.VITE_MEDIA_ORIGIN).toBe('https://media.pickmyfruit.com')
 	})
 
-	it('treats empty MEDIA_ORIGIN as unset', () => {
+	it('treats empty VITE_MEDIA_ORIGIN as unset', () => {
 		const result = schema.safeParse({
 			...VALID_DEV_ENV,
-			MEDIA_ORIGIN: '',
+			VITE_MEDIA_ORIGIN: '',
 		})
 		expect(result.error).toBeFalsy()
-		expect(result.data?.MEDIA_ORIGIN).toBeUndefined()
+		expect(result.data?.VITE_MEDIA_ORIGIN).toBeUndefined()
 	})
 })

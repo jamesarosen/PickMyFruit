@@ -186,7 +186,7 @@ describe(TigrisStorageAdapter, () => {
 			)
 		})
 
-		it('returns MEDIA_ORIGIN-based URL for a pub/ path when mediaOrigin is set', () => {
+		it('returns VITE_MEDIA_ORIGIN-based URL for a pub/ path when mediaOrigin is set', () => {
 			const withMedia = new TigrisStorageAdapter({
 				bucketName: 'test-bucket',
 				accessKeyId: 'fake',

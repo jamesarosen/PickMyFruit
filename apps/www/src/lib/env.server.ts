@@ -72,10 +72,10 @@ const outputSchema = z
 			.string()
 			.regex(/^.+\s<[^@]+@[^>]+>$/, 'Must be in "Display Name <email>" format'),
 		HMAC_SECRET: z.string().min(32),
-		MEDIA_ORIGIN: mediaOriginSchema,
 		MIGRATE_ON_REQUEST: z.stringbool().prefault('false'),
 		NODE_ENV: z.string().prefault('development'),
 		SHARP_CONCURRENCY: z.coerce.number().int().positive().prefault(1),
+		VITE_MEDIA_ORIGIN: mediaOriginSchema,
 		email: emailSchema,
 		storage: storageSchema,
 	})
@@ -116,6 +116,7 @@ if (!result.success) {
  *
  * Properties use their canonical SCREAMING_SNAKE_CASE names so they match
  * what operators set in .env files, Docker, and Fly secrets.
+ * `VITE_MEDIA_ORIGIN` is shared with the client bundle (see env.client.ts).
  * Compare with clientEnv, which strips the VITE_ prefix into camelCase
  * since that prefix is a build-tool detail.
  */
