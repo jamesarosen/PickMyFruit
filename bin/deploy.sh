@@ -27,7 +27,6 @@
 #                                VITE_SENTRY_RELEASE is derived from this automatically.
 #   VITE_SENTRY_ERROR_SAMPLE_RATE    Error sample rate (default: 1.0 in prod)
 #   VITE_SENTRY_TRACES_SAMPLE_RATE   Traces sample rate (default: 1.0 in prod)
-#   VITE_MEDIA_ORIGIN                Baked into client + server; overrides fly.toml [build.args]
 
 set -euo pipefail
 
@@ -63,9 +62,5 @@ DEPLOY_ARGS=(
 
 [[ -n "${VITE_SENTRY_TRACES_SAMPLE_RATE:-}" ]] &&
 	DEPLOY_ARGS+=(--build-arg "VITE_SENTRY_TRACES_SAMPLE_RATE=$VITE_SENTRY_TRACES_SAMPLE_RATE")
-
-# Optional: overrides [build.args] in fly.toml / fly.preview.toml (e.g. CI matrix).
-[[ -n "${VITE_MEDIA_ORIGIN:-}" ]] &&
-	DEPLOY_ARGS+=(--build-arg "VITE_MEDIA_ORIGIN=$VITE_MEDIA_ORIGIN")
 
 flyctl deploy "${DEPLOY_ARGS[@]}"

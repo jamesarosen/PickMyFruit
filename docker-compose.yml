@@ -4,7 +4,6 @@ services:
       context: .
       dockerfile: apps/www/Dockerfile
       args:
-        VITE_MEDIA_ORIGIN: ${VITE_MEDIA_ORIGIN:-}
         VITE_SENTRY_DSN: ${VITE_SENTRY_DSN}
         VITE_SENTRY_ENABLED: ${VITE_SENTRY_ENABLED}
     ports:
@@ -34,7 +33,6 @@ services:
       # Serialize libvips — the VM is 1 shared CPU; parallel image work just
       # bloats RSS without throughput gain.
       SHARP_CONCURRENCY: "1"
-      VITE_MEDIA_ORIGIN: ${VITE_MEDIA_ORIGIN:-}
       # glibc default is up to 8 arenas/CPU, each reserving ~64 MB. Capping at 2
       # significantly lowers RSS for Node + native-binary workloads.
       MALLOC_ARENA_MAX: "2"

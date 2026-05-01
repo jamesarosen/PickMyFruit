@@ -38,7 +38,6 @@ COPY . .
 # runtime via Fly secrets.
 # See fly.toml [build.args]
 # See env.client.ts
-ARG VITE_MEDIA_ORIGIN
 ARG VITE_SENTRY_DSN
 ARG VITE_SENTRY_ENABLED
 ARG VITE_SENTRY_ERROR_SAMPLE_RATE

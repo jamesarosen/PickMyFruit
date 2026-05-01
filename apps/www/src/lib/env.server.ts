@@ -26,12 +26,12 @@ const tigrisStorageSchema = z
 		AWS_SECRET_ACCESS_KEY: z.string().min(1),
 		BUCKET_NAME: z.string().min(1),
 		PROVIDER: z.literal('tigris'),
-		VITE_MEDIA_ORIGIN: mediaOriginSchema,
+		MEDIA_ORIGIN: mediaOriginSchema,
 	})
-	.transform(({ VITE_MEDIA_ORIGIN, ...rest }) => ({
+	.transform(({ MEDIA_ORIGIN, ...rest }) => ({
 		...rest,
 		mediaOrigin:
-			VITE_MEDIA_ORIGIN ?? `https://${rest.BUCKET_NAME}.fly.storage.tigris.dev`,
+			MEDIA_ORIGIN ?? `https://${rest.BUCKET_NAME}.fly.storage.tigris.dev`,
 	}))
 
 const storageSchema = z.discriminatedUnion('PROVIDER', [
@@ -55,7 +55,7 @@ function preprocessEnv(raw: unknown): unknown {
 		EMAIL_PROVIDER = 'console',
 		RESEND_API_KEY,
 		STORAGE_PROVIDER = 'local',
-		VITE_MEDIA_ORIGIN,
+		MEDIA_ORIGIN,
 		...rest
 	} = env
 	return {
@@ -68,7 +68,7 @@ function preprocessEnv(raw: unknown): unknown {
 			AWS_ENDPOINT_URL_S3,
 			BUCKET_NAME,
 			DATA_DIR,
-			VITE_MEDIA_ORIGIN,
+			MEDIA_ORIGIN,
 		},
 	}
 }
@@ -129,8 +129,6 @@ const parsedEnv = result.data
  * Properties use their canonical SCREAMING_SNAKE_CASE names so they match
  * what operators set in .env files, Docker, and Fly secrets.
  * When `storage.PROVIDER` is `tigris`, `storage.mediaOrigin` is the public photo
- * origin (`VITE_MEDIA_ORIGIN` or the default bucket CDN host). Compare with
- * clientEnv, which strips the VITE_ prefix into camelCase since that prefix is
- * a build-tool detail.
+ * origin (`MEDIA_ORIGIN` or the default bucket CDN host).
  */
 export const serverEnv = parsedEnv

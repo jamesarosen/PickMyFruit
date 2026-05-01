@@ -10,7 +10,6 @@ import {
 } from '@tanstack/solid-router'
 import { HydrationScript } from 'solid-js/web'
 import { PageFooter } from '@/components/PageFooter'
-import { rootHeadLinks } from '@/lib/root-head-links'
 import { getSession } from '@/lib/session'
 import { Sentry } from '@/lib/sentry'
 import '../styles/base.css'
@@ -63,7 +62,7 @@ export const Route = createRootRoute({
 				content: 'https://www.pickmyfruit.com/og-image.png',
 			},
 		],
-		links: rootHeadLinks(),
+		links: [{ rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' }],
 	}),
 	shellComponent: RootShell,
 	component: RootComponent,

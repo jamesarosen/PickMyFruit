@@ -78,6 +78,11 @@ describe('applySecurityHeaders', () => {
 
 		expect(csp).toContain('https://media.pickmyfruit.com')
 		expect(csp).toContain('https://test-bucket.fly.storage.tigris.dev')
+		const directives = parseContentSecurityPolicy(csp)
+		expect(directives.get('link-src')).toEqual([
+			"'self'",
+			'https://media.pickmyfruit.com',
+		])
 
 		vi.doUnmock('../src/lib/env.server')
 		vi.resetModules()

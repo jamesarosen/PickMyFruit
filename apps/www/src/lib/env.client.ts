@@ -6,18 +6,8 @@ const isProd = import.meta.env.PROD as boolean
  * @see Dockerfile
  * @see fly.toml [build.args]
  */
-const mediaOriginSchema = z.preprocess(
-	(val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
-	z
-		.string()
-		.url()
-		.transform((url) => url.replace(/\/+$/, ''))
-		.optional()
-)
-
 const schema = z
 	.object({
-		VITE_MEDIA_ORIGIN: mediaOriginSchema,
 		VITE_SENTRY_DSN: z.url().optional(),
 		VITE_SENTRY_ENABLED: z
 			.enum(['true', 'false'])
@@ -29,7 +19,6 @@ const schema = z
 		VITE_SENTRY_ENVIRONMENT: z.string().optional(),
 	})
 	.transform((data) => ({
-		mediaOrigin: data.VITE_MEDIA_ORIGIN,
 		sentryDsn: data.VITE_SENTRY_DSN,
 		// In prod: default to true if DSN is available
 		// In other envs: default to false (reporting off, opt-in for testing)
@@ -49,7 +38,6 @@ const schema = z
 	})
 
 const result = schema.safeParse({
-	VITE_MEDIA_ORIGIN: import.meta.env.VITE_MEDIA_ORIGIN,
 	VITE_SENTRY_DSN: import.meta.env.VITE_SENTRY_DSN,
 	VITE_SENTRY_ENABLED: import.meta.env.VITE_SENTRY_ENABLED,
 	VITE_SENTRY_ERROR_SAMPLE_RATE: import.meta.env.VITE_SENTRY_ERROR_SAMPLE_RATE,

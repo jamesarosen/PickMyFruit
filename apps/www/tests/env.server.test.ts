@@ -65,17 +65,17 @@ describe('env.server schema', () => {
 		expect(result.error).toBeTruthy()
 	})
 
-	it('parses with optional VITE_MEDIA_ORIGIN when storage is local', () => {
+	it('parses with optional MEDIA_ORIGIN when storage is local', () => {
 		const result = schema.safeParse({
 			...VALID_DEV_ENV,
-			VITE_MEDIA_ORIGIN: 'https://media.pickmyfruit.com',
+			MEDIA_ORIGIN: 'https://media.pickmyfruit.com',
 		})
 		expect(result.error).toBeFalsy()
 		expect(result.data?.storage.PROVIDER).toBe('local')
 		expect('mediaOrigin' in result.data!.storage).toBe(false)
 	})
 
-	it('treats empty VITE_MEDIA_ORIGIN as unset for tigris mediaOrigin default', () => {
+	it('treats empty MEDIA_ORIGIN as unset for tigris mediaOrigin default', () => {
 		const result = schema.safeParse({
 			...VALID_DEV_ENV,
 			STORAGE_PROVIDER: 'tigris',
@@ -83,7 +83,7 @@ describe('env.server schema', () => {
 			AWS_SECRET_ACCESS_KEY: 'b',
 			AWS_ENDPOINT_URL_S3: 'https://fly.storage.tigris.dev',
 			BUCKET_NAME: 'my-bucket',
-			VITE_MEDIA_ORIGIN: '',
+			MEDIA_ORIGIN: '',
 		})
 		expect(result.error).toBeFalsy()
 		if (result.data?.storage.PROVIDER !== 'tigris')
@@ -117,7 +117,7 @@ describe('env.server schema', () => {
 		)
 	})
 
-	it('tigris storage uses VITE_MEDIA_ORIGIN for mediaOrigin when set', () => {
+	it('tigris storage uses MEDIA_ORIGIN for mediaOrigin when set', () => {
 		const result = schema.safeParse({
 			...VALID_DEV_ENV,
 			STORAGE_PROVIDER: 'tigris',
@@ -125,7 +125,7 @@ describe('env.server schema', () => {
 			AWS_SECRET_ACCESS_KEY: 'b',
 			AWS_ENDPOINT_URL_S3: 'https://fly.storage.tigris.dev',
 			BUCKET_NAME: 'my-bucket',
-			VITE_MEDIA_ORIGIN: 'https://cdn.example.com',
+			MEDIA_ORIGIN: 'https://cdn.example.com',
 		})
 		expect(result.error).toBeFalsy()
 		if (result.data?.storage.PROVIDER !== 'tigris')

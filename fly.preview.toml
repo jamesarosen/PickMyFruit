@@ -1,7 +1,7 @@
 # Fly.io configuration for PR preview apps.
 # App name is set dynamically via --app when deploying.
 # See .github/workflows/deploy.yml (preview job). This file replaces fly.toml
-# for those deploys — copy VITE_* build/runtime vars from fly.toml when needed.
+# for those deploys — copy runtime vars from fly.toml [env] when needed.
 
 primary_region = 'sjc'
 
@@ -10,7 +10,6 @@ primary_region = 'sjc'
   ignorefile = ".dockerignore"
 
   [build.args]
-    VITE_MEDIA_ORIGIN = "https://media.pickmyfruit.com"
     VITE_SENTRY_ENABLED = "true"
 
 [http_service]
@@ -49,7 +48,7 @@ primary_region = 'sjc'
   MIGRATE_ON_REQUEST = 'true'
   NODE_ENV = 'development'
   STORAGE_PROVIDER = 'local'
-  VITE_MEDIA_ORIGIN = 'https://media.pickmyfruit.com'
+  MEDIA_ORIGIN = 'https://media.pickmyfruit.com'
 
 [[vm]]
   size = 'shared-cpu-1x'

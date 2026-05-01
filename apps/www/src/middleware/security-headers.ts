@@ -1,10 +1,13 @@
 import { createMiddleware } from '@tanstack/solid-start'
 
-function buildCspDirectives(extraImgSrc: string[]): string[] {
+function buildCspDirectives(
+	extraImgSrc: string[],
+	linkSrc: string | null
+): string[] {
 	const imgSrc = ["img-src 'self' data: blob:", ...extraImgSrc]
 		.filter(Boolean)
 		.join(' ')
-	return [
+	const directives = [
 		"default-src 'self'",
 		// Solid's HydrationScript injects an inline script for SSR hydration.
 		// @todo replace 'unsafe-inline' with nonce-based CSP when Solid supports it
@@ -29,12 +32,17 @@ function buildCspDirectives(extraImgSrc: string[]): string[] {
 		"base-uri 'self'",
 		"frame-ancestors 'none'",
 	]
+	if (linkSrc) {
+		directives.splice(2, 0, linkSrc)
+	}
+	return directives
 }
 
 // Resolved once on the first request and cached; avoids a static import of a
 // *.server module from this non-server file while still paying the import cost
 // only once.
 let _cspImgSrcHosts: string[] | undefined
+let _cspLinkSrc: string | null | undefined
 
 /** Hosts allowed in `img-src` for listing photos (Tigris bucket CDN and optional custom origin). */
 async function resolveListingImageOriginsForCsp(): Promise<string[]> {
@@ -54,6 +62,18 @@ async function resolveListingImageOriginsForCsp(): Promise<string[]> {
 	return _cspImgSrcHosts
 }
 
+/** `link-src` entry for `Link` response headers that preconnect to the media CDN (Tigris only). */
+async function resolveCspLinkSrc(): Promise<string | null> {
+	if (_cspLinkSrc === undefined) {
+		const { serverEnv } = await import('@/lib/env.server')
+		_cspLinkSrc =
+			serverEnv.storage.PROVIDER === 'tigris'
+				? `link-src 'self' ${serverEnv.storage.mediaOrigin}`
+				: null
+	}
+	return _cspLinkSrc
+}
+
 /**
  * Applies all security headers to a `Headers` object.
  *
@@ -62,7 +82,8 @@ async function resolveListingImageOriginsForCsp(): Promise<string[]> {
  */
 export async function applySecurityHeaders(headers: Headers): Promise<void> {
 	const imgSrcHosts = await resolveListingImageOriginsForCsp()
-	const csp = buildCspDirectives(imgSrcHosts).join('; ')
+	const linkSrc = await resolveCspLinkSrc()
+	const csp = buildCspDirectives(imgSrcHosts, linkSrc).join('; ')
 	headers.set('Content-Security-Policy', csp)
 	// Legacy fallback for browsers that predate CSP frame-ancestors
 	headers.set('X-Frame-Options', 'DENY')

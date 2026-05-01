@@ -19,7 +19,6 @@ primary_region = 'sjc'
   # Pass VITE_SENTRY_ERROR_SAMPLE_RATE and VITE_SENTRY_TRACES_SAMPLE_RATE
   # similarly to tune sampling without changing defaults in env.client.ts.
   [build.args]
-    VITE_MEDIA_ORIGIN = "https://media.pickmyfruit.com"
     VITE_SENTRY_ENABLED = "true"
 
 # HTTP service configuration
@@ -69,7 +68,7 @@ primary_region = 'sjc'
   MALLOC_ARENA_MAX = '2'
   MIGRATE_ON_REQUEST = 'true'
   NODE_ENV = 'production'
-  VITE_MEDIA_ORIGIN = 'https://media.pickmyfruit.com'
+  MEDIA_ORIGIN = 'https://media.pickmyfruit.com'
   # Cap V8 heap at ~75% of the 512 MB VM so GC fires before Linux OOM-kills,
   # leaving headroom for libvips native allocations and the OS.
   NODE_OPTIONS = '--max-old-space-size=384'
