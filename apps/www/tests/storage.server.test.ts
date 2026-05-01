@@ -172,21 +172,23 @@ describe(LocalStorageAdapter, () => {
 })
 
 describe(TigrisStorageAdapter, () => {
+	const defaultMediaOrigin = 'https://test-bucket.fly.storage.tigris.dev'
 	const adapter = new TigrisStorageAdapter({
 		bucketName: 'test-bucket',
 		accessKeyId: 'fake',
 		secretAccessKey: 'fake',
 		endpointUrl: 'https://fly.storage.tigris.dev',
+		mediaOrigin: defaultMediaOrigin,
 	})
 
 	describe('publicUrl', () => {
-		it('returns the bucket CDN URL for a pub/ path when mediaOrigin is unset', () => {
+		it('returns mediaOrigin/pub/ URL for a pub/ path', () => {
 			expect(adapter.publicUrl('listings/1/uuid.jpg')).toBe(
 				'https://test-bucket.fly.storage.tigris.dev/pub/listings/1/uuid.jpg'
 			)
 		})
 
-		it('returns VITE_MEDIA_ORIGIN-based URL for a pub/ path when mediaOrigin is set', () => {
+		it('returns a custom mediaOrigin/pub/ URL when configured', () => {
 			const withMedia = new TigrisStorageAdapter({
 				bucketName: 'test-bucket',
 				accessKeyId: 'fake',
@@ -233,6 +235,7 @@ describe(TigrisStorageAdapter, () => {
 				accessKeyId: 'fake',
 				secretAccessKey: 'fake',
 				endpointUrl: `http://127.0.0.1:${port}`,
+				mediaOrigin: defaultMediaOrigin,
 			})
 
 			try {

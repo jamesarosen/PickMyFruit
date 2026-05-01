@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { schema } from '../src/lib/env.server'
+import { schema, computeMediaOrigin } from '../src/lib/env.server'
 
 describe('env.server schema', () => {
 	const VALID_DEV_ENV = {
@@ -81,5 +81,40 @@ describe('env.server schema', () => {
 		})
 		expect(result.error).toBeFalsy()
 		expect(result.data?.VITE_MEDIA_ORIGIN).toBeUndefined()
+	})
+
+	it('computeMediaOrigin is empty for local storage', () => {
+		const result = schema.safeParse(VALID_DEV_ENV)
+		expect(result.data).toBeTruthy()
+		expect(computeMediaOrigin(result.data!)).toBe('')
+	})
+
+	it('computeMediaOrigin defaults to the Tigris bucket host when VITE_MEDIA_ORIGIN is unset', () => {
+		const result = schema.safeParse({
+			...VALID_DEV_ENV,
+			STORAGE_PROVIDER: 'tigris',
+			AWS_ACCESS_KEY_ID: 'a',
+			AWS_SECRET_ACCESS_KEY: 'b',
+			AWS_ENDPOINT_URL_S3: 'https://fly.storage.tigris.dev',
+			BUCKET_NAME: 'my-bucket',
+		})
+		expect(result.error).toBeFalsy()
+		expect(computeMediaOrigin(result.data!)).toBe(
+			'https://my-bucket.fly.storage.tigris.dev'
+		)
+	})
+
+	it('computeMediaOrigin uses VITE_MEDIA_ORIGIN for Tigris when set', () => {
+		const result = schema.safeParse({
+			...VALID_DEV_ENV,
+			STORAGE_PROVIDER: 'tigris',
+			AWS_ACCESS_KEY_ID: 'a',
+			AWS_SECRET_ACCESS_KEY: 'b',
+			AWS_ENDPOINT_URL_S3: 'https://fly.storage.tigris.dev',
+			BUCKET_NAME: 'my-bucket',
+			VITE_MEDIA_ORIGIN: 'https://cdn.example.com',
+		})
+		expect(result.error).toBeFalsy()
+		expect(computeMediaOrigin(result.data!)).toBe('https://cdn.example.com')
 	})
 })

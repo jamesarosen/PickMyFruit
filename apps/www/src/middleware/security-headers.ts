@@ -36,18 +36,17 @@ function buildCspDirectives(extraImgSrc: string[]): string[] {
 // only once.
 let _cspImgSrcHosts: string[] | undefined
 
-/** Hosts allowed in `img-src` for listing photos (Tigris bucket and optional CDN alias). */
+/** Hosts allowed in `img-src` for listing photos (Tigris bucket CDN and optional custom origin). */
 async function resolveListingImageOriginsForCsp(): Promise<string[]> {
 	if (_cspImgSrcHosts === undefined) {
 		const { serverEnv } = await import('@/lib/env.server')
 		const hosts: string[] = []
-		// Narrow to the specific bucket hostname, so a compromised sibling bucket
-		// cannot be used to exfiltrate data.
 		if (serverEnv.storage.PROVIDER === 'tigris') {
-			hosts.push(`https://${serverEnv.storage.BUCKET_NAME}.fly.storage.tigris.dev`)
-		}
-		if (serverEnv.VITE_MEDIA_ORIGIN) {
-			hosts.push(serverEnv.VITE_MEDIA_ORIGIN)
+			const defaultHost = `https://${serverEnv.storage.BUCKET_NAME}.fly.storage.tigris.dev`
+			hosts.push(defaultHost)
+			if (serverEnv.mediaOrigin && serverEnv.mediaOrigin !== defaultHost) {
+				hosts.push(serverEnv.mediaOrigin)
+			}
 		}
 		_cspImgSrcHosts = hosts
 	}

@@ -101,6 +101,22 @@ const outputSchema = z
 
 export const schema = z.preprocess(preprocessEnv, outputSchema)
 
+export type ParsedServerEnv = z.infer<typeof outputSchema>
+
+/**
+ * Origin used in listing photo `publicUrl` values and CSP `img-src` for Tigris.
+ * Defaults to the bucket's public CDN hostname when `VITE_MEDIA_ORIGIN` is unset.
+ */
+export function computeMediaOrigin(env: ParsedServerEnv): string {
+	if (env.storage.PROVIDER !== 'tigris') {
+		return ''
+	}
+	return (
+		env.VITE_MEDIA_ORIGIN ??
+		`https://${env.storage.BUCKET_NAME}.fly.storage.tigris.dev`
+	)
+}
+
 const result = schema.safeParse(process.env)
 if (!result.success) {
 	const missing = result.error.issues.map(
@@ -111,13 +127,20 @@ if (!result.success) {
 	)
 }
 
+const parsedEnv = result.data
+
 /**
  * Validated server-side environment variables.
  *
  * Properties use their canonical SCREAMING_SNAKE_CASE names so they match
  * what operators set in .env files, Docker, and Fly secrets.
  * `VITE_MEDIA_ORIGIN` is shared with the client bundle (see env.client.ts).
+ * `mediaOrigin` is always set: for Tigris it is `VITE_MEDIA_ORIGIN` or the default
+ * bucket CDN host; for local storage it is an empty string.
  * Compare with clientEnv, which strips the VITE_ prefix into camelCase
  * since that prefix is a build-tool detail.
  */
-export const serverEnv = result.data
+export const serverEnv = {
+	...parsedEnv,
+	mediaOrigin: computeMediaOrigin(parsedEnv),
+} as ParsedServerEnv & { mediaOrigin: string }

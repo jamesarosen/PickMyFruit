@@ -154,18 +154,18 @@ export class LocalStorageAdapter implements StorageAdapter {
 export class TigrisStorageAdapter implements StorageAdapter {
 	private readonly client: S3Client
 	private readonly bucket: string
-	private readonly mediaOrigin: string | undefined
+	private readonly mediaOrigin: string
 
 	constructor(opts: {
 		bucketName: string
 		accessKeyId: string
 		secretAccessKey: string
 		endpointUrl: string
-		/** When set, `publicUrl` uses this origin so browsers load from a CDN hostname (e.g. media.example.com). */
-		mediaOrigin?: string
+		/** Origin for `publicUrl` (e.g. custom CDN or default `https://{bucket}.fly.storage.tigris.dev`). */
+		mediaOrigin: string
 	}) {
 		this.bucket = opts.bucketName
-		this.mediaOrigin = opts.mediaOrigin?.replace(/\/+$/, '')
+		this.mediaOrigin = opts.mediaOrigin.replace(/\/+$/, '')
 		this.client = new S3Client({
 			region: 'auto',
 			endpoint: opts.endpointUrl,
@@ -268,10 +268,7 @@ export class TigrisStorageAdapter implements StorageAdapter {
 	}
 
 	publicUrl(pathWithinDir: string): string {
-		const origin = this.mediaOrigin
-			? this.mediaOrigin
-			: `https://${this.bucket}.fly.storage.tigris.dev`
-		return `${origin}/pub/${pathWithinDir}`
+		return `${this.mediaOrigin}/pub/${pathWithinDir}`
 	}
 
 	async delete(dir: 'raw' | 'pub', pathWithinDir: string): Promise<void> {
@@ -297,7 +294,7 @@ export function createStorageAdapter(env: typeof serverEnv): StorageAdapter {
 		accessKeyId: env.storage.AWS_ACCESS_KEY_ID,
 		secretAccessKey: env.storage.AWS_SECRET_ACCESS_KEY,
 		endpointUrl: env.storage.AWS_ENDPOINT_URL_S3,
-		...(env.VITE_MEDIA_ORIGIN ? { mediaOrigin: env.VITE_MEDIA_ORIGIN } : {}),
+		mediaOrigin: env.mediaOrigin,
 	})
 }
 
