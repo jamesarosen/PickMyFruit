@@ -37,8 +37,11 @@ describe('applySecurityHeaders', () => {
 		vi.resetModules()
 		vi.doMock('../src/lib/env.server', () => ({
 			serverEnv: {
-				mediaOrigin: 'https://test-bucket.fly.storage.tigris.dev',
-				storage: { PROVIDER: 'tigris', BUCKET_NAME: 'test-bucket' },
+				storage: {
+					PROVIDER: 'tigris',
+					BUCKET_NAME: 'test-bucket',
+					mediaOrigin: 'https://test-bucket.fly.storage.tigris.dev',
+				},
 			},
 		}))
 		const { applySecurityHeaders: apply } =
@@ -59,9 +62,11 @@ describe('applySecurityHeaders', () => {
 		vi.resetModules()
 		vi.doMock('../src/lib/env.server', () => ({
 			serverEnv: {
-				mediaOrigin: 'https://media.pickmyfruit.com',
-				VITE_MEDIA_ORIGIN: 'https://media.pickmyfruit.com',
-				storage: { PROVIDER: 'tigris', BUCKET_NAME: 'test-bucket' },
+				storage: {
+					PROVIDER: 'tigris',
+					BUCKET_NAME: 'test-bucket',
+					mediaOrigin: 'https://media.pickmyfruit.com',
+				},
 			},
 		}))
 		const { applySecurityHeaders: apply } =

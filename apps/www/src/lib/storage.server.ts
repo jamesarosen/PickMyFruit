@@ -294,7 +294,7 @@ export function createStorageAdapter(env: typeof serverEnv): StorageAdapter {
 		accessKeyId: env.storage.AWS_ACCESS_KEY_ID,
 		secretAccessKey: env.storage.AWS_SECRET_ACCESS_KEY,
 		endpointUrl: env.storage.AWS_ENDPOINT_URL_S3,
-		mediaOrigin: env.mediaOrigin,
+		mediaOrigin: env.storage.mediaOrigin,
 	})
 }
 

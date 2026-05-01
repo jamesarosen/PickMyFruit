@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { schema, computeMediaOrigin } from '../src/lib/env.server'
+import { schema } from '../src/lib/env.server'
 
 describe('env.server schema', () => {
 	const VALID_DEV_ENV = {
@@ -65,31 +65,42 @@ describe('env.server schema', () => {
 		expect(result.error).toBeTruthy()
 	})
 
-	it('accepts optional VITE_MEDIA_ORIGIN as a URL', () => {
+	it('parses with optional VITE_MEDIA_ORIGIN when storage is local', () => {
 		const result = schema.safeParse({
 			...VALID_DEV_ENV,
 			VITE_MEDIA_ORIGIN: 'https://media.pickmyfruit.com',
 		})
 		expect(result.error).toBeFalsy()
-		expect(result.data?.VITE_MEDIA_ORIGIN).toBe('https://media.pickmyfruit.com')
+		expect(result.data?.storage.PROVIDER).toBe('local')
+		expect('mediaOrigin' in result.data!.storage).toBe(false)
 	})
 
-	it('treats empty VITE_MEDIA_ORIGIN as unset', () => {
+	it('treats empty VITE_MEDIA_ORIGIN as unset for tigris mediaOrigin default', () => {
 		const result = schema.safeParse({
 			...VALID_DEV_ENV,
+			STORAGE_PROVIDER: 'tigris',
+			AWS_ACCESS_KEY_ID: 'a',
+			AWS_SECRET_ACCESS_KEY: 'b',
+			AWS_ENDPOINT_URL_S3: 'https://fly.storage.tigris.dev',
+			BUCKET_NAME: 'my-bucket',
 			VITE_MEDIA_ORIGIN: '',
 		})
 		expect(result.error).toBeFalsy()
-		expect(result.data?.VITE_MEDIA_ORIGIN).toBeUndefined()
+		if (result.data?.storage.PROVIDER !== 'tigris')
+			throw new Error('expected tigris')
+		expect(result.data.storage.mediaOrigin).toBe(
+			'https://my-bucket.fly.storage.tigris.dev'
+		)
 	})
 
-	it('computeMediaOrigin is empty for local storage', () => {
+	it('local storage has no mediaOrigin property', () => {
 		const result = schema.safeParse(VALID_DEV_ENV)
 		expect(result.data).toBeTruthy()
-		expect(computeMediaOrigin(result.data!)).toBe('')
+		expect(result.data!.storage.PROVIDER).toBe('local')
+		expect('mediaOrigin' in result.data!.storage).toBe(false)
 	})
 
-	it('computeMediaOrigin defaults to the Tigris bucket host when VITE_MEDIA_ORIGIN is unset', () => {
+	it('tigris storage defaults mediaOrigin to the bucket CDN host', () => {
 		const result = schema.safeParse({
 			...VALID_DEV_ENV,
 			STORAGE_PROVIDER: 'tigris',
@@ -99,12 +110,14 @@ describe('env.server schema', () => {
 			BUCKET_NAME: 'my-bucket',
 		})
 		expect(result.error).toBeFalsy()
-		expect(computeMediaOrigin(result.data!)).toBe(
+		if (result.data?.storage.PROVIDER !== 'tigris')
+			throw new Error('expected tigris')
+		expect(result.data.storage.mediaOrigin).toBe(
 			'https://my-bucket.fly.storage.tigris.dev'
 		)
 	})
 
-	it('computeMediaOrigin uses VITE_MEDIA_ORIGIN for Tigris when set', () => {
+	it('tigris storage uses VITE_MEDIA_ORIGIN for mediaOrigin when set', () => {
 		const result = schema.safeParse({
 			...VALID_DEV_ENV,
 			STORAGE_PROVIDER: 'tigris',
@@ -115,6 +128,8 @@ describe('env.server schema', () => {
 			VITE_MEDIA_ORIGIN: 'https://cdn.example.com',
 		})
 		expect(result.error).toBeFalsy()
-		expect(computeMediaOrigin(result.data!)).toBe('https://cdn.example.com')
+		if (result.data?.storage.PROVIDER !== 'tigris')
+			throw new Error('expected tigris')
+		expect(result.data.storage.mediaOrigin).toBe('https://cdn.example.com')
 	})
 })

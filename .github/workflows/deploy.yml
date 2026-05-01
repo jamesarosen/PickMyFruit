@@ -157,8 +157,6 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           FLY_APP: ${{ env.APP_NAME }}
-          # Preview uses fly.preview.toml, not fly.toml — VITE_MEDIA_ORIGIN must be
-          # set there (or passed here) so the Docker build bakes the media CDN URL.
           FLY_CONFIG: fly.preview.toml
           FLY_HA: "false"
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
