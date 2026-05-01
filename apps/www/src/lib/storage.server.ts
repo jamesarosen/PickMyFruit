@@ -268,7 +268,15 @@ export class TigrisStorageAdapter implements StorageAdapter {
 	}
 
 	publicUrl(pathWithinDir: string): string {
-		return `${this.mediaOrigin}/pub/${pathWithinDir}`
+		const u = new URL(this.mediaOrigin)
+		const encoded = pathWithinDir
+			.split('/')
+			.filter((s) => s.length > 0)
+			.map((s) => encodeURIComponent(s))
+			.join('/')
+		const basePath = u.pathname.replace(/\/+$/, '')
+		u.pathname = `${basePath}/pub/${encoded}`.replace(/\/{2,}/g, '/')
+		return u.href
 	}
 
 	async delete(dir: 'raw' | 'pub', pathWithinDir: string): Promise<void> {

@@ -213,6 +213,24 @@ describe(TigrisStorageAdapter, () => {
 				'https://media.example.com/pub/x.jpg'
 			)
 		})
+
+		it('percent-encodes each path segment', () => {
+			expect(adapter.publicUrl('listing_photos/a b.jpg')).toBe(
+				'https://test-bucket.fly.storage.tigris.dev/pub/listing_photos/a%20b.jpg'
+			)
+		})
+
+		it('throws when mediaOrigin is not a valid URL', () => {
+			expect(() =>
+				new TigrisStorageAdapter({
+					bucketName: 'test-bucket',
+					accessKeyId: 'fake',
+					secretAccessKey: 'fake',
+					endpointUrl: 'https://fly.storage.tigris.dev',
+					mediaOrigin: 'not-a-url',
+				}).publicUrl('x.jpg')
+			).toThrow()
+		})
 	})
 
 	describe('upload', () => {
