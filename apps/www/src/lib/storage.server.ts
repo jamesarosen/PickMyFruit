@@ -63,7 +63,10 @@ export interface StorageAdapter {
 		dir: 'raw' | 'pub',
 		pathWithinDir: string
 	): Promise<ReadableStream>
-	/** Return the public URL for a `pub/` object. */
+	/**
+	 * Return the public URL for a `pub/` object.
+	 * @throws {TypeError} When the implementation cannot build a valid URL (e.g. invalid `mediaOrigin` or pathname on Tigris).
+	 */
 	publicUrl(pathWithinDir: string): string
 	/** Delete a stored object. No-ops silently if the object does not exist. */
 	delete(dir: 'raw' | 'pub', pathWithinDir: string): Promise<void>
@@ -267,6 +270,10 @@ export class TigrisStorageAdapter implements StorageAdapter {
 		return Readable.toWeb(stream) as ReadableStream
 	}
 
+	/**
+	 * Builds an absolute URL under `pub/` with per-segment encoding.
+	 * @throws {TypeError} When `mediaOrigin` is not a valid base URL for `new URL()`, or the composed pathname is invalid.
+	 */
 	publicUrl(pathWithinDir: string): string {
 		const u = new URL(this.mediaOrigin)
 		const encoded = pathWithinDir
