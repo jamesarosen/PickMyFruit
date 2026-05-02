@@ -3,18 +3,7 @@ import { Hono } from "hono";
 import sharp from "sharp";
 import { fileTypeFromBuffer } from "file-type";
 import type { StorageAdapter } from "../storage/StorageAdapter.js";
-
-/**
- * UUIDv7 regex: standard UUID format where the 13th hex digit (version nibble)
- * is exactly `7`. Example: `01970000-0000-7000-8000-000000000000`.
- */
-const UUIDV7_RE =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-/** Returns true when `value` matches the UUIDv7 format. */
-function isUuidv7(value: string): boolean {
-	return UUIDV7_RE.test(value);
-}
+import { isValidPhotoId } from "../lib/validatePhotoId.js";
 
 // Apply Sharp global settings once at module load, not per-request.
 sharp.concurrency(1);
@@ -48,7 +37,7 @@ export function buildTransformRouter(storage: StorageAdapter): Hono {
 		const { photoID } = c.req.param();
 
 		// Validate that photoID is a valid UUIDv7.
-		if (!isUuidv7(photoID)) {
+		if (!isValidPhotoId(photoID)) {
 			return c.json({ error: "invalid_photo_id" }, 400);
 		}
 

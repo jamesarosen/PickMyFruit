@@ -6,6 +6,8 @@ import { MemoryStorageAdapter } from "./storage/MemoryStorageAdapter.js";
 import { TigrisStorageAdapter } from "./storage/TigrisStorageAdapter.js";
 import type { StorageAdapter } from "./storage/StorageAdapter.js";
 import { buildTransformRouter } from "./routes/transform.js";
+import { buildHeadPhotoRouter } from "./routes/headPhoto.js";
+import { authMiddleware } from "./middleware/auth.js";
 
 // TODO (commit 6): wire in Sentry for exception capture
 
@@ -50,7 +52,14 @@ app.get("/health", (c) => {
 	});
 });
 
+// All routes except /health require the x-internal-token header.
+// Hono processes middleware in registration order; by mounting authMiddleware
+// on specific path patterns we avoid covering /health.
+app.use("/transform/*", authMiddleware);
+app.use("/photos/*", authMiddleware);
+
 app.route("/", buildTransformRouter(storage));
+app.route("/", buildHeadPhotoRouter(storage));
 
 // Only start the HTTP server when this module is run directly, not when
 // imported by tests, so tests can call app.request() without binding a port.

@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { uuidv7 } from "uuidv7";
 import { MemoryStorageAdapter } from "../../src/storage/MemoryStorageAdapter.js";
 import { buildTransformRouter } from "../../src/routes/transform.js";
+import { authMiddleware } from "../../src/middleware/auth.js";
 
 /** Build a minimal valid JPEG buffer using Sharp's create API. */
 async function makeJpeg(
@@ -22,8 +23,26 @@ async function makeJpeg(
 function makeApp(): { app: Hono; storage: MemoryStorageAdapter } {
 	const storage = new MemoryStorageAdapter();
 	const app = new Hono();
+	app.use("/transform/*", authMiddleware);
 	app.route("/", buildTransformRouter(storage));
 	return { app, storage };
+}
+
+/** Build a POST /transform request with auth token included. */
+function transformRequest(
+	photoID: string,
+	body: Uint8Array | Buffer,
+	extraHeaders: Record<string, string> = {},
+): Request {
+	return new Request(`http://localhost/transform/${photoID}`, {
+		method: "POST",
+		body,
+		headers: {
+			"content-type": "image/jpeg",
+			"x-internal-token": "test-token",
+			...extraHeaders,
+		},
+	});
 }
 
 describe("POST /transform/:photoID", () => {
@@ -39,13 +58,7 @@ describe("POST /transform/:photoID", () => {
 			const photoID = uuidv7();
 			const jpeg = await makeJpeg();
 
-			const res = await app.fetch(
-				new Request(`http://localhost/transform/${photoID}`, {
-					method: "POST",
-					body: jpeg,
-					headers: { "content-type": "image/jpeg" },
-				}),
-			);
+			const res = await app.fetch(transformRequest(photoID, jpeg));
 
 			expect(res.status).toBe(200);
 			const body = (await res.json()) as {
@@ -70,12 +83,7 @@ describe("POST /transform/:photoID", () => {
 			const photoID = uuidv7();
 			const jpeg = await makeJpeg();
 
-			const req = () =>
-				new Request(`http://localhost/transform/${photoID}`, {
-					method: "POST",
-					body: jpeg,
-					headers: { "content-type": "image/jpeg" },
-				});
+			const req = () => transformRequest(photoID, jpeg);
 
 			const first = await app.fetch(req());
 			expect(first.status).toBe(200);
@@ -99,12 +107,7 @@ describe("POST /transform/:photoID", () => {
 				return origPut(...args);
 			};
 
-			const req = () =>
-				new Request(`http://localhost/transform/${photoID}`, {
-					method: "POST",
-					body: jpeg,
-					headers: { "content-type": "image/jpeg" },
-				});
+			const req = () => transformRequest(photoID, jpeg);
 
 			await app.fetch(req());
 			await app.fetch(req());
@@ -116,13 +119,7 @@ describe("POST /transform/:photoID", () => {
 	describe("validation errors", () => {
 		it("returns 400 for a photoID that is not a UUIDv7", async () => {
 			const jpeg = await makeJpeg();
-			const res = await app.fetch(
-				new Request("http://localhost/transform/not-a-uuid", {
-					method: "POST",
-					body: jpeg,
-					headers: { "content-type": "image/jpeg" },
-				}),
-			);
+			const res = await app.fetch(transformRequest("not-a-uuid", jpeg));
 			expect(res.status).toBe(400);
 			const body = (await res.json()) as { error: string };
 			expect(body.error).toBe("invalid_photo_id");
@@ -132,13 +129,7 @@ describe("POST /transform/:photoID", () => {
 			// UUIDv4 has '4' in the version nibble, not '7'
 			const uuidV4 = "550e8400-e29b-41d4-a716-446655440000";
 			const jpeg = await makeJpeg();
-			const res = await app.fetch(
-				new Request(`http://localhost/transform/${uuidV4}`, {
-					method: "POST",
-					body: jpeg,
-					headers: { "content-type": "image/jpeg" },
-				}),
-			);
+			const res = await app.fetch(transformRequest(uuidV4, jpeg));
 			expect(res.status).toBe(400);
 		});
 
@@ -146,13 +137,7 @@ describe("POST /transform/:photoID", () => {
 			const photoID = uuidv7();
 			// Build a body that actually exceeds 30 MB so the streaming limiter fires.
 			const oversizedBody = new Uint8Array(31 * 1024 * 1024);
-			const res = await app.fetch(
-				new Request(`http://localhost/transform/${photoID}`, {
-					method: "POST",
-					body: oversizedBody,
-					headers: { "content-type": "image/jpeg" },
-				}),
-			);
+			const res = await app.fetch(transformRequest(photoID, oversizedBody));
 			expect(res.status).toBe(413);
 			const body = (await res.json()) as { error: string };
 			expect(body.error).toBe("payload_too_large");
@@ -162,11 +147,7 @@ describe("POST /transform/:photoID", () => {
 			const photoID = uuidv7();
 			const textBuffer = Buffer.from("Hello, world!");
 			const res = await app.fetch(
-				new Request(`http://localhost/transform/${photoID}`, {
-					method: "POST",
-					body: textBuffer,
-					headers: { "content-type": "text/plain" },
-				}),
+				transformRequest(photoID, textBuffer, { "content-type": "text/plain" }),
 			);
 			expect(res.status).toBe(415);
 			const body = (await res.json()) as { error: string };
@@ -175,13 +156,7 @@ describe("POST /transform/:photoID", () => {
 
 		it("returns 415 for an empty body", async () => {
 			const photoID = uuidv7();
-			const res = await app.fetch(
-				new Request(`http://localhost/transform/${photoID}`, {
-					method: "POST",
-					body: new Uint8Array(0),
-					headers: { "content-type": "image/jpeg" },
-				}),
-			);
+			const res = await app.fetch(transformRequest(photoID, new Uint8Array(0)));
 			expect(res.status).toBe(415);
 		});
 
@@ -189,13 +164,7 @@ describe("POST /transform/:photoID", () => {
 			const photoID = uuidv7();
 			// PDF magic bytes: %PDF-
 			const pdfBytes = Buffer.from("%PDF-1.4 fake pdf content");
-			const res = await app.fetch(
-				new Request(`http://localhost/transform/${photoID}`, {
-					method: "POST",
-					body: pdfBytes,
-					headers: { "content-type": "image/jpeg" },
-				}),
-			);
+			const res = await app.fetch(transformRequest(photoID, pdfBytes));
 			expect(res.status).toBe(415);
 			const body = (await res.json()) as { error: string; mime: string };
 			expect(body.error).toBe("unsupported_media_type");
