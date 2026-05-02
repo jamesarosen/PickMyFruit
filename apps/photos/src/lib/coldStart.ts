@@ -23,6 +23,9 @@ export function markFirstRequestComplete(): void {
  * @internal Do not call from production code.
  */
 export function _resetForTesting(fakeStartedAt?: number): void {
+	if (process.env.NODE_ENV === "production") {
+		throw new Error("_resetForTesting called in production");
+	}
 	_startedAt = fakeStartedAt ?? Date.now();
 	_firstRequest = true;
 }

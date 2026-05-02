@@ -110,7 +110,32 @@ describe("cold-start tracking in POST /transform/:photoID", () => {
 		expect(body.bootMs).toBeGreaterThanOrEqual(0);
 	});
 
-	// Concurrent-request ordering (first finally wins) is not easily tested via
-	// app.fetch() since requests are sequential in the test runtime. This would
-	// require real concurrency (Worker threads or actual HTTP server). Skipped.
+	it("invalid photoID as first request still flips the cold-start flag", async () => {
+		// Sending a non-UUID path param should return 400 but still mark the
+		// service as warm, so the next valid request sees coldStart: false.
+		const res400 = await app.fetch(
+			new Request("http://localhost/transform/not-a-uuid", {
+				method: "POST",
+				body: Buffer.alloc(0),
+				headers: {
+					"content-type": "image/jpeg",
+					"x-internal-token": "test-token",
+				},
+			}),
+		);
+		expect(res400.status).toBe(400);
+		const err = (await res400.json()) as { error: string };
+		expect(err.error).toBe("invalid_photo_id");
+
+		// A subsequent valid request must see coldStart: false.
+		const jpeg = await makeJpeg();
+		const res = await app.fetch(transformRequest(uuidv7(), jpeg));
+		expect(res.status).toBe(200);
+		const body = (await res.json()) as { coldStart: boolean };
+		expect(body.coldStart).toBe(false);
+	});
+
+	// Concurrent-request ordering is not easily tested via app.fetch() since
+	// requests are sequential in the test runtime. This would require real
+	// concurrency (Worker threads or actual HTTP server). Skipped.
 });
