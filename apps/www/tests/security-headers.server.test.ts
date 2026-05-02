@@ -37,7 +37,11 @@ describe('applySecurityHeaders', () => {
 		vi.resetModules()
 		vi.doMock('../src/lib/env.server', () => ({
 			serverEnv: {
-				storage: { PROVIDER: 'tigris', BUCKET_NAME: 'test-bucket' },
+				storage: {
+					PROVIDER: 'tigris',
+					BUCKET_NAME: 'test-bucket',
+					mediaOrigin: 'https://test-bucket.fly.storage.tigris.dev',
+				},
 			},
 		}))
 		const { applySecurityHeaders: apply } =
@@ -49,6 +53,31 @@ describe('applySecurityHeaders', () => {
 
 		expect(csp).toContain('https://test-bucket.fly.storage.tigris.dev')
 		expect(csp).not.toContain('https://*.fly.storage.tigris.dev')
+
+		vi.doUnmock('../src/lib/env.server')
+		vi.resetModules()
+	})
+
+	it('uses only mediaOrigin in img-src, not the default bucket host', async () => {
+		vi.resetModules()
+		vi.doMock('../src/lib/env.server', () => ({
+			serverEnv: {
+				storage: {
+					PROVIDER: 'tigris',
+					BUCKET_NAME: 'test-bucket',
+					mediaOrigin: 'https://media.pickmyfruit.com',
+				},
+			},
+		}))
+		const { applySecurityHeaders: apply } =
+			await import('../src/middleware/security-headers')
+
+		const headers = new Headers()
+		await apply(headers)
+		const csp = headers.get('Content-Security-Policy')!
+
+		expect(csp).toContain('https://media.pickmyfruit.com')
+		expect(csp).not.toContain('https://test-bucket.fly.storage.tigris.dev')
 
 		vi.doUnmock('../src/lib/env.server')
 		vi.resetModules()

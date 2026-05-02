@@ -63,7 +63,10 @@ export interface StorageAdapter {
 		dir: 'raw' | 'pub',
 		pathWithinDir: string
 	): Promise<ReadableStream>
-	/** Return the public URL for a `pub/` object. */
+	/**
+	 * Return the public URL for a `pub/` object.
+	 * @throws {TypeError} When the implementation cannot build a valid URL (e.g. invalid `mediaOrigin` or pathname on Tigris).
+	 */
 	publicUrl(pathWithinDir: string): string
 	/** Delete a stored object. No-ops silently if the object does not exist. */
 	delete(dir: 'raw' | 'pub', pathWithinDir: string): Promise<void>
@@ -154,14 +157,18 @@ export class LocalStorageAdapter implements StorageAdapter {
 export class TigrisStorageAdapter implements StorageAdapter {
 	private readonly client: S3Client
 	private readonly bucket: string
+	private readonly mediaOrigin: string
 
 	constructor(opts: {
 		bucketName: string
 		accessKeyId: string
 		secretAccessKey: string
 		endpointUrl: string
+		/** Origin for `publicUrl` (e.g. custom CDN or default `https://{bucket}.fly.storage.tigris.dev`). */
+		mediaOrigin: string
 	}) {
 		this.bucket = opts.bucketName
+		this.mediaOrigin = opts.mediaOrigin
 		this.client = new S3Client({
 			region: 'auto',
 			endpoint: opts.endpointUrl,
@@ -263,8 +270,20 @@ export class TigrisStorageAdapter implements StorageAdapter {
 		return Readable.toWeb(stream) as ReadableStream
 	}
 
+	/**
+	 * Builds an absolute URL under `pub/` with per-segment encoding.
+	 * @throws {TypeError} When `mediaOrigin` is not a valid base URL for `new URL()`, or the composed pathname is invalid.
+	 */
 	publicUrl(pathWithinDir: string): string {
-		return `https://${this.bucket}.fly.storage.tigris.dev/pub/${pathWithinDir}`
+		const u = new URL(this.mediaOrigin)
+		const encoded = pathWithinDir
+			.split('/')
+			.filter((s) => s.length > 0)
+			.map((s) => encodeURIComponent(s))
+			.join('/')
+		const basePath = u.pathname.replace(/\/+$/, '')
+		u.pathname = `${basePath}/pub/${encoded}`.replace(/\/{2,}/g, '/')
+		return u.href
 	}
 
 	async delete(dir: 'raw' | 'pub', pathWithinDir: string): Promise<void> {
@@ -290,6 +309,7 @@ export function createStorageAdapter(env: typeof serverEnv): StorageAdapter {
 		accessKeyId: env.storage.AWS_ACCESS_KEY_ID,
 		secretAccessKey: env.storage.AWS_SECRET_ACCESS_KEY,
 		endpointUrl: env.storage.AWS_ENDPOINT_URL_S3,
+		mediaOrigin: env.storage.mediaOrigin,
 	})
 }
 

@@ -10,18 +10,36 @@ const emailSchema = z.discriminatedUnion('PROVIDER', [
 	}),
 ])
 
-const storageSchema = z.discriminatedUnion('PROVIDER', [
-	z.object({
-		DATA_DIR: z.string().min(1),
-		PROVIDER: z.literal('local'),
-	}),
-	z.object({
+const mediaOriginSchema = z.preprocess(
+	(val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+	z
+		.string()
+		.url()
+		.transform((url) => url.replace(/\/+$/, ''))
+		.optional()
+)
+
+const tigrisStorageSchema = z
+	.object({
 		AWS_ACCESS_KEY_ID: z.string().min(1),
 		AWS_ENDPOINT_URL_S3: z.string().min(1),
 		AWS_SECRET_ACCESS_KEY: z.string().min(1),
 		BUCKET_NAME: z.string().min(1),
 		PROVIDER: z.literal('tigris'),
+		MEDIA_ORIGIN: mediaOriginSchema,
+	})
+	.transform(({ MEDIA_ORIGIN, ...rest }) => ({
+		...rest,
+		mediaOrigin:
+			MEDIA_ORIGIN ?? `https://${rest.BUCKET_NAME}.fly.storage.tigris.dev`,
+	}))
+
+const storageSchema = z.discriminatedUnion('PROVIDER', [
+	z.object({
+		DATA_DIR: z.string().min(1),
+		PROVIDER: z.literal('local'),
 	}),
+	tigrisStorageSchema,
 ])
 
 /** Restructures flat env vars into namespaced sub-objects before schema validation. */
@@ -37,6 +55,7 @@ function preprocessEnv(raw: unknown): unknown {
 		EMAIL_PROVIDER = 'console',
 		RESEND_API_KEY,
 		STORAGE_PROVIDER = 'local',
+		MEDIA_ORIGIN,
 		...rest
 	} = env
 	return {
@@ -49,6 +68,7 @@ function preprocessEnv(raw: unknown): unknown {
 			AWS_ENDPOINT_URL_S3,
 			BUCKET_NAME,
 			DATA_DIR,
+			MEDIA_ORIGIN,
 		},
 	}
 }
@@ -101,12 +121,14 @@ if (!result.success) {
 	)
 }
 
+const parsedEnv = result.data
+
 /**
  * Validated server-side environment variables.
  *
  * Properties use their canonical SCREAMING_SNAKE_CASE names so they match
  * what operators set in .env files, Docker, and Fly secrets.
- * Compare with clientEnv, which strips the VITE_ prefix into camelCase
- * since that prefix is a build-tool detail.
+ * When `storage.PROVIDER` is `tigris`, `storage.mediaOrigin` is the public photo
+ * origin (`MEDIA_ORIGIN` or the default bucket CDN host).
  */
-export const serverEnv = result.data
+export const serverEnv = parsedEnv

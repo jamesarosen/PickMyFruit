@@ -1,6 +1,7 @@
 # Fly.io configuration for PR preview apps.
 # App name is set dynamically via --app when deploying.
-# See .github/workflows/preview.yml.
+# See .github/workflows/deploy.yml (preview job). This file replaces fly.toml
+# for those deploys — copy runtime vars from fly.toml [env] when needed.
 
 primary_region = 'sjc'
 
@@ -47,6 +48,7 @@ primary_region = 'sjc'
   MIGRATE_ON_REQUEST = 'true'
   NODE_ENV = 'development'
   STORAGE_PROVIDER = 'local'
+  MEDIA_ORIGIN = 'https://media.pickmyfruit.com'
 
 [[vm]]
   size = 'shared-cpu-1x'

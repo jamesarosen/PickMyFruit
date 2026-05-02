@@ -172,18 +172,64 @@ describe(LocalStorageAdapter, () => {
 })
 
 describe(TigrisStorageAdapter, () => {
+	const defaultMediaOrigin = 'https://test-bucket.fly.storage.tigris.dev'
 	const adapter = new TigrisStorageAdapter({
 		bucketName: 'test-bucket',
 		accessKeyId: 'fake',
 		secretAccessKey: 'fake',
 		endpointUrl: 'https://fly.storage.tigris.dev',
+		mediaOrigin: defaultMediaOrigin,
 	})
 
 	describe('publicUrl', () => {
-		it('returns the CDN URL for a pub/ path', () => {
+		it('returns mediaOrigin/pub/ URL for a pub/ path', () => {
 			expect(adapter.publicUrl('listings/1/uuid.jpg')).toBe(
 				'https://test-bucket.fly.storage.tigris.dev/pub/listings/1/uuid.jpg'
 			)
+		})
+
+		it('returns a custom mediaOrigin/pub/ URL when configured', () => {
+			const withMedia = new TigrisStorageAdapter({
+				bucketName: 'test-bucket',
+				accessKeyId: 'fake',
+				secretAccessKey: 'fake',
+				endpointUrl: 'https://fly.storage.tigris.dev',
+				mediaOrigin: 'https://media.example.com',
+			})
+			expect(withMedia.publicUrl('listings/1/uuid.jpg')).toBe(
+				'https://media.example.com/pub/listings/1/uuid.jpg'
+			)
+		})
+
+		it('normalizes a trailing slash on mediaOrigin', () => {
+			const withMedia = new TigrisStorageAdapter({
+				bucketName: 'test-bucket',
+				accessKeyId: 'fake',
+				secretAccessKey: 'fake',
+				endpointUrl: 'https://fly.storage.tigris.dev',
+				mediaOrigin: 'https://media.example.com/',
+			})
+			expect(withMedia.publicUrl('x.jpg')).toBe(
+				'https://media.example.com/pub/x.jpg'
+			)
+		})
+
+		it('percent-encodes each path segment', () => {
+			expect(adapter.publicUrl('listing_photos/a b.jpg')).toBe(
+				'https://test-bucket.fly.storage.tigris.dev/pub/listing_photos/a%20b.jpg'
+			)
+		})
+
+		it('throws when mediaOrigin is not a valid URL', () => {
+			expect(() =>
+				new TigrisStorageAdapter({
+					bucketName: 'test-bucket',
+					accessKeyId: 'fake',
+					secretAccessKey: 'fake',
+					endpointUrl: 'https://fly.storage.tigris.dev',
+					mediaOrigin: 'not-a-url',
+				}).publicUrl('x.jpg')
+			).toThrow()
 		})
 	})
 
@@ -207,6 +253,7 @@ describe(TigrisStorageAdapter, () => {
 				accessKeyId: 'fake',
 				secretAccessKey: 'fake',
 				endpointUrl: `http://127.0.0.1:${port}`,
+				mediaOrigin: defaultMediaOrigin,
 			})
 
 			try {
