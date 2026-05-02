@@ -169,11 +169,32 @@ else) is essentially Proposal B with a polite name.
 
 ## Decision
 
-**Proposal B is accepted.** The durable-volume option goes away. All app
-blobs live in Tigris (different buckets/prefixes per environment, an
-in-memory adapter for tests). The photo service is a separate Fly app that
-scales to zero. S3 is the source of truth; web holds `pending` rows and
-reconciles on boot.
+**Proposal B is accepted, deployed as a single Fly app with two process
+groups behind Flycast.** The durable-volume option goes away. All app
+blobs live in Tigris (different buckets per environment, an in-memory
+adapter for tests). One `pickmyfruit` Fly app builds one Docker image and
+runs it under two entrypoints (`web` and `photos`) as separate process
+groups. Public traffic reaches `web` only; `web` reaches `photos` over
+**Flycast** so Fly Proxy can auto-start the photos machine on demand.
+S3 is the source of truth; web holds `pending` rows and reconciles on
+boot.
+
+### Why one app, not two
+
+A single app keeps one Docker image, one CI pipeline, one Node version,
+one set of secrets, and one `fly deploy`. The reason this isn't free is
+that Fly's `auto_stop_machines` / `auto_start_machines` lives in **Fly
+Proxy**, and 6PN private DNS (`<process>.process.<app>.internal`) bypasses
+the proxy via WireGuard. A 6PN request to a stopped Machine simply fails;
+nothing wakes it.
+
+**Flycast** puts Fly Proxy in front of a private service on the same app,
+so internal callers get auto-start without exposing the service publicly.
+The cost is one Fly concept to learn and one extra hostname
+(`<app>.flycast`) instead of `<process>.process.<app>.internal`.
+
+See [Private applications and Flycast](https://fly.io/docs/blueprints/private-applications-flycast/)
+and [Autostart/autostop private apps](https://fly.io/docs/blueprints/autostart-internal-apps/).
 
 The rest of this document is the implementation plan.
 
@@ -219,39 +240,50 @@ re-shaped into TOML once the surface stabilises.
 
 ## Goals
 
-- Photo service is a separate Fly app, idle RSS = 0.
+- Photos process group scales to zero; web's idle RSS carries no Sharp.
 - Web never imports Sharp.
 - One transform endpoint, synchronous, idempotent on `photoID`.
 - Tigris is the only storage; an in-memory adapter exists for Vitest.
 - Tests bind to the **HTTP contract**, not the implementation language.
 - Distributed traces span web → photos; cold-start is observable.
+- One Docker image, one `fly deploy`, two entrypoints.
 
 ## Box architecture
 
 ```mermaid
 flowchart LR
   Browser[Browser]
-  subgraph WebApp[Fly app: pickmyfruit-web]
-    Web[Tan Stack Start server]
-    WebDB[(SQLite: app)]
+  subgraph FlyApp[Fly app: pickmyfruit · one Docker image]
+    subgraph WebGroup[process group: web]
+      Web[Tan Stack Start server]
+      WebDB[(SQLite: app)]
+    end
+    subgraph PhotosGroup[process group: photos<br/>min_machines = 0, auto_stop]
+      Photos[Node + Hono + Sharp]
+    end
   end
-  subgraph PhotoApp[Fly app: pickmyfruit-photos<br/>min_machines = 0]
-    Photos[Node + Hono + Sharp]
-  end
+  FlyProxy{{Fly Proxy / Flycast}}
   Tigris[(Tigris<br/>buckets per env)]
 
-  Browser -- "upload (multipart)" --> Web
-  Web -- "POST /transform/:photoID<br/>(stream)" --> Photos
+  Browser -- "TLS · upload (multipart)" --> Web
+  Web -- "pickmyfruit.flycast:8080<br/>POST /transform/:photoID" --> FlyProxy
+  FlyProxy -- "wakes if stopped, then routes" --> Photos
   Photos -- "PUT pub/:photoID.jpg" --> Tigris
   Photos -- "200 + metadata" --> Web
   Web --> WebDB
   Browser -- "GET image bytes" --> Tigris
-  Web -. "warm-on-edit GET /health" .-> Photos
-  Web -. "boot reconcile: HEAD /photos/:id" .-> Photos
+  Web -. "warm-on-edit GET /health" .-> FlyProxy
+  Web -. "boot reconcile: HEAD /photos/:id" .-> FlyProxy
 ```
 
 Notes:
-- Web↔Photos uses Fly private 6PN (`pickmyfruit-photos.internal:8080`).
+- Web → Photos goes through **Flycast** (`pickmyfruit.flycast:8080`), not
+  raw 6PN, so Fly Proxy can auto-start a stopped photos machine. The
+  `.flycast` hostname is reachable only from inside the org's private
+  network; it is not publicly routable.
+- Public ingress is bound to the `web` process group via `processes =
+  ["web"]` on the public `[http_service]`. The photos process group has a
+  separate `[[services]]` block scoped to Flycast.
 - Browser reads images **directly from Tigris**, never through photos. The
   photo service is on the upload/reconcile path only.
 
@@ -302,6 +334,25 @@ sequenceDiagram
 
 ## Components
 
+### Repository layout
+
+One Fly app, one Docker image, two entrypoints:
+
+```
+apps/
+  www/                  # existing Tan Stack Start app — entrypoint for `web`
+  photos/               # new Hono service — entrypoint for `photos`
+Dockerfile              # one image, builds both, sized for libvips
+fly.toml                # one app, two process groups, two services
+```
+
+The Dockerfile installs deps for both apps in one stage (so `sharp` and
+`libvips` ship in the image once). The two process groups select their
+entrypoints via the `[processes]` table — e.g.
+`web = "node apps/www/.output/server/index.mjs"` and
+`photos = "node apps/photos/dist/index.mjs"`. Web's entrypoint never
+imports `sharp`, so libvips stays on disk but out of web's RSS.
+
 ### Photo service (`apps/photos`)
 
 - **Runtime:** Node 24, Hono on top of bare Node `http` (Hono buys us
@@ -316,16 +367,68 @@ sequenceDiagram
 - **Sharp config:** `sharp.concurrency(1)`, `sharp.cache(false)`,
   `sequentialRead: true`, fully streamed.
 - **Auth:** static shared secret in a header (`x-internal-token`) sourced
-  from Fly secrets. 6PN is private but defence-in-depth is cheap.
+  from Fly secrets. Flycast is private to the org, but defence-in-depth
+  against a future misconfig is cheap.
 - **Cold-start signal:** the process records `process_started_at` at boot
   and sets `firstRequest = true` until the first request finishes; the
   response includes `coldStart: boolean` and `bootMs: number` for that
   first request. Subsequent requests get `coldStart: false`.
 
+### `fly.toml` shape (illustrative)
+
+```toml
+app = "pickmyfruit"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[processes]
+  web    = "node apps/www/.output/server/index.mjs"
+  photos = "node apps/photos/dist/index.mjs"
+
+# Public ingress — web only.
+[http_service]
+  internal_port      = 3000
+  force_https        = true
+  auto_stop_machines = false
+  min_machines_running = 1
+  processes          = ["web"]
+
+# Flycast — photos only, private to the org, auto-start on demand.
+[[services]]
+  internal_port        = 8080
+  protocol             = "tcp"
+  processes            = ["photos"]
+  auto_stop_machines   = "stop"
+  auto_start_machines  = true
+  min_machines_running = 0
+
+  [[services.ports]]
+    port     = 8080
+    handlers = ["http"]
+
+[[vm]]
+  processes = ["web"]
+  size      = "shared-cpu-1x"
+  memory    = "512mb"
+
+[[vm]]
+  processes = ["photos"]
+  size      = "shared-cpu-1x"
+  memory    = "256mb"
+```
+
+The Flycast hostname is `pickmyfruit.flycast` (org-private; not publicly
+routable). Web reaches photos at `http://pickmyfruit.flycast:8080`.
+Confirm the exact `[[services]]` shape against the [Flycast blueprint](https://fly.io/docs/blueprints/private-applications-flycast/)
+before merging — Fly's config surface drifts faster than ADRs do.
+
 ### Web changes (`apps/www`)
 
-- New `photoServiceClient.server.ts`: thin `fetch` wrapper around the
-  photos URL, with auth header, trace propagation, and timeouts.
+- New `photoServiceClient.server.ts`: thin `fetch` wrapper around
+  `PHOTOS_BASE_URL` (defaults to `http://pickmyfruit.flycast:8080` in
+  prod), with auth header, trace propagation, and timeouts.
 - `LocalStorageAdapter` is removed. A new `MemoryStorageAdapter`
   implements the same `StorageAdapter` interface for Vitest. The
   `STORAGE_PROVIDER` enum becomes `tigris | memory` (memory is
@@ -504,12 +607,17 @@ in isolation before web is wired to it.
       drops in a manual `fly deploy --build-only` measurement noted in
       the commit message.
 
-12. **feat(infra): pickmyfruit-photos Fly app config**
-    - `apps/photos/fly.toml` with `min_machines_running = 0`,
-      `auto_stop_machines = "stop"`, `auto_start_machines = true`,
-      256 MB shared-cpu-1x. Buckets/secrets configured via
-      `fly secrets set`.
-    - Tests: deploy to staging, run the Tier 4 smoke Hurl file.
+12. **feat(infra): photos process group + Flycast service**
+    - Update root `fly.toml` to add the `photos` process under
+      `[processes]`, a Flycast `[[services]]` block scoped to it
+      (`auto_stop_machines = "stop"`, `auto_start_machines = true`,
+      `min_machines_running = 0`), and a per-process `[[vm]]` sized at
+      256 MB. Update Dockerfile so both apps build into the one image.
+      Add Tigris bucket + `INTERNAL_TOKEN` to Fly secrets. Web's
+      `PHOTOS_BASE_URL` defaults to `http://pickmyfruit.flycast:8080`.
+    - Tests: deploy to staging, scale `photos=1` once to verify boot,
+      scale `photos=0` and confirm Fly Proxy auto-starts on the first
+      web → photos request, then run the Tier 4 smoke Hurl file.
 
 13. **feat(www): warm-on-edit ping in listing edit loader**
     - Best-effort `GET /health` with 500 ms timeout when an editable
@@ -527,9 +635,19 @@ in isolation before web is wired to it.
 
 - **Cold-start UX during upload.** Mitigated by the warm-on-edit ping;
   measured via the `coldStart` flag.
-- **6PN connectivity.** A single misconfigured Fly secret breaks every
-  upload. Health endpoint + a startup-time connectivity check on web
-  log a clear error if the photo service isn't reachable.
+- **Flycast misconfig.** If the `[[services]]` block isn't scoped to
+  `processes = ["photos"]`, Fly may try to route public traffic to
+  photos, or photos may not be reachable on Flycast at all. Verify with
+  `fly proxy 8080 -a pickmyfruit` from a dev machine after deploy and
+  hit `/health` over Flycast in the staging smoke test.
+- **Auto-start latency budget.** Flycast wake is ~1–2 s, same ballpark
+  as a separate-app cold start. The warm-on-edit ping mitigates user-
+  facing latency. If wake times grow unexpectedly (image size, region),
+  switch `auto_stop_machines` from `"stop"` to `"suspend"`.
+- **Process-group VM sizing drift.** `[[vm]]` blocks scoped to
+  `processes` must be kept in sync as both groups evolve; an unscoped
+  `[[vm]]` would apply to both. Lint check or comment guard in
+  `fly.toml`.
 - **Reconciliation correctness.** The 30 s "stuck pending" threshold
   must exceed P99 transform wall time. Start at 60 s and tune from
   observed data.
