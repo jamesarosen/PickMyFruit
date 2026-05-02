@@ -53,10 +53,12 @@ app.get("/health", (c) => {
 });
 
 // All routes except /health require the x-internal-token header.
-// Hono processes middleware in registration order; by mounting authMiddleware
-// on specific path patterns we avoid covering /health.
-app.use("/transform/*", authMiddleware);
-app.use("/photos/*", authMiddleware);
+// Registering globally and carving out /health explicitly ensures any future
+// route is protected by default rather than requiring a new use() call.
+app.use("*", async (c, next) => {
+	if (c.req.path === "/health") return next();
+	return authMiddleware(c, next);
+});
 
 app.route("/", buildTransformRouter(storage));
 app.route("/", buildHeadPhotoRouter(storage));

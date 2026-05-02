@@ -12,10 +12,11 @@ function makeApp(): { app: Hono; storage: MemoryStorageAdapter } {
 	const storage = new MemoryStorageAdapter();
 	const app = new Hono();
 
-	app.use("/transform/*", authMiddleware);
-	app.use("/photos/*", authMiddleware);
-
 	app.get("/health", (c) => c.json({ ok: true }));
+	app.use("*", async (c, next) => {
+		if (c.req.path === "/health") return next();
+		return authMiddleware(c, next);
+	});
 	app.route("/", buildTransformRouter(storage));
 	app.route("/", buildHeadPhotoRouter(storage));
 

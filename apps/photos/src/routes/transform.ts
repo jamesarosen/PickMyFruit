@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import sharp from "sharp";
 import { fileTypeFromBuffer } from "file-type";
 import type { StorageAdapter } from "../storage/StorageAdapter.js";
-import { isValidPhotoId } from "../lib/validatePhotoId.js";
+import { isValidPhotoId, normalizePhotoId } from "../lib/validatePhotoId.js";
 
 // Apply Sharp global settings once at module load, not per-request.
 sharp.concurrency(1);
@@ -34,13 +34,16 @@ export function buildTransformRouter(storage: StorageAdapter): Hono {
 	const router = new Hono();
 
 	router.post("/transform/:photoID", async (c) => {
-		const { photoID } = c.req.param();
+		const rawId = c.req.param("photoID");
 
 		// Validate that photoID is a valid UUIDv7.
-		if (!isValidPhotoId(photoID)) {
+		if (!isValidPhotoId(rawId)) {
 			return c.json({ error: "invalid_photo_id" }, 400);
 		}
 
+		// Normalize to lowercase so the storage key is always canonical,
+		// regardless of whether the caller supplied an uppercase UUID.
+		const photoID = normalizePhotoId(rawId);
 		const key = `pub/${photoID}.jpg`;
 
 		// HEAD before transform: idempotency check. Not atomic — two concurrent

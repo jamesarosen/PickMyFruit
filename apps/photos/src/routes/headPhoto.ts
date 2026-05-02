@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { StorageAdapter } from "../storage/StorageAdapter.js";
-import { isValidPhotoId } from "../lib/validatePhotoId.js";
+import { isValidPhotoId, normalizePhotoId } from "../lib/validatePhotoId.js";
 
 /**
  * Build the Hono sub-app for `HEAD /photos/:photoID`.
@@ -12,16 +12,22 @@ import { isValidPhotoId } from "../lib/validatePhotoId.js";
 export function buildHeadPhotoRouter(storage: StorageAdapter): Hono {
 	const router = new Hono();
 
-	// Hono routes GET also match HEAD requests automatically. Registering this
-	// as GET means both `GET /photos/:photoID` and `HEAD /photos/:photoID`
-	// resolve to this handler, which always returns a bodyless response.
-	router.get("/photos/:photoID", async (c) => {
-		const { photoID } = c.req.param();
+	// Use router.all() with an explicit method guard so only HEAD is accepted.
+	// router.on("HEAD", ...) doesn't propagate through app.route() in Hono 4.x,
+	// and router.get() would also match GET — returning 200 with no body, which
+	// is semantically wrong for a GET request.
+	router.all("/photos/:photoID", async (c) => {
+		if (c.req.method !== "HEAD") return c.body(null, 405);
 
-		if (!isValidPhotoId(photoID)) {
+		const rawId = c.req.param("photoID");
+
+		if (!isValidPhotoId(rawId)) {
 			return c.body(null, 400);
 		}
 
+		// Normalize to lowercase so the storage key is always canonical,
+		// regardless of whether the caller supplied an uppercase UUID.
+		const photoID = normalizePhotoId(rawId);
 		const key = `pub/${photoID}.jpg`;
 
 		let result: { exists: boolean };

@@ -9,3 +9,8 @@ const UUIDV7_RE =
 export function isValidPhotoId(id: string): boolean {
 	return UUIDV7_RE.test(id);
 }
+
+/** Returns the canonical lowercase form of a photoID. */
+export function normalizePhotoId(id: string): string {
+	return id.toLowerCase();
+}

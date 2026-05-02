@@ -23,7 +23,7 @@ async function makeJpeg(
 function makeApp(): { app: Hono; storage: MemoryStorageAdapter } {
 	const storage = new MemoryStorageAdapter();
 	const app = new Hono();
-	app.use("/transform/*", authMiddleware);
+	app.use("*", async (c, next) => authMiddleware(c, next));
 	app.route("/", buildTransformRouter(storage));
 	return { app, storage };
 }
