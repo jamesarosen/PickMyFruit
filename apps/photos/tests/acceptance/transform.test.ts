@@ -142,16 +142,15 @@ describe("POST /transform/:photoID", () => {
 			expect(res.status).toBe(400);
 		});
 
-		it("returns 413 for a payload exceeding 30 MB (via content-length)", async () => {
+		it("returns 413 for a payload exceeding 30 MB (streaming body check)", async () => {
 			const photoID = uuidv7();
+			// Build a body that actually exceeds 30 MB so the streaming limiter fires.
+			const oversizedBody = new Uint8Array(31 * 1024 * 1024);
 			const res = await app.fetch(
 				new Request(`http://localhost/transform/${photoID}`, {
 					method: "POST",
-					body: new Uint8Array(1),
-					headers: {
-						"content-type": "image/jpeg",
-						"content-length": String(31 * 1024 * 1024),
-					},
+					body: oversizedBody,
+					headers: { "content-type": "image/jpeg" },
 				}),
 			);
 			expect(res.status).toBe(413);

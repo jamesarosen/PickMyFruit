@@ -26,10 +26,10 @@ const MAX_BYTES = 30 * 1024 * 1024;
 /** Response shape for a successful transform (or cache hit). */
 interface TransformResponse {
 	key: string;
-	width: number;
-	height: number;
-	bytes: number;
-	etag: string;
+	width: number | null;
+	height: number | null;
+	bytes: number | null;
+	etag: string | null;
 	cached: boolean;
 }
 
@@ -54,48 +54,44 @@ export function buildTransformRouter(storage: StorageAdapter): Hono {
 
 		const key = `pub/${photoID}.jpg`;
 
-		// Idempotency check: return cached result if the object already exists.
+		// HEAD before transform: idempotency check. Not atomic — two concurrent
+		// requests for the same photoID could both transform and PUT. In practice
+		// the web caller assigns UUIDs and pending rows atomically, making this
+		// unlikely. The second PUT overwrites with identical content.
 		const headResult = await storage.head(key);
 		if (headResult.exists && headResult.etag && headResult.size !== undefined) {
-			// We don't store dimensions in the object store, so we must re-parse
-			// the metadata. For the cached path we skip re-transforming but still
-			// need width/height — HEAD returns size, not dimensions.
-			// Strategy: return a stub with size=headResult.size. The plan says
-			// width/height come from the transform; for a cache hit we return the
-			// stored size but cannot recover dimensions without a GET + metadata
-			// parse. Per the spec "cached: true" response still needs w/h.
-			// We store dimensions in the ETag comment isn't feasible.
-			// Pragmatic solution: do a lightweight Sharp metadata-only pass on the
-			// stored object is not possible without reading it (no GET). The plan
-			// does not require dimensions on cache hits to be pixel-perfect — but
-			// it does list them in the shape. We'll do a HEAD-only fast path but
-			// note this limitation with a TODO for commit 5 (cold-start fields).
-			// For now: return 0,0 for cached dimensions — the web app uses the
-			// stored image directly from Tigris, not these fields for rendering.
-			// TODO(commit-5): store width/height in object metadata on PUT so
-			// the cached path can return real values.
+			// We don't store dimensions in the object store, so width/height cannot
+			// be recovered from a HEAD-only response without fetching the full image.
+			// TODO(commit-5): store width/height in object metadata on PUT so the
+			// cached path can return real values.
 			return c.json<TransformResponse>({
 				key,
-				width: 0,
-				height: 0,
-				bytes: headResult.size,
-				etag: headResult.etag,
+				width: null,
+				height: null,
+				bytes: headResult.size ?? null,
+				etag: headResult.etag ?? null,
 				cached: true,
 			});
 		}
 
-		// Read the raw request body into a Buffer (with size guard).
-		const contentLength = Number(c.req.header("content-length") ?? "0");
-		if (contentLength > MAX_BYTES) {
-			return c.json({ error: "payload_too_large" }, 413);
+		// Read body in chunks, reject as soon as limit crossed.
+		const reader = c.req.raw.body?.getReader();
+		if (!reader) {
+			return c.json({ error: "no_body" }, 400);
 		}
-
-		const rawBody = await c.req.arrayBuffer();
-		const inputBuffer = Buffer.from(rawBody);
-
-		if (inputBuffer.length > MAX_BYTES) {
-			return c.json({ error: "payload_too_large" }, 413);
+		const chunks: Uint8Array[] = [];
+		let totalBytes = 0;
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			totalBytes += value.length;
+			if (totalBytes > MAX_BYTES) {
+				await reader.cancel();
+				return c.json({ error: "payload_too_large" }, 413);
+			}
+			chunks.push(value);
 		}
+		const inputBuffer = Buffer.concat(chunks);
 
 		if (inputBuffer.length === 0) {
 			return c.json({ error: "unsupported_media_type", mime: "" }, 415);
@@ -110,25 +106,43 @@ export function buildTransformRouter(storage: StorageAdapter): Hono {
 			);
 		}
 
-		// Transform: resize to max 1600 px wide, auto-orient (strips EXIF), encode JPEG.
+		// Transform: auto-orient (strips EXIF) first so resize operates on the
+		// correct logical dimensions, then resize to max 1600 px wide, encode JPEG.
+		// .rotate() must precede .resize(): a portrait shot stored as 3024×4032
+		// with EXIF rotation 90° would otherwise be resized to 1600×2144 (wrong
+		// axis) before rotation flips it to 2144×1600 — exceeding the 1600 px cap.
 		const sharpPipeline = sharp(inputBuffer, { sequentialRead: true })
-			.resize({ width: 1600, withoutEnlargement: true })
 			.rotate() // applies EXIF orientation then strips EXIF
+			.resize({ width: 1600, withoutEnlargement: true })
 			.jpeg({ quality: 85 });
 
-		const outputBuffer = await sharpPipeline.toBuffer();
-		const metadata = await sharp(outputBuffer).metadata();
-		const width = metadata.width ?? 0;
-		const height = metadata.height ?? 0;
+		let outputBuffer: Buffer;
+		let info: sharp.OutputInfo;
+		try {
+			const result = await sharpPipeline.toBuffer({ resolveWithObject: true });
+			outputBuffer = result.data;
+			info = result.info;
+		} catch (err) {
+			// TODO (commit 6): Sentry.captureException(err)
+			return c.json({ error: "transform_failed" }, 422);
+		}
+
+		const width = info.width;
+		const height = info.height;
 
 		// Store the result.
-		const readable = Readable.from(outputBuffer);
-		const putResult = await storage.put(
-			key,
-			readable,
-			"image/jpeg",
-			outputBuffer.length,
-		);
+		let putResult: { etag: string };
+		try {
+			putResult = await storage.put(
+				key,
+				Readable.from(outputBuffer),
+				"image/jpeg",
+				outputBuffer.length,
+			);
+		} catch (err) {
+			// TODO (commit 6): Sentry.captureException(err)
+			return c.json({ error: "storage_failed" }, 502);
+		}
 
 		return c.json<TransformResponse>({
 			key,
