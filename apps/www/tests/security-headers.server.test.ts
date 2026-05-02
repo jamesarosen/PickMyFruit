@@ -58,7 +58,7 @@ describe('applySecurityHeaders', () => {
 		vi.resetModules()
 	})
 
-	it('includes custom mediaOrigin in img-src when it differs from the bucket host', async () => {
+	it('uses only mediaOrigin in img-src, not the default bucket host', async () => {
 		vi.resetModules()
 		vi.doMock('../src/lib/env.server', () => ({
 			serverEnv: {
@@ -77,7 +77,7 @@ describe('applySecurityHeaders', () => {
 		const csp = headers.get('Content-Security-Policy')!
 
 		expect(csp).toContain('https://media.pickmyfruit.com')
-		expect(csp).toContain('https://test-bucket.fly.storage.tigris.dev')
+		expect(csp).not.toContain('https://test-bucket.fly.storage.tigris.dev')
 
 		vi.doUnmock('../src/lib/env.server')
 		vi.resetModules()

@@ -42,12 +42,7 @@ async function resolveListingImageOriginsForCsp(): Promise<string[]> {
 		const { serverEnv } = await import('@/lib/env.server')
 		const hosts: string[] = []
 		if (serverEnv.storage.PROVIDER === 'tigris') {
-			const defaultHost = `https://${serverEnv.storage.BUCKET_NAME}.fly.storage.tigris.dev`
-			hosts.push(defaultHost)
-			const { mediaOrigin } = serverEnv.storage
-			if (mediaOrigin !== defaultHost) {
-				hosts.push(mediaOrigin)
-			}
+			hosts.push(serverEnv.storage.mediaOrigin)
 		}
 		_cspImgSrcHosts = hosts
 	}
