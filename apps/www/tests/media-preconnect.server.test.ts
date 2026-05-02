@@ -19,9 +19,9 @@ describe('responseLooksLikeHtmlDocument', () => {
 		expect(responseLooksLikeHtmlDocument(r)).toBe(false)
 	})
 
-	it('returns false for text/html+xml', () => {
+	it('returns false for application/xhtml+xml', () => {
 		const r = new Response('', {
-			headers: { 'content-type': 'text/html+xml' },
+			headers: { 'content-type': 'application/xhtml+xml' },
 		})
 		expect(responseLooksLikeHtmlDocument(r)).toBe(false)
 	})

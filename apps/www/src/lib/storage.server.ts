@@ -168,7 +168,7 @@ export class TigrisStorageAdapter implements StorageAdapter {
 		mediaOrigin: string
 	}) {
 		this.bucket = opts.bucketName
-		this.mediaOrigin = opts.mediaOrigin.replace(/\/+$/, '')
+		this.mediaOrigin = opts.mediaOrigin
 		this.client = new S3Client({
 			region: 'auto',
 			endpoint: opts.endpointUrl,

@@ -1,11 +1,9 @@
 import { createMiddleware } from '@tanstack/solid-start'
 
-/** True when the response is likely a full HTML document (not XHTML, not fragments). */
+/** True when the response is likely a full HTML document (not JSON, not XHTML). */
 export function responseLooksLikeHtmlDocument(response: Response): boolean {
 	const type = response.headers.get('content-type') ?? ''
-	if (!type.includes('text/html')) return false
-	if (type.includes('text/html+xml')) return false
-	return true
+	return type.includes('text/html')
 }
 
 /**
