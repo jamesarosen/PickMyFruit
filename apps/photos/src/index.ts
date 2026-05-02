@@ -1,10 +1,43 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { z } from "zod";
 import sharp from "sharp";
+import { MemoryStorageAdapter } from "./storage/MemoryStorageAdapter.js";
+import { TigrisStorageAdapter } from "./storage/TigrisStorageAdapter.js";
+import type { StorageAdapter } from "./storage/StorageAdapter.js";
+import { buildTransformRouter } from "./routes/transform.js";
 
 // TODO (commit 6): wire in Sentry for exception capture
 
 const startedAt = Date.now();
+
+/** Resolve and validate the storage adapter from environment variables. */
+function createStorageAdapter(): StorageAdapter {
+	const provider = process.env["STORAGE_PROVIDER"] ?? "memory";
+
+	if (provider === "tigris") {
+		const tigrisEnv = z
+			.object({
+				AWS_ACCESS_KEY_ID: z.string().min(1),
+				AWS_SECRET_ACCESS_KEY: z.string().min(1),
+				AWS_ENDPOINT_URL_S3: z.string().url(),
+				BUCKET_NAME: z.string().min(1),
+			})
+			.parse(process.env);
+
+		return new TigrisStorageAdapter({
+			bucketName: tigrisEnv.BUCKET_NAME,
+			accessKeyId: tigrisEnv.AWS_ACCESS_KEY_ID,
+			secretAccessKey: tigrisEnv.AWS_SECRET_ACCESS_KEY,
+			endpointUrl: tigrisEnv.AWS_ENDPOINT_URL_S3,
+		});
+	}
+
+	// Default: memory adapter (used in tests and local dev without env config).
+	return new MemoryStorageAdapter();
+}
+
+const storage = createStorageAdapter();
 
 const app = new Hono();
 
@@ -16,6 +49,8 @@ app.get("/health", (c) => {
 		sharpVersion: sharp.versions.sharp,
 	});
 });
+
+app.route("/", buildTransformRouter(storage));
 
 // Only start the HTTP server when this module is run directly, not when
 // imported by tests, so tests can call app.request() without binding a port.
