@@ -33,14 +33,22 @@ export class MemoryStorageAdapter implements StorageAdapter {
 		key: string,
 		body: Readable,
 		contentType: string,
+		contentLength: number,
 	): Promise<PutResult> {
 		const chunks: Buffer[] = [];
 		for await (const chunk of body) {
-			chunks.push(
-				Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string),
-			);
+			// Buffer.from handles Buffer, Uint8Array, and string correctly without
+			// a type guard. The old `Buffer.isBuffer` guard caused Uint8Array chunks
+			// to fall through to `Buffer.from(chunk as string)`, which stringifies
+			// the array as "16,32,0,…" — corrupting the stored bytes.
+			chunks.push(Buffer.from(chunk as Uint8Array | string));
 		}
 		const data = Buffer.concat(chunks);
+		if (data.length !== contentLength) {
+			throw new Error(
+				`MemoryStorageAdapter: collected ${data.length} bytes but contentLength is ${contentLength}`,
+			);
+		}
 		// Use an MD5 hash as a deterministic ETag, matching S3's convention for
 		// non-multipart uploads. This makes the Memory adapter behave consistently
 		// with what Tigris returns, so callers can compare ETags across adapters.

@@ -19,7 +19,7 @@ describe("MemoryStorageAdapter", () => {
 
 		it("returns exists=true with etag and size after a put", async () => {
 			const body = Readable.from(Buffer.from("hello world"));
-			await adapter.put("pub/hello.jpg", body, "image/jpeg");
+			await adapter.put("pub/hello.jpg", body, "image/jpeg", 11);
 
 			const result = await adapter.head("pub/hello.jpg");
 			expect(result.exists).toBe(true);
@@ -32,35 +32,70 @@ describe("MemoryStorageAdapter", () => {
 	describe("put", () => {
 		it("stores the body and returns an etag", async () => {
 			const content = "image bytes here";
-			const body = Readable.from(Buffer.from(content));
+			const buf = Buffer.from(content);
+			const body = Readable.from(buf);
 
-			const result = await adapter.put("pub/photo.jpg", body, "image/jpeg");
+			const result = await adapter.put(
+				"pub/photo.jpg",
+				body,
+				"image/jpeg",
+				buf.length,
+			);
 
 			expect(typeof result.etag).toBe("string");
 			expect(result.etag).toBeTruthy();
 		});
 
-		it("overwrites an existing key with new content", async () => {
-			const first = Readable.from(Buffer.from("first"));
-			await adapter.put("pub/photo.jpg", first, "image/jpeg");
+		it("stores Uint8Array chunks byte-for-byte without corruption", async () => {
+			// Uint8Array is not a Buffer, so the old `Buffer.isBuffer` guard would
+			// fall through to Buffer.from(chunk as string), stringifying the array
+			// as "16,32,0,…" and corrupting the stored bytes. Wrap in an array so
+			// Readable.from emits the Uint8Array as a single chunk (matching how
+			// sharp and other image pipelines deliver typed-array chunks).
+			const input = new Uint8Array([0x10, 0x20, 0x00, 0xff, 0x80]);
+			const body = Readable.from([input]);
 
-			const second = Readable.from(Buffer.from("second content"));
-			await adapter.put("pub/photo.jpg", second, "image/jpeg");
+			await adapter.put("pub/uint8.bin", body, "application/octet-stream", 5);
+
+			const result = await adapter.head("pub/uint8.bin");
+			expect(result.size).toBe(5);
+		});
+
+		it("overwrites an existing key with new content", async () => {
+			const first = Buffer.from("first");
+			await adapter.put(
+				"pub/photo.jpg",
+				Readable.from(first),
+				"image/jpeg",
+				first.length,
+			);
+
+			const second = Buffer.from("second content");
+			await adapter.put(
+				"pub/photo.jpg",
+				Readable.from(second),
+				"image/jpeg",
+				second.length,
+			);
 
 			const result = await adapter.head("pub/photo.jpg");
 			expect(result.size).toBe(14); // "second content" is 14 bytes
 		});
 
 		it("stores distinct content for distinct keys", async () => {
+			const bufA = Buffer.from("aaa");
+			const bufB = Buffer.from("bbbbb");
 			await adapter.put(
 				"pub/a.jpg",
-				Readable.from(Buffer.from("aaa")),
+				Readable.from(bufA),
 				"image/jpeg",
+				bufA.length,
 			);
 			await adapter.put(
 				"pub/b.jpg",
-				Readable.from(Buffer.from("bbbbb")),
+				Readable.from(bufB),
 				"image/jpeg",
+				bufB.length,
 			);
 
 			const a = await adapter.head("pub/a.jpg");
@@ -72,10 +107,12 @@ describe("MemoryStorageAdapter", () => {
 
 	describe("delete", () => {
 		it("removes a stored key so head returns exists=false", async () => {
+			const data = Buffer.from("data");
 			await adapter.put(
 				"pub/photo.jpg",
-				Readable.from(Buffer.from("data")),
+				Readable.from(data),
 				"image/jpeg",
+				data.length,
 			);
 			await adapter.delete("pub/photo.jpg");
 

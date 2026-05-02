@@ -82,6 +82,7 @@ export class TigrisStorageAdapter implements StorageAdapter {
 		key: string,
 		body: Readable,
 		contentType: string,
+		contentLength: number,
 	): Promise<PutResult> {
 		const response = await this.client.send(
 			new PutObjectCommand({
@@ -89,6 +90,7 @@ export class TigrisStorageAdapter implements StorageAdapter {
 				Key: key,
 				Body: body,
 				ContentType: contentType,
+				ContentLength: contentLength,
 			}),
 		);
 		const etag = response.ETag;

@@ -35,7 +35,12 @@ describe.skipIf(!hasS3Credentials)(
 			const content = Buffer.from("fake jpeg bytes");
 			const body = Readable.from(content);
 
-			const putResult = await adapter.put(key, body, "image/jpeg");
+			const putResult = await adapter.put(
+				key,
+				body,
+				"image/jpeg",
+				content.length,
+			);
 			expect(typeof putResult.etag).toBe("string");
 			expect(putResult.etag).toBeTruthy();
 
@@ -46,7 +51,8 @@ describe.skipIf(!hasS3Credentials)(
 
 		it("delete removes an object so head returns exists=false", async () => {
 			const key = `pub/to-delete-${Date.now()}.jpg`;
-			await adapter.put(key, Readable.from(Buffer.from("data")), "image/jpeg");
+			const data = Buffer.from("data");
+			await adapter.put(key, Readable.from(data), "image/jpeg", data.length);
 
 			await adapter.delete(key);
 
