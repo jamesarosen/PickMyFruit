@@ -6,7 +6,6 @@ describe('env.server schema', () => {
 		BETTER_AUTH_SECRET: 'abcdefghijklmnopqrstuvwxyz0123456789',
 		BETTER_AUTH_URL: 'http://localhost:3001',
 		DATABASE_URL: 'file:data/test.db',
-		DATA_DIR: '/tmp/test',
 		EMAIL_FROM: 'Hello <hello@example.com>',
 		HMAC_SECRET: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
 		NODE_ENV: 'development',
@@ -63,5 +62,73 @@ describe('env.server schema', () => {
 			SHARP_CONCURRENCY: '0',
 		})
 		expect(result.error).toBeTruthy()
+	})
+
+	it('parses with optional MEDIA_ORIGIN when storage is memory (MEDIA_ORIGIN is ignored)', () => {
+		const result = schema.safeParse({
+			...VALID_DEV_ENV,
+			MEDIA_ORIGIN: 'https://media.pickmyfruit.com',
+		})
+		expect(result.error).toBeFalsy()
+		expect(result.data?.storage.PROVIDER).toBe('memory')
+		expect('mediaOrigin' in result.data!.storage).toBe(false)
+	})
+
+	it('treats empty MEDIA_ORIGIN as unset for tigris mediaOrigin default', () => {
+		const result = schema.safeParse({
+			...VALID_DEV_ENV,
+			STORAGE_PROVIDER: 'tigris',
+			AWS_ACCESS_KEY_ID: 'a',
+			AWS_SECRET_ACCESS_KEY: 'b',
+			AWS_ENDPOINT_URL_S3: 'https://fly.storage.tigris.dev',
+			BUCKET_NAME: 'my-bucket',
+			MEDIA_ORIGIN: '',
+		})
+		expect(result.error).toBeFalsy()
+		if (result.data?.storage.PROVIDER !== 'tigris')
+			throw new Error('expected tigris')
+		expect(result.data.storage.mediaOrigin).toBe(
+			'https://my-bucket.fly.storage.tigris.dev'
+		)
+	})
+
+	it('memory storage has no mediaOrigin property', () => {
+		const result = schema.safeParse(VALID_DEV_ENV)
+		expect(result.data).toBeTruthy()
+		expect(result.data!.storage.PROVIDER).toBe('memory')
+		expect('mediaOrigin' in result.data!.storage).toBe(false)
+	})
+
+	it('tigris storage defaults mediaOrigin to the bucket CDN host', () => {
+		const result = schema.safeParse({
+			...VALID_DEV_ENV,
+			STORAGE_PROVIDER: 'tigris',
+			AWS_ACCESS_KEY_ID: 'a',
+			AWS_SECRET_ACCESS_KEY: 'b',
+			AWS_ENDPOINT_URL_S3: 'https://fly.storage.tigris.dev',
+			BUCKET_NAME: 'my-bucket',
+		})
+		expect(result.error).toBeFalsy()
+		if (result.data?.storage.PROVIDER !== 'tigris')
+			throw new Error('expected tigris')
+		expect(result.data.storage.mediaOrigin).toBe(
+			'https://my-bucket.fly.storage.tigris.dev'
+		)
+	})
+
+	it('tigris storage uses MEDIA_ORIGIN for mediaOrigin when set', () => {
+		const result = schema.safeParse({
+			...VALID_DEV_ENV,
+			STORAGE_PROVIDER: 'tigris',
+			AWS_ACCESS_KEY_ID: 'a',
+			AWS_SECRET_ACCESS_KEY: 'b',
+			AWS_ENDPOINT_URL_S3: 'https://fly.storage.tigris.dev',
+			BUCKET_NAME: 'my-bucket',
+			MEDIA_ORIGIN: 'https://cdn.example.com',
+		})
+		expect(result.error).toBeFalsy()
+		if (result.data?.storage.PROVIDER !== 'tigris')
+			throw new Error('expected tigris')
+		expect(result.data.storage.mediaOrigin).toBe('https://cdn.example.com')
 	})
 })

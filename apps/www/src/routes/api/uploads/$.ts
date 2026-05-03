@@ -8,13 +8,13 @@ const MIME_TYPES: Record<string, string> = {
 	webp: 'image/webp',
 }
 
-/** Serves public uploads for the local storage adapter (development only). */
+/** Serves public uploads for the memory storage adapter (test/dev only). */
 export const Route = createFileRoute('/api/uploads/$')({
 	server: {
 		handlers: {
 			async GET({ request }) {
 				const { serverEnv } = await import('@/lib/env.server')
-				if (serverEnv.storage.PROVIDER !== 'local') {
+				if (serverEnv.storage.PROVIDER !== 'memory') {
 					// In production, env validation requires STORAGE_PROVIDER=tigris, so this
 					// route never runs in production. Defense-in-depth: return 404 anyway.
 					return new Response(null, { status: 404 })

@@ -1,31 +1,22 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { mkdtemp, rm, readFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { Readable } from 'node:stream'
 import { text } from 'node:stream/consumers'
 import {
-	LocalStorageAdapter,
+	MemoryStorageAdapter,
 	TigrisStorageAdapter,
 } from '../src/lib/storage.server'
 
-describe(LocalStorageAdapter, () => {
-	let tmpDir: string
-	let adapter: LocalStorageAdapter
+describe(MemoryStorageAdapter, () => {
+	let adapter: MemoryStorageAdapter
 
-	beforeEach(async () => {
-		tmpDir = await mkdtemp(join(tmpdir(), 'pmf-storage-test-'))
-		adapter = new LocalStorageAdapter(tmpDir)
-	})
-
-	afterEach(async () => {
-		await rm(tmpDir, { recursive: true, force: true })
+	beforeEach(() => {
+		adapter = new MemoryStorageAdapter()
 	})
 
 	describe('upload + publicUrl (public access)', () => {
-		it('writes the file and returns a /api/uploads/ URL', async () => {
+		it('stores the file and returns a /api/uploads/ URL', async () => {
 			const buf = Buffer.from('fake-image-data')
 			await adapter.upload('pub', 'listings/1/test.png', Readable.from(buf), {
 				mimeType: 'image/png',
@@ -34,27 +25,23 @@ describe(LocalStorageAdapter, () => {
 			const url = adapter.publicUrl('listings/1/test.png')
 			expect(url).toBe('/api/uploads/pub/listings/1/test.png')
 
-			// File is actually on disk
-			const written = await readFile(
-				join(tmpDir, 'uploads', 'pub', 'listings/1/test.png')
-			)
-			expect(written).toEqual(buf)
+			// Data is actually stored
+			const stored = await adapter.read('pub', 'listings/1/test.png')
+			expect(stored).toEqual(buf)
 		})
 
-		it('creates nested directories as needed', async () => {
+		it('accepts nested paths without requiring directory creation', async () => {
 			await adapter.upload(
 				'pub',
 				'listings/99/deep/uuid.jpg',
 				Readable.from(Buffer.from('x')),
 				{ mimeType: 'image/jpeg' }
 			)
-			const written = await readFile(
-				join(tmpDir, 'uploads', 'pub', 'listings/99/deep/uuid.jpg')
-			)
-			expect(written).toEqual(Buffer.from('x'))
+			const stored = await adapter.read('pub', 'listings/99/deep/uuid.jpg')
+			expect(stored).toEqual(Buffer.from('x'))
 		})
 
-		it('pipes stream uploads to disk', async () => {
+		it('assembles streamed upload chunks into a single buffer', async () => {
 			await adapter.upload(
 				'pub',
 				'listings/1/streamed.jpg',
@@ -62,16 +49,13 @@ describe(LocalStorageAdapter, () => {
 				{ mimeType: 'image/jpeg' }
 			)
 
-			const written = await readFile(
-				join(tmpDir, 'uploads', 'pub', 'listings/1/streamed.jpg'),
-				'utf8'
-			)
-			expect(written).toBe('streamed-image')
+			const stored = await adapter.read('pub', 'listings/1/streamed.jpg')
+			expect(stored.toString('utf8')).toBe('streamed-image')
 		})
 	})
 
 	describe('upload + read (private access)', () => {
-		it('writes the file and read returns the original buffer', async () => {
+		it('stores the file and read returns the original buffer', async () => {
 			const buf = Buffer.from('raw-image-with-exif')
 			await adapter.upload('raw', 'listings/1/test.png', Readable.from(buf), {
 				mimeType: 'image/png',
@@ -81,7 +65,7 @@ describe(LocalStorageAdapter, () => {
 			expect(result).toEqual(buf)
 		})
 
-		it('readStream returns a readable stream for an object', async () => {
+		it('readStream returns a readable stream for a stored object', async () => {
 			await adapter.upload(
 				'raw',
 				'listings/1/test.png',
@@ -102,13 +86,11 @@ describe(LocalStorageAdapter, () => {
 				{ mimeType: 'image/jpeg' }
 			)
 
-			const readSpy = vi.spyOn(adapter, 'read')
 			const response = new Response(
 				await adapter.readWebStream('pub', 'listings/1/test.jpg')
 			)
 
 			expect(await response.text()).toBe('public')
-			expect(readSpy).not.toHaveBeenCalled()
 		})
 	})
 
@@ -123,7 +105,7 @@ describe(LocalStorageAdapter, () => {
 	})
 
 	describe('delete', () => {
-		it('removes the file so subsequent read throws', async () => {
+		it('removes the entry so subsequent read throws', async () => {
 			await adapter.upload(
 				'pub',
 				'listings/1/delete-me.png',
@@ -138,52 +120,88 @@ describe(LocalStorageAdapter, () => {
 			).rejects.toThrow()
 		})
 
-		it('does not throw when the file does not exist', async () => {
+		it('does not throw when the entry does not exist', async () => {
 			await expect(
 				adapter.delete('pub', 'listings/1/nonexistent.png')
 			).resolves.not.toThrow()
 		})
 	})
 
-	describe('path traversal', () => {
-		it('upload rejects traversal in pathWithinDir', async () => {
-			await expect(
-				adapter.upload(
-					'pub',
-					'../../../etc/passwd',
-					Readable.from(Buffer.from('x')),
-					{ mimeType: 'text/plain' }
-				)
-			).rejects.toThrow('Invalid storage key')
-		})
-
-		it('read rejects traversal in pathWithinDir', async () => {
-			await expect(adapter.read('pub', '../../../etc/passwd')).rejects.toThrow(
-				'Invalid storage key'
-			)
-		})
-
-		it('delete rejects traversal in pathWithinDir', async () => {
-			await expect(adapter.delete('pub', '../../../etc/passwd')).rejects.toThrow(
-				'Invalid storage key'
-			)
+	describe('isolation between dir prefixes', () => {
+		it('stores raw and pub entries independently', async () => {
+			const rawBuf = Buffer.from('raw-data')
+			const pubBuf = Buffer.from('pub-data')
+			await adapter.upload('raw', 'listings/1/same.jpg', Readable.from(rawBuf), {
+				mimeType: 'image/jpeg',
+			})
+			await adapter.upload('pub', 'listings/1/same.jpg', Readable.from(pubBuf), {
+				mimeType: 'image/jpeg',
+			})
+			expect(await adapter.read('raw', 'listings/1/same.jpg')).toEqual(rawBuf)
+			expect(await adapter.read('pub', 'listings/1/same.jpg')).toEqual(pubBuf)
 		})
 	})
 })
 
 describe(TigrisStorageAdapter, () => {
+	const defaultMediaOrigin = 'https://test-bucket.fly.storage.tigris.dev'
 	const adapter = new TigrisStorageAdapter({
 		bucketName: 'test-bucket',
 		accessKeyId: 'fake',
 		secretAccessKey: 'fake',
 		endpointUrl: 'https://fly.storage.tigris.dev',
+		mediaOrigin: defaultMediaOrigin,
 	})
 
 	describe('publicUrl', () => {
-		it('returns the CDN URL for a pub/ path', () => {
+		it('returns mediaOrigin/pub/ URL for a pub/ path', () => {
 			expect(adapter.publicUrl('listings/1/uuid.jpg')).toBe(
 				'https://test-bucket.fly.storage.tigris.dev/pub/listings/1/uuid.jpg'
 			)
+		})
+
+		it('returns a custom mediaOrigin/pub/ URL when configured', () => {
+			const withMedia = new TigrisStorageAdapter({
+				bucketName: 'test-bucket',
+				accessKeyId: 'fake',
+				secretAccessKey: 'fake',
+				endpointUrl: 'https://fly.storage.tigris.dev',
+				mediaOrigin: 'https://media.example.com',
+			})
+			expect(withMedia.publicUrl('listings/1/uuid.jpg')).toBe(
+				'https://media.example.com/pub/listings/1/uuid.jpg'
+			)
+		})
+
+		it('normalizes a trailing slash on mediaOrigin', () => {
+			const withMedia = new TigrisStorageAdapter({
+				bucketName: 'test-bucket',
+				accessKeyId: 'fake',
+				secretAccessKey: 'fake',
+				endpointUrl: 'https://fly.storage.tigris.dev',
+				mediaOrigin: 'https://media.example.com/',
+			})
+			expect(withMedia.publicUrl('x.jpg')).toBe(
+				'https://media.example.com/pub/x.jpg'
+			)
+		})
+
+		it('percent-encodes each path segment', () => {
+			expect(adapter.publicUrl('listing_photos/a b.jpg')).toBe(
+				'https://test-bucket.fly.storage.tigris.dev/pub/listing_photos/a%20b.jpg'
+			)
+		})
+
+		it('throws when mediaOrigin is not a valid URL', () => {
+			expect(() =>
+				new TigrisStorageAdapter({
+					bucketName: 'test-bucket',
+					accessKeyId: 'fake',
+					secretAccessKey: 'fake',
+					endpointUrl: 'https://fly.storage.tigris.dev',
+					mediaOrigin: 'not-a-url',
+				}).publicUrl('x.jpg')
+			).toThrow()
 		})
 	})
 
@@ -207,6 +225,7 @@ describe(TigrisStorageAdapter, () => {
 				accessKeyId: 'fake',
 				secretAccessKey: 'fake',
 				endpointUrl: `http://127.0.0.1:${port}`,
+				mediaOrigin: defaultMediaOrigin,
 			})
 
 			try {

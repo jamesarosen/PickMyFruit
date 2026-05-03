@@ -1,6 +1,4 @@
-import { createReadStream, createWriteStream } from 'node:fs'
-import { readFile, mkdir, rm } from 'node:fs/promises'
-import { dirname, resolve, sep } from 'node:path'
+import { createHash } from 'node:crypto'
 import { Readable, Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import {
@@ -63,33 +61,30 @@ export interface StorageAdapter {
 		dir: 'raw' | 'pub',
 		pathWithinDir: string
 	): Promise<ReadableStream>
-	/** Return the public URL for a `pub/` object. */
+	/**
+	 * Return the public URL for a `pub/` object.
+	 * @throws {TypeError} When the implementation cannot build a valid URL (e.g. invalid `mediaOrigin` or pathname on Tigris).
+	 */
 	publicUrl(pathWithinDir: string): string
 	/** Delete a stored object. No-ops silently if the object does not exist. */
 	delete(dir: 'raw' | 'pub', pathWithinDir: string): Promise<void>
 }
 
-/** Local filesystem adapter — used in development and tests (STORAGE_PROVIDER=local). */
-export class LocalStorageAdapter implements StorageAdapter {
-	private readonly uploadsDir: string
+interface MemoryEntry {
+	data: Buffer
+	contentType: string
+	etag: string
+}
 
-	constructor(dataDir: string) {
-		this.uploadsDir = resolve(dataDir, 'uploads')
-	}
+/**
+ * In-process memory adapter — test-only (STORAGE_PROVIDER=memory).
+ * Files live in a Map for the lifetime of the process; never use in production.
+ */
+export class MemoryStorageAdapter implements StorageAdapter {
+	private readonly store = new Map<string, MemoryEntry>()
 
-	/**
-	 * Resolves dir + pathWithinDir to an absolute path, guarding against path traversal.
-	 * Reports attempted traversals to Sentry before throwing.
-	 */
-	private safeFilePath(dir: 'raw' | 'pub', pathWithinDir: string): string {
-		const filePath = resolve(this.uploadsDir, dir, pathWithinDir)
-		if (!filePath.startsWith(this.uploadsDir + sep)) {
-			const e = new Error('Storage: path traversal attempt blocked')
-			e.cause = `${dir}/${pathWithinDir}`
-			Sentry.captureException(e)
-			throw new Error('Invalid storage key')
-		}
-		return filePath
+	private key(dir: 'raw' | 'pub', pathWithinDir: string): string {
+		return `${dir}/${pathWithinDir}`
 	}
 
 	async upload(
@@ -98,39 +93,39 @@ export class LocalStorageAdapter implements StorageAdapter {
 		body: StorageBody,
 		opts: UploadOptions
 	): Promise<void> {
-		const filePath = this.safeFilePath(dir, pathWithinDir)
-		const counter = makeByteCounter()
-		await Sentry.startSpan(
-			{
-				name: 'storage.upload.local',
-				op: 'storage.upload',
-				attributes: {
-					'storage.provider': 'local',
-					'storage.dir': dir,
-					'storage.key': `${dir}/${pathWithinDir}`,
-					'storage.mime_type': opts.mimeType,
-					'storage.streaming': true,
-					'storage.target_path': filePath,
-					...(opts.photoId ? { 'photo.id': opts.photoId } : {}),
-				},
-			},
-			async (span) => {
-				await mkdir(dirname(filePath), { recursive: true })
-				await pipeline(body, counter.stream, createWriteStream(filePath))
-				span.setAttribute('storage.bytes_written', counter.bytes())
-			}
-		)
+		const chunks: Buffer[] = []
+		for await (const chunk of body) {
+			chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string))
+		}
+		const data = Buffer.concat(chunks)
+		const etag = createHash('md5').update(data).digest('hex')
+		this.store.set(this.key(dir, pathWithinDir), {
+			data,
+			contentType: opts.mimeType,
+			etag,
+		})
 	}
 
 	async read(dir: 'raw' | 'pub', pathWithinDir: string): Promise<Buffer> {
-		return readFile(this.safeFilePath(dir, pathWithinDir))
+		const entry = this.store.get(this.key(dir, pathWithinDir))
+		if (!entry) {
+			const err = Object.assign(
+				new Error(
+					`ENOENT: no such file or directory, open '${dir}/${pathWithinDir}'`
+				),
+				{ code: 'ENOENT' }
+			)
+			throw err
+		}
+		return entry.data
 	}
 
 	async readStream(
 		dir: 'raw' | 'pub',
 		pathWithinDir: string
 	): Promise<Readable> {
-		return createReadStream(this.safeFilePath(dir, pathWithinDir))
+		const data = await this.read(dir, pathWithinDir)
+		return Readable.from(data)
 	}
 
 	async readWebStream(
@@ -146,7 +141,7 @@ export class LocalStorageAdapter implements StorageAdapter {
 	}
 
 	async delete(dir: 'raw' | 'pub', pathWithinDir: string): Promise<void> {
-		await rm(this.safeFilePath(dir, pathWithinDir), { force: true })
+		this.store.delete(this.key(dir, pathWithinDir))
 	}
 }
 
@@ -154,14 +149,18 @@ export class LocalStorageAdapter implements StorageAdapter {
 export class TigrisStorageAdapter implements StorageAdapter {
 	private readonly client: S3Client
 	private readonly bucket: string
+	private readonly mediaOrigin: string
 
 	constructor(opts: {
 		bucketName: string
 		accessKeyId: string
 		secretAccessKey: string
 		endpointUrl: string
+		/** Origin for `publicUrl` (e.g. custom CDN or default `https://{bucket}.fly.storage.tigris.dev`). */
+		mediaOrigin: string
 	}) {
 		this.bucket = opts.bucketName
+		this.mediaOrigin = opts.mediaOrigin
 		this.client = new S3Client({
 			region: 'auto',
 			endpoint: opts.endpointUrl,
@@ -263,8 +262,20 @@ export class TigrisStorageAdapter implements StorageAdapter {
 		return Readable.toWeb(stream) as ReadableStream
 	}
 
+	/**
+	 * Builds an absolute URL under `pub/` with per-segment encoding.
+	 * @throws {TypeError} When `mediaOrigin` is not a valid base URL for `new URL()`, or the composed pathname is invalid.
+	 */
 	publicUrl(pathWithinDir: string): string {
-		return `https://${this.bucket}.fly.storage.tigris.dev/pub/${pathWithinDir}`
+		const u = new URL(this.mediaOrigin)
+		const encoded = pathWithinDir
+			.split('/')
+			.filter((s) => s.length > 0)
+			.map((s) => encodeURIComponent(s))
+			.join('/')
+		const basePath = u.pathname.replace(/\/+$/, '')
+		u.pathname = `${basePath}/pub/${encoded}`.replace(/\/{2,}/g, '/')
+		return u.href
 	}
 
 	async delete(dir: 'raw' | 'pub', pathWithinDir: string): Promise<void> {
@@ -282,14 +293,15 @@ export class TigrisStorageAdapter implements StorageAdapter {
 
 /** Instantiate the appropriate adapter based on STORAGE_PROVIDER. */
 export function createStorageAdapter(env: typeof serverEnv): StorageAdapter {
-	if (env.storage.PROVIDER === 'local') {
-		return new LocalStorageAdapter(env.storage.DATA_DIR)
+	if (env.storage.PROVIDER === 'memory') {
+		return new MemoryStorageAdapter()
 	}
 	return new TigrisStorageAdapter({
 		bucketName: env.storage.BUCKET_NAME,
 		accessKeyId: env.storage.AWS_ACCESS_KEY_ID,
 		secretAccessKey: env.storage.AWS_SECRET_ACCESS_KEY,
 		endpointUrl: env.storage.AWS_ENDPOINT_URL_S3,
+		mediaOrigin: env.storage.mediaOrigin,
 	})
 }
 
