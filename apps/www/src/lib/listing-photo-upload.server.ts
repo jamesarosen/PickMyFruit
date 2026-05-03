@@ -173,6 +173,16 @@ export async function unlinkUploadStaging(tempPath: string): Promise<void> {
 	await unlink(tempPath).catch(() => undefined)
 }
 
+/** Creates a Node.js read stream for a staged upload temp file. */
+export function createStagedReadStream(tempPath: string): Readable {
+	return createReadStream(tempPath)
+}
+
+/** Returns the byte size of a staged upload temp file. */
+export async function getStagedFileSize(tempPath: string): Promise<number> {
+	return (await stat(tempPath)).size
+}
+
 /**
  * Uploads a photo to both raw/ (private, full EXIF) and pub/ (public, EXIF-stripped)
  * storage, and returns the ID to be used in paths.

@@ -323,6 +323,98 @@ export async function addPhotoToListing(
 }
 
 /**
+ * Inserts a photo row with `status='pending'` inside a transaction that
+ * atomically checks the photo count and assigns `order` via MAX()+1.
+ *
+ * Returns `null` when the listing already has `maxPhotos` photos. Call
+ * `completePhoto` once the photos service confirms the transform succeeded.
+ */
+export async function insertPendingPhoto(
+	listingId: number,
+	id: string,
+	ext: ALLOWED_EXT,
+	maxPhotos: number
+): Promise<ListingPhoto | null> {
+	return Sentry.startSpan(
+		{
+			name: 'insertPendingPhoto',
+			op: 'db.query',
+			attributes: { listingId },
+		},
+		async () => {
+			return db.transaction(async (tx) => {
+				const [{ count }] = await tx
+					.select({ count: sql<number>`COUNT(*)` })
+					.from(listingPhotos)
+					.where(eq(listingPhotos.listingId, listingId))
+				if (Number(count) >= maxPhotos) return null
+
+				const result = await tx
+					.insert(listingPhotos)
+					.values({
+						id,
+						listingId,
+						ext,
+						status: 'pending',
+						order: sql`COALESCE(
+							(SELECT MAX("order") FROM listing_photos
+							 WHERE listing_id = ${listingId}),
+							-1
+						) + 1`,
+					})
+					.returning()
+				if (!result[0])
+					throw new DataInvariantError('insertPendingPhoto: insert returned no row')
+				return result[0]
+			})
+		}
+	)
+}
+
+/**
+ * Updates a photo row from `pending` to `complete` after the photos service
+ * confirms the transform succeeded. Stores the key, dimensions, size, and
+ * ETag returned by the service.
+ */
+export async function completePhoto(
+	id: string,
+	fields: {
+		key: string
+		width: number | null
+		height: number | null
+		bytes: number | null
+		etag: string | null
+	}
+): Promise<void> {
+	return Sentry.startSpan(
+		{ name: 'completePhoto', op: 'db.query', attributes: { id } },
+		async () => {
+			await db
+				.update(listingPhotos)
+				.set({ status: 'complete', ...fields })
+				.where(eq(listingPhotos.id, id))
+		}
+	)
+}
+
+/**
+ * Marks a photo row as `abandoned`. Called when the photos-service transform
+ * fails after the pending row was already inserted. An ops script can
+ * reconcile abandoned rows and their raw/ objects.
+ */
+export async function abandonPhoto(id: string): Promise<void> {
+	return Sentry.startSpan(
+		{ name: 'abandonPhoto', op: 'db.query', attributes: { id } },
+		async () => {
+			await db
+				.update(listingPhotos)
+				.set({ status: 'abandoned' })
+				.where(eq(listingPhotos.id, id))
+		}
+	)
+}
+
+/**
  * Returns public photo data for a listing. rawKey is never exposed.
  * @invariant The returned photos are sorted by `order` ascending — the
  * element at index 0 is the cover photo. Callers may rely on this without

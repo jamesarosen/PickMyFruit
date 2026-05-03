@@ -51,8 +51,9 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 			detectMimeFromTempFile,
 			stageUploadStream,
 			unlinkUploadStaging,
-			uploadListingPhoto,
 			mimeToExt,
+			createStagedReadStream,
+			getStagedFileSize,
 		} = await import('@/lib/listing-photo-upload.server')
 		// Shed load before staging to disk so an overloaded server doesn't
 		// keep accepting 5 MB temp files it can't process.
@@ -81,67 +82,91 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 		}
 
 		// Stage the upload to disk so the file body never sits in memory as a
-		// Buffer. Two read streams are then opened from the temp file: one for
-		// the raw archive copy, one for the Sharp-processed public copy.
+		// Buffer. This temp file is the source for both the raw archive copy
+		// and the stream sent to the photos service.
 		const tempPath = await stageUploadStream(
 			file.stream() as ReadableStream<Uint8Array>
 		)
 		try {
 			const mimeType = await detectMimeFromTempFile(tempPath)
 
-			const { addPhotoToListing } = await import('@/data/queries.server')
-
+			const uuidModule = await import('uuid')
+			const id = uuidModule.v7()
 			const fileExt = mimeToExt(mimeType)
-			const { storage } = await import('@/lib/storage.server')
-			const { id } = await uploadListingPhoto({
-				tempPath,
-				mimeType,
-				fileExt,
-				storage,
-			})
 			const rawPathKey = `listing_photos/${id}${fileExt}`
-			const pubPathKey = `listing_photos/${id}.jpg`
 
-			let photo
-			try {
-				photo = await addPhotoToListing(
-					listingId,
-					id,
-					fileExt,
-					MAX_PHOTOS_PER_LISTING
-				)
-			} catch (dbErr) {
-				// The storage objects are now orphaned. Best-effort cleanup — if deletion
-				// fails, Sentry will capture it so an ops script can reconcile.
-				const { Sentry } = await import('@/lib/sentry')
-				await Promise.all([
-					storage
-						.delete('raw', rawPathKey)
-						.catch((e) => Sentry.captureException(e, { extra: { rawPathKey } })),
-					storage
-						.delete('pub', pubPathKey)
-						.catch((e) => Sentry.captureException(e, { extra: { pubPathKey } })),
-				])
-				throw dbErr
-			}
+			const { storage } = await import('@/lib/storage.server')
+
+			// 1. Stream the original file to raw/ (private, EXIF intact) so we
+			//    have the source material for any future reprocessing.
+			await storage.upload('raw', rawPathKey, createStagedReadStream(tempPath), {
+				mimeType,
+				photoId: id,
+			})
+
+			// 2. INSERT a pending row so the ID is reserved in the DB before we
+			//    talk to the photos service. On any subsequent failure, `abandoned`
+			//    rows can be reconciled by an ops script.
+			const { insertPendingPhoto, completePhoto: markPhotoComplete } =
+				await import('@/data/queries.server')
+			const photo = await insertPendingPhoto(
+				listingId,
+				id,
+				fileExt,
+				MAX_PHOTOS_PER_LISTING
+			)
 
 			if (!photo) {
-				// addPhotoToListing returns null when the listing is already at the limit.
-				// Clean up the storage objects we just uploaded.
+				// Listing is already at the photo limit. Clean up the raw upload
+				// we just stored and return a user-facing error.
 				const { Sentry } = await import('@/lib/sentry')
-				await Promise.all([
-					storage
-						.delete('raw', rawPathKey)
-						.catch((e) => Sentry.captureException(e, { extra: { rawPathKey } })),
-					storage
-						.delete('pub', pubPathKey)
-						.catch((e) => Sentry.captureException(e, { extra: { pubPathKey } })),
-				])
+				await storage
+					.delete('raw', rawPathKey)
+					.catch((e) => Sentry.captureException(e, { extra: { rawPathKey } }))
 				throw new UserError(
 					'TOO_MANY_PHOTOS',
 					`A listing can have at most ${MAX_PHOTOS_PER_LISTING} photos`
 				)
 			}
+
+			// 3. Stream bytes to POST /transform/:id on the photos service.
+			const { transformPhoto } = await import('@/lib/photoServiceClient.server')
+			const fileBytes = await getStagedFileSize(tempPath)
+			// headers may be a Headers instance or a plain object depending on the adapter.
+			const traceparent =
+				typeof headers.get === 'function'
+					? (headers.get('traceparent') ?? undefined)
+					: ((headers as Record<string, string>)['traceparent'] ?? undefined)
+
+			let transformResult
+			try {
+				transformResult = await transformPhoto(
+					id,
+					createStagedReadStream(tempPath) as unknown as ReadableStream,
+					mimeType,
+					fileBytes,
+					{ traceparent }
+				)
+			} catch (transformErr) {
+				// Mark the row abandoned and clean up raw/ so it doesn't linger.
+				const { Sentry } = await import('@/lib/sentry')
+				const { abandonPhoto } = await import('@/data/queries.server')
+				await abandonPhoto(id).catch((e) => Sentry.captureException(e))
+				await storage
+					.delete('raw', rawPathKey)
+					.catch((e) => Sentry.captureException(e, { extra: { rawPathKey } }))
+				Sentry.captureException(transformErr)
+				throw transformErr
+			}
+
+			// 4. UPDATE the row to complete with metadata from the photos service.
+			await markPhotoComplete(id, {
+				key: transformResult.key,
+				width: transformResult.width,
+				height: transformResult.height,
+				bytes: transformResult.bytes,
+				etag: transformResult.etag,
+			})
 
 			return {
 				id: photo.id,

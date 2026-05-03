@@ -189,6 +189,12 @@ export const listingPhotos = sqliteTable(
 			.notNull()
 			.references(() => listings.id, { onDelete: 'cascade' }),
 		ext: text('ext').notNull(), // file extension, e.g. '.jpg' — paths derived at runtime
+		status: text('status').notNull().default('complete'), // 'pending' | 'complete' | 'abandoned'
+		key: text('key'), // storage key for the pub/ object, e.g. 'pub/abc123.jpg'
+		width: integer('width'),
+		height: integer('height'),
+		bytes: integer('bytes'),
+		etag: text('etag'),
 		order: integer('order').notNull().default(0),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
