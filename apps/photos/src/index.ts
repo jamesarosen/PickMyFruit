@@ -8,8 +8,13 @@ import type { StorageAdapter } from "./storage/StorageAdapter.js";
 import { buildTransformRouter } from "./routes/transform.js";
 import { buildHeadPhotoRouter } from "./routes/headPhoto.js";
 import { authMiddleware } from "./middleware/auth.js";
+import { initTracing } from "./lib/tracing.js";
+import { initSentry } from "./lib/sentry.js";
 
-// TODO (commit 6): wire in Sentry for exception capture
+// Initialise observability before anything else so all spans and errors
+// are captured from process start.
+initTracing();
+initSentry();
 
 const startedAt = Date.now();
 
