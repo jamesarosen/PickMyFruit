@@ -83,6 +83,8 @@ interface MemoryEntry {
 export class MemoryStorageAdapter implements StorageAdapter {
 	private readonly store = new Map<string, MemoryEntry>()
 
+	// Keys are Map keys — no filesystem, so traversal-style paths like '../etc/passwd'
+	// are harmless literal strings, not path traversal vulnerabilities.
 	private key(dir: 'raw' | 'pub', pathWithinDir: string): string {
 		return `${dir}/${pathWithinDir}`
 	}
@@ -95,10 +97,10 @@ export class MemoryStorageAdapter implements StorageAdapter {
 	): Promise<void> {
 		const chunks: Buffer[] = []
 		for await (const chunk of body) {
-			chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string))
+			chunks.push(Buffer.from(chunk as Uint8Array | string))
 		}
 		const data = Buffer.concat(chunks)
-		const etag = createHash('md5').update(data).digest('hex')
+		const etag = `"${createHash('md5').update(data).digest('hex')}"`
 		this.store.set(this.key(dir, pathWithinDir), {
 			data,
 			contentType: opts.mimeType,

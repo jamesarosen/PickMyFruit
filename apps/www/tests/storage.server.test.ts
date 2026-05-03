@@ -127,6 +127,28 @@ describe(MemoryStorageAdapter, () => {
 		})
 	})
 
+	describe('Uint8Array chunk handling', () => {
+		it('stores Uint8Array stream chunks without corrupting bytes', async () => {
+			const bytes = new Uint8Array([1, 2, 3, 4, 5])
+			await adapter.upload('raw', 'listings/1/uint8.bin', Readable.from([bytes]), {
+				mimeType: 'application/octet-stream',
+			})
+			const stored = await adapter.read('raw', 'listings/1/uint8.bin')
+			expect(stored).toEqual(Buffer.from(bytes))
+		})
+	})
+
+	describe('path traversal', () => {
+		it('treats traversal-style keys as literal map keys (no filesystem risk)', async () => {
+			const path = '../../../etc/passwd'
+			await adapter.upload('raw', path, Readable.from(Buffer.from('data')), {
+				mimeType: 'text/plain',
+			})
+			const result = await adapter.read('raw', path)
+			expect(result).toEqual(Buffer.from('data'))
+		})
+	})
+
 	describe('isolation between dir prefixes', () => {
 		it('stores raw and pub entries independently', async () => {
 			const rawBuf = Buffer.from('raw-data')
