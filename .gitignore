@@ -126,3 +126,6 @@ typings/
 
 # Local Docker Compose volumes
 /data
+
+# Generated test fixtures (large binary files created by bin/test-hurl setup)
+apps/photos/tests/fixtures/oversized.bin

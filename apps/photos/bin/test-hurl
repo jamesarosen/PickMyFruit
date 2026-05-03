@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# Integration test runner: spins up LocalStack + the photos service, runs Hurl tests.
+# Usage: bash apps/photos/bin/test-hurl [--skip-build]
+#
+# Must be run from the repository root so Hurl file paths (relative to repo root) resolve.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+PHOTOS_DIR="$REPO_ROOT/apps/photos"
+
+# ===== Configuration =====
+PORT=8081
+LS_PORT=4566
+LS_CONTAINER="pmf-photos-localstack-$$"
+PHOTOS_SERVER_PID=""
+LS_LOG="$PHOTOS_DIR/dist/localstack.log"
+
+STORAGE_PROVIDER=tigris
+AWS_ENDPOINT_URL_S3="http://localhost:${LS_PORT}"
+AWS_ACCESS_KEY_ID=test
+AWS_SECRET_ACCESS_KEY=test
+AWS_REGION=us-east-1
+BUCKET_NAME=pmf-photos-test
+INTERNAL_TOKEN=test-token
+
+# UUIDv7 generated deterministically for this test run (constant so we can assert the key)
+PHOTO_ID="01966c54-c3b1-7000-8000-000000000001"
+ABSENT_PHOTO_ID="01966c54-c3b1-7000-8000-000000000002"
+OTHER_PHOTO_ID="01966c54-c3b1-7000-8000-000000000003"
+
+# ===== Cleanup trap =====
+cleanup() {
+  echo "=== Cleaning up ==="
+  if [[ -n "$PHOTOS_SERVER_PID" ]] && kill -0 "$PHOTOS_SERVER_PID" 2>/dev/null; then
+    kill "$PHOTOS_SERVER_PID" || true
+    wait "$PHOTOS_SERVER_PID" 2>/dev/null || true
+  fi
+  # Save LocalStack logs before stopping so CI can upload them as artifacts on failure.
+  docker logs "$LS_CONTAINER" > "$LS_LOG" 2>&1 || true
+  docker stop "$LS_CONTAINER" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+# ===== Generate large fixture for oversized test =====
+# 31 MB of zeros — just over the 30 MB MAX_BYTES limit so the service returns 413.
+# Not committed to git; generated fresh each run.
+OVERSIZED_FIXTURE="$PHOTOS_DIR/tests/fixtures/oversized.bin"
+if [[ ! -f "$OVERSIZED_FIXTURE" ]] || [[ $(wc -c < "$OVERSIZED_FIXTURE") -lt $((31 * 1024 * 1024)) ]]; then
+  echo "=== Generating oversized fixture (31 MB) ==="
+  dd if=/dev/zero of="$OVERSIZED_FIXTURE" bs=1M count=31 2>/dev/null
+fi
+
+# ===== Build =====
+if [[ "${1:-}" != "--skip-build" ]]; then
+  echo "=== Building photos service ==="
+  (cd "$PHOTOS_DIR" && pnpm build)
+fi
+
+# ===== Start LocalStack =====
+echo "=== Starting LocalStack ==="
+mkdir -p "$(dirname "$LS_LOG")"
+docker run --rm -d \
+  --name "$LS_CONTAINER" \
+  -p "${LS_PORT}:4566" \
+  -e SERVICES=s3 \
+  localstack/localstack:latest > /dev/null
+
+echo "=== Waiting for LocalStack to be ready ==="
+for i in $(seq 1 30); do
+  if curl -sf "http://localhost:${LS_PORT}/_localstack/health" | grep -q 's3'; then
+    echo "LocalStack ready after ${i}s"
+    break
+  fi
+  if [[ $i -eq 30 ]]; then
+    echo "ERROR: LocalStack did not become ready in 30s" >&2
+    docker logs "$LS_CONTAINER" >&2
+    exit 1
+  fi
+  sleep 1
+done
+
+echo "=== Creating S3 bucket ==="
+AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+AWS_DEFAULT_REGION="$AWS_REGION" \
+  aws --endpoint-url="$AWS_ENDPOINT_URL_S3" s3 mb "s3://${BUCKET_NAME}"
+
+# ===== Start photos service =====
+echo "=== Starting photos service ==="
+STORAGE_PROVIDER="$STORAGE_PROVIDER" \
+AWS_ENDPOINT_URL_S3="$AWS_ENDPOINT_URL_S3" \
+AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+AWS_REGION="$AWS_REGION" \
+BUCKET_NAME="$BUCKET_NAME" \
+INTERNAL_TOKEN="$INTERNAL_TOKEN" \
+PORT="$PORT" \
+NODE_ENV=production \
+  node "$PHOTOS_DIR/dist/index.js" &
+PHOTOS_SERVER_PID=$!
+
+echo "=== Waiting for photos service on port ${PORT} ==="
+for i in $(seq 1 30); do
+  if curl -sf "http://localhost:${PORT}/health" > /dev/null; then
+    echo "Photos service ready after ${i}s"
+    break
+  fi
+  if ! kill -0 "$PHOTOS_SERVER_PID" 2>/dev/null; then
+    echo "ERROR: Photos service exited unexpectedly" >&2
+    exit 1
+  fi
+  if [[ $i -eq 30 ]]; then
+    echo "ERROR: Photos service did not become ready in 30s" >&2
+    exit 1
+  fi
+  sleep 1
+done
+
+# ===== Run Hurl tests =====
+echo "=== Running Hurl tests ==="
+cd "$REPO_ROOT"
+
+hurl \
+  --variable "port=${PORT}" \
+  --variable "token=${INTERNAL_TOKEN}" \
+  --variable "photo_id=${PHOTO_ID}" \
+  --variable "absent_photo_id=${ABSENT_PHOTO_ID}" \
+  --variable "other_photo_id=${OTHER_PHOTO_ID}" \
+  --test \
+  apps/photos/tests/hurl/01-health.hurl \
+  apps/photos/tests/hurl/02-happy-path.hurl \
+  apps/photos/tests/hurl/03-idempotency.hurl \
+  apps/photos/tests/hurl/04-auth.hurl \
+  apps/photos/tests/hurl/05-head-photo.hurl \
+  apps/photos/tests/hurl/06-bad-mime.hurl \
+  apps/photos/tests/hurl/07-oversized.hurl \
+  apps/photos/tests/hurl/08-bad-photo-id.hurl
