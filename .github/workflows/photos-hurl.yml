@@ -29,19 +29,15 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --filter @pmf/photos...
 
       - name: Install Hurl
         run: |
-          HURL_VERSION=$(curl -fsSL https://api.github.com/repos/Orange-OpenSource/hurl/releases/latest | jq -r '.tag_name')
+          HURL_VERSION="6.1.1"
           curl -fsSL "https://github.com/Orange-OpenSource/hurl/releases/download/${HURL_VERSION}/hurl-${HURL_VERSION}-x86_64-unknown-linux-gnu.tar.gz" \
             | tar xz -C /tmp
           sudo mv "/tmp/hurl-${HURL_VERSION}-x86_64-unknown-linux-gnu/bin/hurl" /usr/local/bin/hurl
           hurl --version
-
-      - name: Install AWS CLI
-        run: |
-          pip install awscli --quiet
 
       - name: Run Hurl integration tests
         run: bash apps/photos/bin/test-hurl

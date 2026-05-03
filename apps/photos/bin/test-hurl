@@ -40,7 +40,7 @@ cleanup() {
   docker logs "$LS_CONTAINER" > "$LS_LOG" 2>&1 || true
   docker stop "$LS_CONTAINER" 2>/dev/null || true
 }
-trap cleanup EXIT
+trap cleanup EXIT INT TERM
 
 # ===== Generate large fixture for oversized test =====
 # 31 MB of zeros — just over the 30 MB MAX_BYTES limit so the service returns 413.
@@ -48,7 +48,7 @@ trap cleanup EXIT
 OVERSIZED_FIXTURE="$PHOTOS_DIR/tests/fixtures/oversized.bin"
 if [[ ! -f "$OVERSIZED_FIXTURE" ]] || [[ $(wc -c < "$OVERSIZED_FIXTURE") -lt $((31 * 1024 * 1024)) ]]; then
   echo "=== Generating oversized fixture (31 MB) ==="
-  dd if=/dev/zero of="$OVERSIZED_FIXTURE" bs=1M count=31 2>/dev/null
+  dd if=/dev/zero of="$OVERSIZED_FIXTURE" bs=1048576 count=31 2>/dev/null
 fi
 
 # ===== Build =====
@@ -60,6 +60,7 @@ fi
 # ===== Start LocalStack =====
 echo "=== Starting LocalStack ==="
 mkdir -p "$(dirname "$LS_LOG")"
+docker rm -f "$LS_CONTAINER" 2>/dev/null || true
 docker run --rm -d \
   --name "$LS_CONTAINER" \
   -p "${LS_PORT}:4566" \
@@ -68,7 +69,7 @@ docker run --rm -d \
 
 echo "=== Waiting for LocalStack to be ready ==="
 for i in $(seq 1 30); do
-  if curl -sf "http://localhost:${LS_PORT}/_localstack/health" | grep -q 's3'; then
+  if curl -sf "http://localhost:${LS_PORT}/_localstack/health" | grep -qE '"s3"\s*:\s*"(running|available)"'; then
     echo "LocalStack ready after ${i}s"
     break
   fi
