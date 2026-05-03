@@ -22,8 +22,8 @@ export function initSentry(): void {
 	Sentry.init({
 		dsn,
 		tracesSampleRate: 1.0,
-		// The OTel provider is managed by tracing.ts; tell Sentry not to set up
-		// its own so we can attach SentrySpanProcessor manually if needed.
+		// The OTel provider is managed by tracing.ts, which wires SentrySpanProcessor
+		// manually. Tell Sentry not to set up its own OTel provider.
 		skipOpenTelemetrySetup: true,
 	});
 }

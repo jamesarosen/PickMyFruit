@@ -28,6 +28,7 @@
 		"@opentelemetry/sdk-trace-base": "^2.7.1",
 		"@opentelemetry/sdk-trace-node": "^2.7.1",
 		"@sentry/node": "^10.51.0",
+		"@sentry/opentelemetry": "^10.51.0",
 		"file-type": "^22.0.1",
 		"hono": "^4.8.4",
 		"sharp": "^0.34.5",

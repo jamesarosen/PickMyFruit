@@ -2,7 +2,12 @@ import { Readable } from "node:stream";
 import { Hono } from "hono";
 import sharp from "sharp";
 import { fileTypeFromBuffer } from "file-type";
-import { propagation, context, SpanStatusCode } from "@opentelemetry/api";
+import {
+	propagation,
+	context,
+	trace,
+	SpanStatusCode,
+} from "@opentelemetry/api";
 import type { StorageAdapter } from "../storage/StorageAdapter.js";
 import { isValidPhotoId, normalizePhotoId } from "../lib/validatePhotoId.js";
 import {
@@ -78,7 +83,7 @@ export function buildTransformRouter(storage: StorageAdapter): Hono {
 		const span = tracer.startSpan("transform", {}, parentCtx);
 
 		// All span work happens inside a context that makes this span the active one.
-		return context.with(context.active(), async () => {
+		return context.with(trace.setSpan(parentCtx, span), async () => {
 			try {
 				span.setAttribute("photo.id", photoID);
 				span.setAttribute("transform.name", "default");
@@ -129,6 +134,7 @@ export function buildTransformRouter(storage: StorageAdapter): Hono {
 					totalBytes += value.length;
 					if (totalBytes > MAX_BYTES) {
 						await reader.cancel();
+						span.setAttribute("bytes_in", totalBytes);
 						span.end();
 						return c.json({ error: "payload_too_large" }, 413);
 					}
@@ -174,6 +180,7 @@ export function buildTransformRouter(storage: StorageAdapter): Hono {
 					info = result.info;
 				} catch (err) {
 					captureException(err);
+					span.setAttribute("sharpMs", Date.now() - sharpStart);
 					span.setStatus({ code: SpanStatusCode.ERROR });
 					span.end();
 					return c.json({ error: "transform_failed" }, 422);

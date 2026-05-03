@@ -12,6 +12,7 @@ import {
 	SimpleSpanProcessor,
 } from "@opentelemetry/sdk-trace-node";
 import { W3CTraceContextPropagator } from "@opentelemetry/core";
+import { SentrySpanProcessor } from "@sentry/opentelemetry";
 
 let _provider: NodeTracerProvider | null = null;
 
@@ -55,7 +56,9 @@ export function initTracing(): void {
 	// In test environments let tests inject their own exporter via setTestExporter.
 	if (process.env["NODE_ENV"] === "test") return;
 
-	const provider = new NodeTracerProvider();
+	const provider = new NodeTracerProvider({
+		spanProcessors: [new SentrySpanProcessor()],
+	});
 	provider.register();
 	_provider = provider;
 }
