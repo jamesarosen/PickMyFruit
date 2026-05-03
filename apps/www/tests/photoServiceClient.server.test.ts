@@ -110,7 +110,7 @@ describe('transformPhoto', () => {
 		)
 		await transformPhoto(PHOTO_ID, new Blob(['x']), CONTENT_TYPE, CONTENT_LENGTH)
 		const [, init] = mockFetch.mock.calls[0] as [string, RequestInit]
-		expect(Object.hasOwn(init.headers as object, 'traceparent')).toBe(false)
+		expect(Object.hasOwn(init.headers as object, 'traceparent')).toBeFalsy()
 	})
 
 	it('returns parsed JSON on 200', async () => {

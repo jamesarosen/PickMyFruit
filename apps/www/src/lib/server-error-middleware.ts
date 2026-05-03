@@ -1,8 +1,8 @@
 import { createMiddleware } from '@tanstack/solid-start'
 import { setResponseStatus } from '@tanstack/solid-start/server'
 import { Sentry } from './sentry'
-export { UserError } from './user-error'
 import { UserError } from './user-error'
+export { UserError } from './user-error'
 
 /**
  * Middleware that captures exceptions server-side and converts them

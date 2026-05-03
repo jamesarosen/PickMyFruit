@@ -172,7 +172,9 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 					}
 					// 5xx or other unexpected status — capture to Sentry, rethrow without body
 					Sentry.captureException(transformErr)
-					throw new Error(`Photo processing failed (${transformErr.status})`)
+					throw new Error(`Photo processing failed (${transformErr.status})`, {
+						cause: transformErr,
+					})
 				}
 
 				Sentry.captureException(transformErr)
