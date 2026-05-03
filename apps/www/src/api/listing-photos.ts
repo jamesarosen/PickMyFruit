@@ -155,6 +155,26 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 				await storage
 					.delete('raw', rawPathKey)
 					.catch((e) => Sentry.captureException(e, { extra: { rawPathKey } }))
+
+				// Distinguish user errors (4xx) from infrastructure failures so we
+				// don't burn Sentry quota on client-supplied bad input.
+				const { PhotoServiceError } =
+					await import('@/lib/photoServiceClient.server')
+				if (transformErr instanceof PhotoServiceError) {
+					if (transformErr.status === 422) {
+						throw new UserError(
+							'INVALID_MIME_TYPE',
+							"That file format isn't supported. Please upload a JPEG, PNG, or HEIC."
+						)
+					}
+					if (transformErr.status === 413) {
+						throw new UserError('FILE_TOO_LARGE', 'That file is too large.')
+					}
+					// 5xx or other unexpected status — capture to Sentry, rethrow without body
+					Sentry.captureException(transformErr)
+					throw new Error(`Photo processing failed (${transformErr.status})`)
+				}
+
 				Sentry.captureException(transformErr)
 				throw transformErr
 			}

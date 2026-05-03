@@ -43,11 +43,12 @@ vi.mock('../src/lib/logger.server', () => ({
 const sharp = (await import('sharp')).default
 const {
 	validatePhotoFile,
-	uploadListingPhoto,
 	assertPhotoUploadCapacity,
 	MAX_UPLOAD_QUEUE_DEPTH,
 	MAX_FILE_SIZE_BYTES,
 } = await import('../src/lib/listing-photo-upload.server')
+const { uploadListingPhoto } =
+	await import('../src/lib/listing-photo-sharp-pipeline.server')
 
 // One reusable real fixture per format. Tiny so the encode is instant.
 let jpegFixture: Buffer

@@ -16,7 +16,7 @@ import type { StorageAdapter, StorageBody } from '../src/lib/storage.server'
 // No vi.mock('sharp') — exercises the real native binary.
 const sharp = (await import('sharp')).default
 const { uploadListingPhoto, MAX_IMAGE_PIXELS, PUB_MAX_DIMENSION } =
-	await import('../src/lib/listing-photo-upload.server')
+	await import('../src/lib/listing-photo-sharp-pipeline.server')
 
 afterAll(() => exiftool.end())
 

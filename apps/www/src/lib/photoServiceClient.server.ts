@@ -25,7 +25,9 @@ export class PhotoServiceError extends Error {
 		public readonly status: number,
 		public readonly body: string
 	) {
-		super(`Photo service returned ${status}: ${body}`)
+		// Keep body as a separate property only — never embed it in the message
+		// so internal S3/service details don't leak into error reports.
+		super(`Photo service error ${status}`)
 		this.name = 'PhotoServiceError'
 	}
 }
