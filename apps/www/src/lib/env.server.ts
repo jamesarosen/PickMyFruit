@@ -36,8 +36,7 @@ const tigrisStorageSchema = z
 
 const storageSchema = z.discriminatedUnion('PROVIDER', [
 	z.object({
-		DATA_DIR: z.string().min(1),
-		PROVIDER: z.literal('local'),
+		PROVIDER: z.literal('memory'),
 	}),
 	tigrisStorageSchema,
 ])
@@ -51,10 +50,9 @@ function preprocessEnv(raw: unknown): unknown {
 		AWS_ACCESS_KEY_ID,
 		AWS_SECRET_ACCESS_KEY,
 		BUCKET_NAME,
-		DATA_DIR,
 		EMAIL_PROVIDER = 'console',
 		RESEND_API_KEY,
-		STORAGE_PROVIDER = 'local',
+		STORAGE_PROVIDER = 'memory',
 		MEDIA_ORIGIN,
 		...rest
 	} = env
@@ -67,7 +65,6 @@ function preprocessEnv(raw: unknown): unknown {
 			AWS_SECRET_ACCESS_KEY,
 			AWS_ENDPOINT_URL_S3,
 			BUCKET_NAME,
-			DATA_DIR,
 			MEDIA_ORIGIN,
 		},
 	}
@@ -99,7 +96,7 @@ const outputSchema = z
 			})
 		}
 
-		// Local file is insufficiently robust for storage in production.
+		// In-memory storage is test-only; production must use durable object storage.
 		if (env.NODE_ENV === 'production' && env.storage.PROVIDER !== 'tigris') {
 			ctx.addIssue({
 				code: 'custom',

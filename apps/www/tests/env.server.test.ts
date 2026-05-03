@@ -6,7 +6,6 @@ describe('env.server schema', () => {
 		BETTER_AUTH_SECRET: 'abcdefghijklmnopqrstuvwxyz0123456789',
 		BETTER_AUTH_URL: 'http://localhost:3001',
 		DATABASE_URL: 'file:data/test.db',
-		DATA_DIR: '/tmp/test',
 		EMAIL_FROM: 'Hello <hello@example.com>',
 		HMAC_SECRET: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
 		NODE_ENV: 'development',
@@ -65,13 +64,13 @@ describe('env.server schema', () => {
 		expect(result.error).toBeTruthy()
 	})
 
-	it('parses with optional MEDIA_ORIGIN when storage is local', () => {
+	it('parses with optional MEDIA_ORIGIN when storage is memory (MEDIA_ORIGIN is ignored)', () => {
 		const result = schema.safeParse({
 			...VALID_DEV_ENV,
 			MEDIA_ORIGIN: 'https://media.pickmyfruit.com',
 		})
 		expect(result.error).toBeFalsy()
-		expect(result.data?.storage.PROVIDER).toBe('local')
+		expect(result.data?.storage.PROVIDER).toBe('memory')
 		expect('mediaOrigin' in result.data!.storage).toBe(false)
 	})
 
@@ -93,10 +92,10 @@ describe('env.server schema', () => {
 		)
 	})
 
-	it('local storage has no mediaOrigin property', () => {
+	it('memory storage has no mediaOrigin property', () => {
 		const result = schema.safeParse(VALID_DEV_ENV)
 		expect(result.data).toBeTruthy()
-		expect(result.data!.storage.PROVIDER).toBe('local')
+		expect(result.data!.storage.PROVIDER).toBe('memory')
 		expect('mediaOrigin' in result.data!.storage).toBe(false)
 	})
 

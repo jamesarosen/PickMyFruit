@@ -24,8 +24,8 @@ describe('applySecurityHeaders', () => {
 		expect(directives.get('frame-ancestors')).toEqual(["'none'"])
 	})
 
-	it('does not include any Tigris wildcard in local storage mode', async () => {
-		// Test env uses STORAGE_PROVIDER=local — no bucket URL should appear.
+	it('does not include any Tigris wildcard in memory storage mode', async () => {
+		// Test env uses STORAGE_PROVIDER=memory — no bucket URL should appear.
 		const headers = new Headers()
 		await applySecurityHeaders(headers)
 
