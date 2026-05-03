@@ -65,7 +65,12 @@ async function fetchPhotosByListingIds(
 			order: listingPhotos.order,
 		})
 		.from(listingPhotos)
-		.where(inArray(listingPhotos.listingId, uniqueIds))
+		.where(
+			and(
+				inArray(listingPhotos.listingId, uniqueIds),
+				eq(listingPhotos.status, 'complete')
+			)
+		)
 		.orderBy(listingPhotos.order)
 
 	const map = new Map<number, PublicPhoto[]>()
@@ -346,7 +351,13 @@ export async function insertPendingPhoto(
 				const [{ count }] = await tx
 					.select({ count: sql<number>`COUNT(*)` })
 					.from(listingPhotos)
-					.where(eq(listingPhotos.listingId, listingId))
+					.where(
+						and(
+							eq(listingPhotos.listingId, listingId),
+							// Count only active rows — abandoned rows must not block future uploads.
+							sql`${listingPhotos.status} IN ('pending', 'complete')`
+						)
+					)
 				if (Number(count) >= maxPhotos) return null
 
 				const result = await tx
