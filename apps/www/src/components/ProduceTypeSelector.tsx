@@ -103,6 +103,9 @@ export default function ProduceTypeSelector(props: ProduceTypeSelectorProps) {
 				required
 				validationState={props.errorMessage ? 'invalid' : 'valid'}
 				placeholder="Search produce types…"
+				gutter={6}
+				overflowPadding={12}
+				fitViewport
 				itemComponent={(itemProps) => (
 					<Combobox.Item item={itemProps.item} class="combobox__item">
 						<Combobox.ItemLabel>
