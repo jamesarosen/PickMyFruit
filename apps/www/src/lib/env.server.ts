@@ -80,8 +80,14 @@ const outputSchema = z
 			.string()
 			.regex(/^.+\s<[^@]+@[^>]+>$/, 'Must be in "Display Name <email>" format'),
 		HMAC_SECRET: z.string().min(32),
+		INTERNAL_TOKEN: z.string().min(1).prefault('test-token'),
 		MIGRATE_ON_REQUEST: z.stringbool().prefault('false'),
 		NODE_ENV: z.string().prefault('development'),
+		PHOTOS_BASE_URL: z
+			.string()
+			.url()
+			.transform((url) => url.replace(/\/+$/, ''))
+			.prefault('http://pickmyfruit.flycast:8080'),
 		SHARP_CONCURRENCY: z.coerce.number().int().positive().prefault(1),
 		email: emailSchema,
 		storage: storageSchema,
@@ -93,6 +99,15 @@ const outputSchema = z
 				code: 'custom',
 				path: ['EMAIL_PROVIDER'],
 				message: 'Must be "resend" in production',
+			})
+		}
+
+		// The default test-token must never be used in production.
+		if (env.NODE_ENV === 'production' && env.INTERNAL_TOKEN === 'test-token') {
+			ctx.addIssue({
+				code: 'custom',
+				path: ['INTERNAL_TOKEN'],
+				message: 'Must be set to a strong secret in production',
 			})
 		}
 

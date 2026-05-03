@@ -50,19 +50,23 @@ vi.mock('../src/lib/storage.server', () => ({
 }))
 
 // ============================================================================
-// Mock sharp — avoids native binary
+// Mock photoServiceClient — avoids real HTTP to the photos service
 // ============================================================================
 
-const mockSharpJpeg = vi.fn(() => ({ pipe: vi.fn() }))
-const mockSharpAutoOrient = vi.fn(() => ({ jpeg: mockSharpJpeg }))
+const mockTransformPhoto = vi.fn()
 
-vi.mock('sharp', () => ({
-	default: Object.assign(
-		vi.fn(() => ({
-			autoOrient: mockSharpAutoOrient,
-		})),
-		{ concurrency: vi.fn(), cache: vi.fn() }
-	),
+vi.mock('../src/lib/photoServiceClient.server', () => ({
+	transformPhoto: (...args: unknown[]) => mockTransformPhoto(...args),
+	headPhoto: vi.fn(),
+	PhotoServiceError: class PhotoServiceError extends Error {
+		constructor(
+			public readonly status: number,
+			public readonly body: string
+		) {
+			super(`Photo service returned ${status}: ${body}`)
+			this.name = 'PhotoServiceError'
+		}
+	},
 }))
 
 // Must import after mocking
@@ -76,6 +80,17 @@ const { addPhotoToListing, deletePhoto } =
 describe('addPhotoToListing', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
+		// Default: photos service succeeds (tests below exercise earlier guards)
+		mockTransformPhoto.mockResolvedValue({
+			key: 'pub/test-id.jpg',
+			width: 800,
+			height: 600,
+			bytes: 102400,
+			etag: '"abc"',
+			cached: false,
+			coldStart: false,
+			bootMs: 0,
+		})
 	})
 
 	it('throws when the user is not authenticated', async () => {
