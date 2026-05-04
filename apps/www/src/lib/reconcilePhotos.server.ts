@@ -19,13 +19,26 @@ type PhotoOutcome = 'completed' | 'abandoned' | 'still-pending' | 'error'
  *
  * The sweep never throws — errors per photo are captured to Sentry and the
  * loop continues for remaining photos.
+ *
+ * Idempotency: each transition (pending→complete, pending→abandoned) is a
+ * conditional SQL UPDATE scoped to the photo's current status, so concurrent
+ * sweeps from multiple Fly machines produce the same result without corruption.
+ * However, concurrent sweeps do cause redundant headPhoto traffic. Keep
+ * max_machines = 1 for the www process group in fly.toml to avoid this.
  */
 export async function reconcilePendingPhotos(): Promise<void> {
 	const { getPendingPhotosOlderThan, markPhotoComplete, abandonPhoto } =
 		await import('@/data/queries.server')
 	const { headPhoto } = await import('@/lib/photoServiceClient.server')
 
-	const photos = await getPendingPhotosOlderThan(PENDING_THRESHOLD_MS)
+	let photos: { id: string; createdAt: Date }[]
+	try {
+		photos = await getPendingPhotosOlderThan(PENDING_THRESHOLD_MS)
+	} catch (err) {
+		// A transient DB failure should not silently kill the sweep without a trace.
+		Sentry.captureException(err)
+		return
+	}
 
 	async function reconcileOne(photo: {
 		id: string
@@ -49,17 +62,17 @@ export async function reconcilePendingPhotos(): Promise<void> {
 
 	let completed = 0
 	let abandoned = 0
-	for (const result of results) {
+	results.forEach((result, i) => {
 		if (result.status === 'rejected') {
 			Sentry.captureException(result.reason, {
-				extra: { photoId: photos[results.indexOf(result)]?.id },
+				extra: { photoId: photos[i].id },
 			})
 		} else if (result.value === 'completed') {
 			completed++
 		} else if (result.value === 'abandoned') {
 			abandoned++
 		}
-	}
+	})
 
 	logger.info(
 		{ pending: photos.length, completed, abandoned },

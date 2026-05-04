@@ -29,6 +29,9 @@ primary_region = 'sjc'
   auto_start_machines = true
   min_machines_running = 0
   processes = ['app']
+  # max_machines = 1 — keep to avoid duplicate reconciliation sweeps.
+  # reconcilePendingPhotos is idempotent but concurrent machines issue
+  # redundant headPhoto requests to the photo service.
 
   # HTTP request timeouts.
   # NOTE: photo uploads are also gated by an in-process queue

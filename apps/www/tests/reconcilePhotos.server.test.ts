@@ -11,9 +11,14 @@ import { faker } from '@faker-js/faker'
 
 const mockHeadPhoto = vi.fn()
 
-vi.mock('../src/lib/photoServiceClient.server', () => ({
-	headPhoto: (...args: unknown[]) => mockHeadPhoto(...args),
-}))
+vi.mock('../src/lib/photoServiceClient.server', async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import('../src/lib/photoServiceClient.server')>()
+	return {
+		...actual,
+		headPhoto: (...args: unknown[]) => mockHeadPhoto(...args),
+	}
+})
 
 // ============================================================================
 // Mock DB queries
@@ -166,5 +171,42 @@ describe('reconcilePendingPhotos', () => {
 		await reconcilePendingPhotos()
 
 		expect(mockGetPendingPhotosOlderThan).toHaveBeenCalledWith(THRESHOLD_MS)
+	})
+
+	it('resolves and reports to Sentry when getPendingPhotosOlderThan rejects', async () => {
+		const dbError = new Error('db offline')
+		mockGetPendingPhotosOlderThan.mockRejectedValue(dbError)
+
+		// Should not throw — a DB failure must not crash the sweep loop
+		await expect(reconcilePendingPhotos()).resolves.toBeUndefined()
+
+		expect(mockCaptureException).toHaveBeenCalledWith(dbError)
+		// No photos were fetched so no headPhoto calls should occur
+		expect(mockHeadPhoto).not.toHaveBeenCalled()
+	})
+
+	it('isolates a PhotoServiceError from headPhoto per photo and reports it with photoId', async () => {
+		const { PhotoServiceError } =
+			await import('../src/lib/photoServiceClient.server')
+		const failPhoto = makePhoto()
+		const okPhoto = makePhoto()
+		mockGetPendingPhotosOlderThan.mockResolvedValue([failPhoto, okPhoto])
+
+		const serviceError = new PhotoServiceError(503, 'service unavailable')
+		mockHeadPhoto
+			.mockRejectedValueOnce(serviceError) // first photo fails
+			.mockResolvedValueOnce({ exists: true }) // second succeeds
+
+		await reconcilePendingPhotos()
+
+		// The error must be reported with the failing photo's id
+		expect(mockCaptureException).toHaveBeenCalledWith(
+			serviceError,
+			expect.objectContaining({ extra: { photoId: failPhoto.id } })
+		)
+
+		// The sweep must continue: the ok photo should be completed
+		expect(mockMarkPhotoComplete).toHaveBeenCalledWith(okPhoto.id)
+		expect(mockMarkPhotoComplete).not.toHaveBeenCalledWith(failPhoto.id)
 	})
 })

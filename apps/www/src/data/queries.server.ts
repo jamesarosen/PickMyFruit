@@ -466,6 +466,7 @@ export async function getPendingPhotosOlderThan(
 						lt(listingPhotos.createdAt, cutoff)
 					)
 				)
+				.limit(500)
 			return rows
 		}
 	)
