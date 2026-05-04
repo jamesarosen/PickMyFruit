@@ -35,16 +35,45 @@
 	* foreground colors.
 	* @see https://piccalil.li/blog/taking-a-shot-at-the-double-focus-ring-problem-using-modern-css/
 	*/
-	:focus-visible {
-		box-shadow: var(--_focus-ring-shadow);
-		outline: none;
+	@media not (forced-colors: active) {
+		:focus-visible,
+		.focus-ring:focus-within {
+			box-shadow: var(--_focus-ring-shadow);
+			outline: none;
+		}
+	}
+
+	@media (forced-colors: active) {
+		:focus-visible,
+		.focus-ring:focus-within {
+			box-shadow: none;
+			outline: 2px solid var(--color-accent);
+			outline-offset: 2px;
+		}
 	}
 }
 
 @layer utilities {
-	.focus-ring:focus-within {
-		box-shadow: var(--_focus-ring-shadow);
-		outline: none;
+	@media not (forced-colors: active) {
+		:focus-visible,
+		.focus-ring:focus-within {
+			box-shadow: var(--_focus-ring-shadow);
+			outline: none;
+		}
+	}
+
+	@media (forced-colors: active) {
+		:focus-visible,
+		.focus-ring:focus-within {
+			border-color: Highlight;
+			box-shadow: none;
+			outline: 2px solid Highlight;
+			outline-offset: 3px;
+		}
+
+		.focus-ring-none:focus-visible {
+			outline: none;
+		}
 	}
 
 	.focus-ring-none:focus-visible {

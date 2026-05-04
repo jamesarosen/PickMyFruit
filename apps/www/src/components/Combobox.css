@@ -143,4 +143,14 @@
 	.combobox__item:not([data-selected]) .combobox__item-check {
 		visibility: hidden;
 	}
+
+	@media (forced-colors: active) {
+		.combobox__control:focus-within {
+			border-color: Highlight;
+
+			.combobox__trigger:focus-visible {
+				outline: none;
+			}
+		}
+	}
 }
