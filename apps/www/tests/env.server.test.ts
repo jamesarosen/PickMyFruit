@@ -43,27 +43,6 @@ describe('env.server schema', () => {
 		expect(result.data?.email.PROVIDER).toBe('console')
 	})
 
-	it('defaults SHARP_CONCURRENCY to 1', () => {
-		const result = schema.safeParse(VALID_DEV_ENV)
-		expect(result.data?.SHARP_CONCURRENCY).toBe(1)
-	})
-
-	it('parses SHARP_CONCURRENCY as a positive integer', () => {
-		const result = schema.safeParse({
-			...VALID_DEV_ENV,
-			SHARP_CONCURRENCY: '2',
-		})
-		expect(result.data?.SHARP_CONCURRENCY).toBe(2)
-	})
-
-	it('rejects invalid SHARP_CONCURRENCY values', () => {
-		const result = schema.safeParse({
-			...VALID_DEV_ENV,
-			SHARP_CONCURRENCY: '0',
-		})
-		expect(result.error).toBeTruthy()
-	})
-
 	it('parses with optional MEDIA_ORIGIN when storage is memory (MEDIA_ORIGIN is ignored)', () => {
 		const result = schema.safeParse({
 			...VALID_DEV_ENV,

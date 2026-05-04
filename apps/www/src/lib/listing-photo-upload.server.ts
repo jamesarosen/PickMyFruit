@@ -44,7 +44,7 @@ export function assertPhotoUploadCapacity(): void {
 	}
 }
 
-/** @internal Used by listing-photo-sharp-pipeline.server.ts to manage the shared queue. */
+/** @internal */
 export function getQueueDepth(): number {
 	return queueDepth
 }

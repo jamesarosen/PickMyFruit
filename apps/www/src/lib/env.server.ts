@@ -88,7 +88,6 @@ const outputSchema = z
 			.url()
 			.transform((url) => url.replace(/\/+$/, ''))
 			.prefault('http://pickmyfruit.flycast:8080'),
-		SHARP_CONCURRENCY: z.coerce.number().int().positive().prefault(1),
 		email: emailSchema,
 		storage: storageSchema,
 	})
@@ -119,7 +118,6 @@ const outputSchema = z
 				message: 'Must be "tigris" in production',
 			})
 		}
-
 	})
 
 export const schema = z.preprocess(preprocessEnv, outputSchema)

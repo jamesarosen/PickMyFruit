@@ -125,9 +125,6 @@ importers:
       resend:
         specifier: ^6.9.2
         version: 6.9.2
-      sharp:
-        specifier: ^0.34.5
-        version: 0.34.5
       solid-js:
         specifier: ^1.9.11
         version: 1.9.11
