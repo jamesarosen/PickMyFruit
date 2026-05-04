@@ -62,8 +62,8 @@ primary_region = 'sjc'
   initial_size = '1gb'
 
 # Environment variables
-# NODE_OPTIONS and SHARP_CONCURRENCY are mirrored in docker-compose.yml so
-# local runs reproduce production memory behavior. Keep these in sync.
+# NODE_OPTIONS is mirrored in docker-compose.yml so local runs reproduce
+# production memory behavior. Keep these in sync.
 [env]
   EMAIL_PROVIDER = 'resend'
   # Cap glibc malloc arenas — fewer per-thread arenas means lower RSS for
@@ -72,12 +72,8 @@ primary_region = 'sjc'
   MIGRATE_ON_REQUEST = 'true'
   NODE_ENV = 'production'
   MEDIA_ORIGIN = 'https://media.pickmyfruit.com'
-  # Cap V8 heap at ~75% of the 512 MB VM so GC fires before Linux OOM-kills,
-  # leaving headroom for libvips native allocations and the OS.
+  # Cap V8 heap at ~75% of the 512 MB VM so GC fires before Linux OOM-kills.
   NODE_OPTIONS = '--max-old-space-size=384'
-  # Serialize libvips work — the VM is still 1 shared CPU, so parallel image
-  # processing buys memory pressure without real throughput.
-  SHARP_CONCURRENCY = '1'
   STORAGE_PROVIDER = 'tigris'
   # libuv default is 4. On a 1-CPU shared VM the extra threads buy memory
   # pressure with no real parallelism. Keep 2 so I/O and TLS can overlap.
