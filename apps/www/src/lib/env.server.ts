@@ -119,6 +119,7 @@ const outputSchema = z
 				message: 'Must be "tigris" in production',
 			})
 		}
+
 	})
 
 export const schema = z.preprocess(preprocessEnv, outputSchema)

@@ -11,7 +11,7 @@ import {
 	type AddressFields,
 	type ListingPhoto,
 } from './schema'
-import { eq, desc, and, ne, isNull, gt, inArray, sql } from 'drizzle-orm'
+import { eq, desc, and, ne, isNull, gt, lt, inArray, sql } from 'drizzle-orm'
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 import { Sentry } from '@/lib/sentry'
 import { storage } from '@/lib/storage.server'
@@ -409,6 +409,23 @@ export async function completePhoto(
 }
 
 /**
+ * Transitions a pending photo row to `complete` without updating service
+ * metadata fields. Used by the reconciliation sweep when HEAD confirms a
+ * photo exists but service metadata is not re-fetched.
+ */
+export async function markPhotoComplete(id: string): Promise<void> {
+	return Sentry.startSpan(
+		{ name: 'markPhotoComplete', op: 'db.query', attributes: { id } },
+		async () => {
+			await db
+				.update(listingPhotos)
+				.set({ status: 'complete' })
+				.where(eq(listingPhotos.id, id))
+		}
+	)
+}
+
+/**
  * Marks a photo row as `abandoned`. Called when the photos-service transform
  * fails after the pending row was already inserted. An ops script can
  * reconcile abandoned rows and their raw/ objects.
@@ -421,6 +438,35 @@ export async function abandonPhoto(id: string): Promise<void> {
 				.update(listingPhotos)
 				.set({ status: 'abandoned' })
 				.where(eq(listingPhotos.id, id))
+		}
+	)
+}
+
+/**
+ * Returns pending photos older than `thresholdMs` milliseconds.
+ * Used by the reconciliation sweep to find stale uploads to re-check.
+ */
+export async function getPendingPhotosOlderThan(
+	thresholdMs: number
+): Promise<{ id: string; createdAt: Date }[]> {
+	return Sentry.startSpan(
+		{
+			name: 'getPendingPhotosOlderThan',
+			op: 'db.query',
+			attributes: { thresholdMs },
+		},
+		async () => {
+			const cutoff = new Date(Date.now() - thresholdMs)
+			const rows = await db
+				.select({ id: listingPhotos.id, createdAt: listingPhotos.createdAt })
+				.from(listingPhotos)
+				.where(
+					and(
+						eq(listingPhotos.status, 'pending'),
+						lt(listingPhotos.createdAt, cutoff)
+					)
+				)
+			return rows
 		}
 	)
 }
