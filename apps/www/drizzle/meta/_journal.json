@@ -50,6 +50,13 @@
 			"when": 1775007518000,
 			"tag": "0006_add_listing_photos",
 			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "6",
+			"when": 1777841808562,
+			"tag": "0007_photo_service_columns",
+			"breakpoints": true
 		}
 	]
 }

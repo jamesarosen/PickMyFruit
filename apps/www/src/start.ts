@@ -4,6 +4,15 @@ import { migrationsMiddleware } from '@/middleware/migrations'
 import { securityHeadersMiddleware } from '@/middleware/security-headers'
 import { tlsMiddleware } from '@/middleware/tls'
 
+// Run once at startup and then hourly — fire-and-forget so reconciliation
+// never delays the first request.
+async function runReconcile() {
+	const { reconcilePendingPhotos } = await import('@/lib/reconcilePhotos.server')
+	return reconcilePendingPhotos()
+}
+void runReconcile()
+setInterval(() => void runReconcile(), 60 * 60_000)
+
 export const startInstance = createStart(() => ({
 	requestMiddleware: [
 		migrationsMiddleware, // schema must exist before any handler runs

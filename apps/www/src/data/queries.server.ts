@@ -11,7 +11,7 @@ import {
 	type AddressFields,
 	type ListingPhoto,
 } from './schema'
-import { eq, desc, and, ne, isNull, gt, inArray, sql } from 'drizzle-orm'
+import { eq, desc, and, ne, isNull, gt, lt, inArray, sql } from 'drizzle-orm'
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 import { Sentry } from '@/lib/sentry'
 import { storage } from '@/lib/storage.server'
@@ -318,6 +318,150 @@ export async function addPhotoToListing(
 					throw new DataInvariantError('addPhotoToListing: insert returned no row')
 				return result[0]
 			})
+		}
+	)
+}
+
+/**
+ * Inserts a photo row with `status='pending'` inside a transaction that
+ * atomically checks the photo count and assigns `order` via MAX()+1.
+ *
+ * Returns `null` when the listing already has `maxPhotos` photos. Call
+ * `completePhoto` once the photos service confirms the transform succeeded.
+ */
+export async function insertPendingPhoto(
+	listingId: number,
+	id: string,
+	ext: ALLOWED_EXT,
+	maxPhotos: number
+): Promise<ListingPhoto | null> {
+	return Sentry.startSpan(
+		{
+			name: 'insertPendingPhoto',
+			op: 'db.query',
+			attributes: { listingId },
+		},
+		async () => {
+			return db.transaction(async (tx) => {
+				const [{ count }] = await tx
+					.select({ count: sql<number>`COUNT(*)` })
+					.from(listingPhotos)
+					.where(
+						and(
+							eq(listingPhotos.listingId, listingId),
+							// Count only active rows — abandoned rows must not block future uploads.
+							sql`${listingPhotos.status} IN ('pending', 'complete')`
+						)
+					)
+				if (Number(count) >= maxPhotos) return null
+
+				const result = await tx
+					.insert(listingPhotos)
+					.values({
+						id,
+						listingId,
+						ext,
+						status: 'pending',
+						order: sql`COALESCE(
+							(SELECT MAX("order") FROM listing_photos
+							 WHERE listing_id = ${listingId}),
+							-1
+						) + 1`,
+					})
+					.returning()
+				if (!result[0])
+					throw new DataInvariantError('insertPendingPhoto: insert returned no row')
+				return result[0]
+			})
+		}
+	)
+}
+
+/**
+ * Updates a photo row from `pending` to `complete` after the photos service
+ * confirms the transform succeeded. Stores the key, dimensions, size, and
+ * ETag returned by the service.
+ */
+export async function completePhoto(
+	id: string,
+	fields: {
+		key: string
+		width: number | null
+		height: number | null
+		bytes: number | null
+		etag: string | null
+	}
+): Promise<void> {
+	return Sentry.startSpan(
+		{ name: 'completePhoto', op: 'db.query', attributes: { id } },
+		async () => {
+			await db
+				.update(listingPhotos)
+				.set({ status: 'complete', ...fields })
+				.where(eq(listingPhotos.id, id))
+		}
+	)
+}
+
+/**
+ * Transitions a pending photo row to `complete` without updating service
+ * metadata fields. Used by the reconciliation sweep when HEAD confirms a
+ * photo exists but service metadata is not re-fetched.
+ */
+export async function markPhotoComplete(id: string): Promise<void> {
+	return Sentry.startSpan(
+		{ name: 'markPhotoComplete', op: 'db.query', attributes: { id } },
+		async () => {
+			await db
+				.update(listingPhotos)
+				.set({ status: 'complete' })
+				.where(eq(listingPhotos.id, id))
+		}
+	)
+}
+
+/**
+ * Marks a photo row as `abandoned`. Called when the photos-service transform
+ * fails after the pending row was already inserted. An ops script can
+ * reconcile abandoned rows and their raw/ objects.
+ */
+export async function abandonPhoto(id: string): Promise<void> {
+	return Sentry.startSpan(
+		{ name: 'abandonPhoto', op: 'db.query', attributes: { id } },
+		async () => {
+			await db
+				.update(listingPhotos)
+				.set({ status: 'abandoned' })
+				.where(eq(listingPhotos.id, id))
+		}
+	)
+}
+
+/**
+ * Returns pending photos older than `thresholdMs` milliseconds.
+ * Used by the reconciliation sweep to find stale uploads to re-check.
+ */
+export async function getPendingPhotosOlderThan(
+	thresholdMs: number
+): Promise<{ id: string; createdAt: Date }[]> {
+	return Sentry.startSpan(
+		{
+			name: 'getPendingPhotosOlderThan',
+			op: 'db.query',
+			attributes: { thresholdMs },
+		},
+		async () => {
+			const cutoff = new Date(Date.now() - thresholdMs)
+			const rows = await db
+				.select({ id: listingPhotos.id, createdAt: listingPhotos.createdAt })
+				.from(listingPhotos)
+				.where(
+					and(
+						eq(listingPhotos.status, 'pending'),
+						lt(listingPhotos.createdAt, cutoff)
+					)
+				)
+			return rows
 		}
 	)
 }
