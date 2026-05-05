@@ -42,7 +42,7 @@ const {
 	getAvailableListings,
 	getListingById,
 	getPublicListingById,
-	updateListingStatus,
+	updateListingById,
 } = await import('../src/data/queries.server')
 
 // Wire up the full chain before each test.
@@ -100,29 +100,48 @@ describe('deleteListingById', () => {
 	})
 })
 
-describe('updateListingStatus', () => {
+describe('updateListingById', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 	})
 
-	it('returns true when the listing is updated', async () => {
-		wireUpdateChain([{ id: 1 }])
+	it('returns { tag: updated } when the optimistic lock matches', async () => {
+		const listing = { id: 1, name: 'Apple Tree', status: 'available' }
+		mockUpdateSet.mockReturnValue({ where: mockUpdateWhere })
+		mockUpdateWhere.mockReturnValue({ returning: mockReturning })
+		mockReturning.mockResolvedValue([listing])
 
-		const result = await updateListingStatus(
-			1,
-			faker.string.uuid(),
-			'unavailable'
-		)
+		const result = await updateListingById(1, faker.string.uuid(), 1700000000, {
+			name: 'Apple Tree Updated',
+		})
 
-		expect(result).toBe(true)
+		expect(result).toEqual({ tag: 'updated', listing })
 	})
 
-	it('returns false when no matching live listing exists', async () => {
-		wireUpdateChain([])
+	it('returns { tag: conflict } when UPDATE matches no row but the listing exists', async () => {
+		mockUpdateSet.mockReturnValue({ where: mockUpdateWhere })
+		mockUpdateWhere.mockReturnValue({ returning: mockReturning })
+		mockReturning.mockResolvedValue([])
+		wireSelectChain([{ id: 1 }])
 
-		const result = await updateListingStatus(1, faker.string.uuid(), 'available')
+		const result = await updateListingById(1, faker.string.uuid(), 1700000000, {
+			name: 'Stale Edit',
+		})
 
-		expect(result).toBe(false)
+		expect(result).toEqual({ tag: 'conflict' })
+	})
+
+	it('returns { tag: not_found } when no matching listing exists for this owner', async () => {
+		mockUpdateSet.mockReturnValue({ where: mockUpdateWhere })
+		mockUpdateWhere.mockReturnValue({ returning: mockReturning })
+		mockReturning.mockResolvedValue([])
+		wireSelectChain([])
+
+		const result = await updateListingById(999, faker.string.uuid(), 1700000000, {
+			status: 'unavailable',
+		})
+
+		expect(result).toEqual({ tag: 'not_found' })
 	})
 })
 

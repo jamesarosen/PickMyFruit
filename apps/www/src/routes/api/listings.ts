@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { listingFormSchema } from '@/lib/validation'
 import { geocodeAddress } from '@/lib/geocoding'
 import { Sentry } from '@/lib/sentry'
+import { produceTypes } from '@/lib/produce-types'
 
 const querySchema = z.object({
 	limit: z.coerce.number().int().positive().max(100).default(10),
@@ -79,7 +80,9 @@ export const Route = createFileRoute('/api/listings')({
 				// Create the listing
 				try {
 					const listing = await createListing({
-						name: formData.type, // Use fruit type as name for now
+						name:
+							produceTypes.find((p) => p.slug === formData.type)
+								?.nameSingularTitleCase ?? formData.type,
 						type: formData.type,
 						harvestWindow: formData.harvestWindow,
 						address: formData.address,

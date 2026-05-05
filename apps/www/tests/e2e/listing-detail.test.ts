@@ -12,9 +12,9 @@ test.describe('Listing Detail Page', () => {
 	}) => {
 		await page.goto(`/listings/${testListing.id}`)
 
-		// Verify the fruit type appears as heading
+		// Verify the listing name appears as heading
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			testListing.type
+			testListing.name
 		)
 
 		// Verify key details are visible
@@ -57,7 +57,7 @@ test.describe('Listing Detail Page', () => {
 		await card.click()
 		await expect(page).toHaveURL(`/listings/${testListing.id}`)
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			testListing.type
+			testListing.name
 		)
 	})
 
@@ -80,9 +80,28 @@ test.describe('Listing Detail Page', () => {
 		await loginViaUI(page, testUser)
 		await page.goto(`/listings/${privateListing.id}`)
 
-		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			privateListing.type
-		)
+		// Owner sees title as an editable input, not an h1
+		await expect(page.getByLabel('Title')).toHaveValue(privateListing.name)
 		await expect(page.getByRole('radio', { name: /^Private / })).toBeChecked()
+	})
+
+	test('owner can edit listing title inline and it persists after reload', async ({
+		page,
+		testUser,
+		testListing,
+	}) => {
+		await loginViaUI(page, testUser)
+		await page.goto(`/listings/${testListing.id}`)
+		await page.waitForLoadState('networkidle')
+
+		const newTitle = 'Freshly Edited Title'
+		const titleInput = page.getByLabel('Title')
+		await titleInput.fill(newTitle)
+		await titleInput.blur()
+		await page.waitForLoadState('networkidle')
+
+		await page.reload()
+		await page.waitForLoadState('networkidle')
+		await expect(page.getByLabel('Title')).toHaveValue(newTitle)
 	})
 })

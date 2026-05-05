@@ -84,7 +84,27 @@ const listingStatusValues = Object.values(ListingStatus) as [
 	...ListingStatusValue[],
 ]
 
-// Accepts all three statuses; the UI exposes them as a radio group.
-export const updateListingStatusSchema = z.object({
-	status: z.enum(listingStatusValues, { message: 'Invalid status' }),
-})
+/**
+ * Flat update schema — any combination of data fields may be present, but at
+ * least one data field (anything other than `id` / `clientUpdatedAt`) is
+ * required. `clientUpdatedAt` carries the epoch-seconds timestamp of the last
+ * known `updatedAt` and is used for optimistic concurrency.
+ */
+export const updateListingSchema = z
+	.object({
+		id: z.number().int().positive(),
+		clientUpdatedAt: z.number().int(),
+		status: z.enum(listingStatusValues).optional(),
+		name: z.string().min(1).max(200).optional(),
+		harvestWindow: z.string().min(1).max(50).optional(),
+		variety: z.string().max(200).nullable().optional(),
+		quantity: z.string().max(100).nullable().optional(),
+		notes: z.string().max(1000).nullable().optional(),
+	})
+	.refine(
+		(d) =>
+			[d.status, d.name, d.harvestWindow, d.variety, d.quantity, d.notes].some(
+				(v) => v !== undefined
+			),
+		{ message: 'At least one field must be updated' }
+	)
