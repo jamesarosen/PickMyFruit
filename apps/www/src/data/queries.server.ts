@@ -482,18 +482,54 @@ export async function getListingForInquiry(
 	)
 }
 
-/** Updates a listing's status, scoped to the owning user. */
-export async function updateListingStatus(
+export type UpdateListingResult =
+	| { tag: 'updated'; listing: Listing }
+	| { tag: 'conflict' }
+	| { tag: 'not_found' }
+
+/**
+ * Updates any combination of listing fields for the owning user.
+ *
+ * `clientUpdatedAt` (epoch seconds) implements If-Unmodified-Since semantics:
+ * the update is applied only when the row's `updated_at` matches. If it
+ * doesn't match, returns `{ tag: 'conflict' }` so callers can surface a
+ * human-readable error rather than silently discarding the edit.
+ */
+export async function updateListingById(
 	id: number,
 	userId: string,
-	status: ListingStatusValue
-): Promise<boolean> {
+	clientUpdatedAt: number,
+	fields: {
+		status?: ListingStatusValue
+		name?: string
+		harvestWindow?: string | null
+		variety?: string | null
+		quantity?: string | null
+		notes?: string | null
+	}
+): Promise<UpdateListingResult> {
 	return Sentry.startSpan(
-		{ name: 'updateListingStatus', op: 'db.query', attributes: { id, status } },
+		{ name: 'updateListingById', op: 'db.query', attributes: { id } },
 		async () => {
 			const result = await db
 				.update(listings)
-				.set({ status, updatedAt: new Date() })
+				.set({ ...fields, updatedAt: new Date() })
+				.where(
+					and(
+						eq(listings.id, id),
+						eq(listings.userId, userId),
+						isNull(listings.deletedAt),
+						eq(listings.updatedAt, new Date(clientUpdatedAt * 1000))
+					)
+				)
+				.returning()
+
+			if (result[0]) return { tag: 'updated', listing: result[0] }
+
+			// Distinguish stale-write (conflict) from missing / wrong owner (not found)
+			const exists = await db
+				.select({ id: listings.id })
+				.from(listings)
 				.where(
 					and(
 						eq(listings.id, id),
@@ -501,8 +537,9 @@ export async function updateListingStatus(
 						isNull(listings.deletedAt)
 					)
 				)
-				.returning({ id: listings.id })
-			return result.length > 0
+				.limit(1)
+
+			return exists.length > 0 ? { tag: 'conflict' } : { tag: 'not_found' }
 		}
 	)
 }

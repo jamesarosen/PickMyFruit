@@ -1,9 +1,10 @@
 import { createServerFn } from '@tanstack/solid-start'
 import { getRequestHeaders } from '@tanstack/solid-start/server'
 import { z } from 'zod'
-import { errorMiddleware } from '@/lib/server-error-middleware'
+import { errorMiddleware, UserError } from '@/lib/server-error-middleware'
 import { Sentry } from '@/lib/sentry'
-import type { AddressFields } from '@/data/schema'
+import { updateListingSchema } from '@/lib/validation'
+import type { AddressFields, Listing } from '@/data/schema'
 import type { OwnerListingView } from '@/data/listing'
 
 /** Fetches the current user's listings, or empty array if not authenticated. */
@@ -105,4 +106,31 @@ export const getListingForViewer = createServerFn({ method: 'GET' })
 			}
 		}
 		return getPublic(id)
+	})
+
+/** Updates any combination of listing fields for the authenticated owner. */
+export const updateListing = createServerFn({ method: 'POST' })
+	.middleware([errorMiddleware])
+	.inputValidator((data: unknown) => updateListingSchema.parse(data))
+	.handler(async ({ data }): Promise<Listing> => {
+		const headers = getRequestHeaders()
+		const { auth } = await import('@/lib/auth.server')
+		const session = await auth.api.getSession({ headers })
+		if (!session?.user)
+			throw new UserError('AUTH_REQUIRED', 'Authentication required')
+		const { id, clientUpdatedAt, ...fields } = data
+		const { updateListingById } = await import('@/data/queries.server')
+		const result = await updateListingById(
+			id,
+			session.user.id,
+			clientUpdatedAt,
+			fields
+		)
+		if (result.tag === 'updated') return result.listing
+		if (result.tag === 'conflict')
+			throw new UserError(
+				'CONFLICT',
+				'This listing was updated elsewhere. Please refresh and try again.'
+			)
+		throw new UserError('NOT_FOUND', 'Listing not found')
 	})

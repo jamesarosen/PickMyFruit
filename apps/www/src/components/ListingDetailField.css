@@ -1,0 +1,60 @@
+@layer components {
+	.listing-detail-field {
+		display: contents;
+	}
+
+	.listing-detail-field__label {
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--color-quiet);
+		align-self: baseline;
+	}
+
+	.listing-detail-field__value {
+		font-size: 16px;
+		color: var(--color-foreground);
+	}
+
+	.listing-detail-field__input {
+		width: 100%;
+		font-size: 16px;
+		font-family: inherit;
+		color: var(--color-foreground);
+		background: oklch(from var(--color-background) l c h / 0.6);
+		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.25) h);
+		border-radius: 6px;
+		padding: 6px 8px;
+		margin: 0;
+		box-sizing: border-box;
+
+		&:hover {
+			border-color: oklch(from var(--color-quiet) l calc(c * 0.45) h);
+		}
+
+		&:focus {
+			outline: none;
+			border-color: var(--color-accent);
+			background: var(--color-background);
+		}
+	}
+
+	.listing-detail-field__input--title {
+		font-size: 32px;
+		font-weight: 700;
+		line-height: 1.2;
+		padding-block: 4px 6px;
+	}
+
+	textarea.listing-detail-field__input {
+		display: block;
+		field-sizing: content;
+		box-sizing: content-box;
+		/* Offset 2×8px padding + 2×1px border so the element fills the column in content-box mode */
+		width: calc(100% - 18px);
+		min-height: 4lh;
+		max-height: 12lh;
+		overflow-y: auto;
+		line-height: 1.5;
+		resize: vertical;
+	}
+}

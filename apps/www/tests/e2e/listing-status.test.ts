@@ -20,13 +20,8 @@ test.describe('Listing Status', () => {
 		await expect(availableRadio).toBeChecked()
 		await expect(unavailableRadio).not.toBeChecked()
 
-		const patchPromise = page.waitForResponse(
-			(resp) =>
-				resp.url().includes(`/api/listings/${testListing.id}`) &&
-				resp.request().method() === 'PATCH'
-		)
 		await unavailableRadio.click()
-		await patchPromise
+		await page.waitForLoadState('networkidle')
 
 		await expect(unavailableRadio).toBeChecked()
 		await expect(availableRadio).not.toBeChecked()
@@ -49,13 +44,8 @@ test.describe('Listing Status', () => {
 
 		await expect(unavailableRadio).toBeChecked()
 
-		const patchPromise = page.waitForResponse(
-			(resp) =>
-				resp.url().includes(`/api/listings/${listing.id}`) &&
-				resp.request().method() === 'PATCH'
-		)
 		await availableRadio.click()
-		await patchPromise
+		await page.waitForLoadState('networkidle')
 
 		await expect(availableRadio).toBeChecked()
 	})
@@ -73,13 +63,8 @@ test.describe('Listing Status', () => {
 
 		await expect(privateRadio).not.toBeChecked()
 
-		const patchPromise = page.waitForResponse(
-			(resp) =>
-				resp.url().includes(`/api/listings/${listing.id}`) &&
-				resp.request().method() === 'PATCH'
-		)
 		await privateRadio.click()
-		await patchPromise
+		await page.waitForLoadState('networkidle')
 
 		await expect(privateRadio).toBeChecked()
 	})

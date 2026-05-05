@@ -7,6 +7,7 @@ import Banner from '@/components/Banner'
 import InquiryForm from '@/components/InquiryForm'
 import ListingMap from '@/components/ListingMap'
 import ListingPhotosSection from '@/components/ListingPhotosSection'
+import { ListingDetailField } from '@/components/ListingDetailField'
 import {
 	getStatusVariant,
 	VISIBILITY_OPTIONS,
@@ -15,7 +16,7 @@ import {
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 import { buildListingMeta } from '@/lib/listing-meta'
 import { Sentry } from '@/lib/sentry'
-import { getListingForViewer } from '@/api/listings'
+import { getListingForViewer, updateListing } from '@/api/listings'
 import type { Listing } from '@/data/schema'
 import type { PublicListing } from '@/data/queries.server'
 import type { OwnerListingView, PublicPhoto } from '@/data/listing'
@@ -102,6 +103,7 @@ function coverPhotoUrl(
 }
 
 const STATUS_DEBOUNCE_MS = 300
+const FIELDS_DEBOUNCE_MS = 500
 
 function photosForViewerRow(
 	row: Listing | PublicListing | OwnerListingView
@@ -112,6 +114,8 @@ function photosForViewerRow(
 function OwnerControls(props: {
 	listingId: number
 	initialStatus: ListingStatusValue
+	clientUpdatedAt: () => number
+	onUpdated: (updatedAt: Date) => void
 }) {
 	const [isUpdating, setIsUpdating] = createSignal(false)
 	const [savedStatus, setSavedStatus] = createSignal(props.initialStatus)
@@ -119,12 +123,14 @@ function OwnerControls(props: {
 	const [error, setError] = createErrorSignal()
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined
 
-	onCleanup(() => clearTimeout(debounceTimer))
+	onCleanup(() => {
+		clearTimeout(debounceTimer)
+		const pending = displayStatus()
+		if (pending !== savedStatus()) void commitStatus(pending)
+	})
 
 	function selectStatus(newStatus: ListingStatusValue) {
-		if (newStatus === displayStatus()) {
-			return
-		}
+		if (newStatus === displayStatus()) return
 		setDisplayStatus(newStatus)
 		setError(null)
 		clearTimeout(debounceTimer)
@@ -132,30 +138,18 @@ function OwnerControls(props: {
 	}
 
 	async function commitStatus(newStatus: ListingStatusValue) {
-		if (newStatus === savedStatus()) {
-			return
-		}
+		if (newStatus === savedStatus()) return
 		setIsUpdating(true)
-
 		try {
-			const response = await fetch(`/api/listings/${props.listingId}`, {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ status: newStatus }),
+			const result = await updateListing({
+				data: {
+					id: props.listingId,
+					status: newStatus,
+					clientUpdatedAt: props.clientUpdatedAt(),
+				},
 			})
-
-			if (!response.ok) {
-				let message = 'Failed to update status'
-				try {
-					const data = await response.json()
-					message = typeof data.error === 'string' ? data.error : message
-				} catch {
-					// Response wasn't JSON
-				}
-				throw new Error(message)
-			}
-
 			setSavedStatus(newStatus)
+			props.onUpdated(result.updatedAt!)
 		} catch (err) {
 			Sentry.captureException(err)
 			setError(err)
@@ -166,40 +160,413 @@ function OwnerControls(props: {
 	}
 
 	return (
-		<>
-			<fieldset class="visibility-fieldset" aria-busy={isUpdating()}>
-				<legend class="visibility-legend">Visibility</legend>
-				<For each={VISIBILITY_OPTIONS}>
-					{(option) => (
-						<label
-							class="visibility-option"
-							classList={{
-								'visibility-option--selected': displayStatus() === option.value,
-							}}
-							style={{
-								'--visibility-color': statusSemanticColor[option.value],
-							}}
-						>
-							<input
-								type="radio"
-								name="visibility"
-								value={option.value}
-								checked={displayStatus() === option.value}
-								onChange={() => selectStatus(option.value)}
-							/>
-							<span class="visibility-option-text">
-								<span class="visibility-option-label">{option.label}</span>
-								<span class="visibility-option-description">{option.description}</span>
-							</span>
-						</label>
-					)}
-				</For>
+		<fieldset class="visibility-fieldset" aria-busy={isUpdating()}>
+			{/* Always render the legend — sr-only keeps it off-screen while the
+			    grid label cell provides the visible "Visibility" label above. */}
+			<legend class="sr-only">Visibility</legend>
+			<For each={VISIBILITY_OPTIONS}>
+				{(option) => (
+					<label
+						class="visibility-option"
+						classList={{
+							'visibility-option--selected': displayStatus() === option.value,
+						}}
+						style={{ '--visibility-color': statusSemanticColor[option.value] }}
+					>
+						<input
+							type="radio"
+							name="visibility"
+							value={option.value}
+							checked={displayStatus() === option.value}
+							onChange={() => selectStatus(option.value)}
+						/>
+						<span class="visibility-option-text">
+							<span class="visibility-option-label">{option.label}</span>
+							<span class="visibility-option-description">{option.description}</span>
+						</span>
+					</label>
+				)}
+			</For>
+			<ErrorMessage
+				class="visibility-error"
+				defaultMessage="Failed to update"
+				error={error()}
+			/>
+		</fieldset>
+	)
+}
+
+function OwnerTitleField(props: {
+	listing: OwnerListingView
+	clientUpdatedAt: () => number
+	onNameSaved: (name: string) => void
+	onUpdated: (updatedAt: Date) => void
+}) {
+	const [savedName, setSavedName] = createSignal(props.listing.name)
+	const [displayName, setDisplayName] = createSignal(props.listing.name)
+	const [isSaving, setIsSaving] = createSignal(false)
+	const [nameError, setNameError] = createErrorSignal()
+	let nameTimer: ReturnType<typeof setTimeout> | undefined
+
+	onCleanup(() => {
+		clearTimeout(nameTimer)
+		const trimmed = displayName().trim()
+		if (trimmed && trimmed !== savedName())
+			void saveName(trimmed, props.clientUpdatedAt())
+	})
+
+	async function saveName(value: string, cat: number) {
+		const trimmed = value.trim()
+		if (!trimmed) {
+			setNameError(new Error('Title cannot be empty'))
+			setDisplayName(savedName())
+			return
+		}
+		if (trimmed === savedName()) return
+		setIsSaving(true)
+		try {
+			const result = await updateListing({
+				data: { id: props.listing.id, name: trimmed, clientUpdatedAt: cat },
+			})
+			setSavedName(trimmed)
+			setDisplayName(trimmed)
+			props.onNameSaved(trimmed)
+			setNameError(null)
+			props.onUpdated(result.updatedAt!)
+		} catch (err) {
+			Sentry.captureException(err)
+			setNameError(err)
+			setDisplayName(savedName())
+		} finally {
+			setIsSaving(false)
+		}
+	}
+
+	return (
+		<ListingDetailField label="Title" id="listing-title">
+			<input
+				id="listing-title"
+				class="listing-detail-field__input listing-detail-field__input--title"
+				type="text"
+				value={displayName()}
+				aria-busy={isSaving()}
+				onInput={(e) => {
+					setDisplayName(e.currentTarget.value)
+					clearTimeout(nameTimer)
+					nameTimer = setTimeout(
+						() => saveName(e.currentTarget.value, props.clientUpdatedAt()),
+						FIELDS_DEBOUNCE_MS
+					)
+				}}
+				onBlur={(e) => {
+					clearTimeout(nameTimer)
+					saveName(e.currentTarget.value, props.clientUpdatedAt())
+				}}
+				maxlength={200}
+				aria-describedby={nameError() ? 'listing-title-error' : undefined}
+			/>
+			<Show when={nameError()}>
 				<ErrorMessage
-					class="visibility-error"
-					defaultMessage="Failed to update"
-					error={error()}
+					id="listing-title-error"
+					defaultMessage="Failed to save title"
+					error={nameError()}
 				/>
-			</fieldset>
+			</Show>
+		</ListingDetailField>
+	)
+}
+
+function OwnerEditableFields(props: {
+	listing: OwnerListingView
+	clientUpdatedAt: () => number
+	onUpdated: (updatedAt: Date) => void
+}) {
+	const [savedHarvest, setSavedHarvest] = createSignal(
+		props.listing.harvestWindow ?? ''
+	)
+	const [displayHarvest, setDisplayHarvest] = createSignal(
+		props.listing.harvestWindow ?? ''
+	)
+	const [harvestSaving, setHarvestSaving] = createSignal(false)
+	const [harvestError, setHarvestError] = createErrorSignal()
+
+	const [savedVariety, setSavedVariety] = createSignal<string | null>(
+		props.listing.variety ?? null
+	)
+	const [displayVariety, setDisplayVariety] = createSignal(
+		props.listing.variety ?? ''
+	)
+	const [varietySaving, setVarietySaving] = createSignal(false)
+	const [varietyError, setVarietyError] = createErrorSignal()
+
+	const [savedQuantity, setSavedQuantity] = createSignal<string | null>(
+		props.listing.quantity ?? null
+	)
+	const [displayQuantity, setDisplayQuantity] = createSignal(
+		props.listing.quantity ?? ''
+	)
+	const [quantitySaving, setQuantitySaving] = createSignal(false)
+	const [quantityError, setQuantityError] = createErrorSignal()
+
+	const [savedNotes, setSavedNotes] = createSignal(props.listing.notes ?? '')
+	const [displayNotes, setDisplayNotes] = createSignal(props.listing.notes ?? '')
+	const [notesSaving, setNotesSaving] = createSignal(false)
+	const [notesError, setNotesError] = createErrorSignal()
+
+	let harvestTimer: ReturnType<typeof setTimeout> | undefined
+	let varietyTimer: ReturnType<typeof setTimeout> | undefined
+	let quantityTimer: ReturnType<typeof setTimeout> | undefined
+	let notesTimer: ReturnType<typeof setTimeout> | undefined
+
+	onCleanup(() => {
+		clearTimeout(harvestTimer)
+		clearTimeout(varietyTimer)
+		clearTimeout(quantityTimer)
+		clearTimeout(notesTimer)
+		const cat = props.clientUpdatedAt()
+		const harvestTrimmed = displayHarvest().trim()
+		if (harvestTrimmed && harvestTrimmed !== savedHarvest())
+			void saveHarvest(harvestTrimmed, cat)
+		const varietyTrimmed = displayVariety().trim()
+		const varietyVal = varietyTrimmed || null
+		if (varietyVal !== savedVariety()) void saveVariety(varietyTrimmed, cat)
+		const quantityTrimmed = displayQuantity().trim()
+		const quantityVal = quantityTrimmed || null
+		if (quantityVal !== savedQuantity()) void saveQuantity(quantityTrimmed, cat)
+		const notesTrimmed = displayNotes().trim()
+		if (notesTrimmed !== savedNotes()) void saveNotes(notesTrimmed, cat)
+	})
+
+	async function saveHarvest(value: string, cat: number) {
+		const trimmed = value.trim()
+		if (!trimmed) {
+			setHarvestError(new Error('Harvest window cannot be empty'))
+			setDisplayHarvest(savedHarvest())
+			return
+		}
+		if (trimmed === savedHarvest()) return
+		setHarvestSaving(true)
+		try {
+			const result = await updateListing({
+				data: {
+					id: props.listing.id,
+					harvestWindow: trimmed,
+					clientUpdatedAt: cat,
+				},
+			})
+			setSavedHarvest(trimmed)
+			setHarvestError(null)
+			props.onUpdated(result.updatedAt!)
+		} catch (err) {
+			Sentry.captureException(err)
+			setHarvestError(err)
+			setDisplayHarvest(savedHarvest())
+		} finally {
+			setHarvestSaving(false)
+		}
+	}
+
+	async function saveVariety(value: string, cat: number) {
+		const trimmed = value.trim()
+		const varietyValue = trimmed || null
+		if (varietyValue === savedVariety()) return
+		setVarietySaving(true)
+		try {
+			const result = await updateListing({
+				data: { id: props.listing.id, variety: varietyValue, clientUpdatedAt: cat },
+			})
+			setSavedVariety(varietyValue)
+			setVarietyError(null)
+			props.onUpdated(result.updatedAt!)
+		} catch (err) {
+			Sentry.captureException(err)
+			setVarietyError(err)
+			setDisplayVariety(savedVariety() ?? '')
+		} finally {
+			setVarietySaving(false)
+		}
+	}
+
+	async function saveQuantity(value: string, cat: number) {
+		const trimmed = value.trim()
+		const quantityValue = trimmed || null
+		if (quantityValue === savedQuantity()) return
+		setQuantitySaving(true)
+		try {
+			const result = await updateListing({
+				data: {
+					id: props.listing.id,
+					quantity: quantityValue,
+					clientUpdatedAt: cat,
+				},
+			})
+			setSavedQuantity(quantityValue)
+			setQuantityError(null)
+			props.onUpdated(result.updatedAt!)
+		} catch (err) {
+			Sentry.captureException(err)
+			setQuantityError(err)
+			setDisplayQuantity(savedQuantity() ?? '')
+		} finally {
+			setQuantitySaving(false)
+		}
+	}
+
+	async function saveNotes(value: string, cat: number) {
+		const trimmed = value.trim()
+		const notesValue = trimmed || null
+		if (notesValue === (savedNotes() || null)) return
+		setNotesSaving(true)
+		try {
+			const result = await updateListing({
+				data: { id: props.listing.id, notes: notesValue, clientUpdatedAt: cat },
+			})
+			setSavedNotes(trimmed)
+			setNotesError(null)
+			props.onUpdated(result.updatedAt!)
+		} catch (err) {
+			Sentry.captureException(err)
+			setNotesError(err)
+			setDisplayNotes(savedNotes())
+		} finally {
+			setNotesSaving(false)
+		}
+	}
+
+	return (
+		<>
+			<ListingDetailField label="Harvest Window" id="listing-harvest-window">
+				<input
+					id="listing-harvest-window"
+					class="listing-detail-field__input"
+					type="text"
+					value={displayHarvest()}
+					aria-busy={harvestSaving()}
+					onInput={(e) => {
+						setDisplayHarvest(e.currentTarget.value)
+						clearTimeout(harvestTimer)
+						harvestTimer = setTimeout(
+							() => saveHarvest(e.currentTarget.value, props.clientUpdatedAt()),
+							FIELDS_DEBOUNCE_MS
+						)
+					}}
+					onBlur={(e) => {
+						clearTimeout(harvestTimer)
+						saveHarvest(e.currentTarget.value, props.clientUpdatedAt())
+					}}
+					maxlength={50}
+					aria-describedby={harvestError() ? 'listing-harvest-error' : undefined}
+				/>
+				<Show when={harvestError()}>
+					<ErrorMessage
+						id="listing-harvest-error"
+						defaultMessage="Failed to save harvest window"
+						error={harvestError()}
+					/>
+				</Show>
+			</ListingDetailField>
+
+			<ListingDetailField label="Variety" id="listing-variety">
+				<input
+					id="listing-variety"
+					class="listing-detail-field__input"
+					type="text"
+					value={displayVariety()}
+					aria-busy={varietySaving()}
+					onInput={(e) => {
+						setDisplayVariety(e.currentTarget.value)
+						clearTimeout(varietyTimer)
+						varietyTimer = setTimeout(
+							() => saveVariety(e.currentTarget.value, props.clientUpdatedAt()),
+							FIELDS_DEBOUNCE_MS
+						)
+					}}
+					onBlur={(e) => {
+						clearTimeout(varietyTimer)
+						saveVariety(e.currentTarget.value, props.clientUpdatedAt())
+					}}
+					maxlength={200}
+					placeholder="e.g. Granny Smith"
+					aria-describedby={varietyError() ? 'listing-variety-error' : undefined}
+				/>
+				<Show when={varietyError()}>
+					<ErrorMessage
+						id="listing-variety-error"
+						defaultMessage="Failed to save variety"
+						error={varietyError()}
+					/>
+				</Show>
+			</ListingDetailField>
+
+			<ListingDetailField label="Quantity" id="listing-quantity">
+				<input
+					id="listing-quantity"
+					class="listing-detail-field__input"
+					type="text"
+					value={displayQuantity()}
+					aria-busy={quantitySaving()}
+					onInput={(e) => {
+						setDisplayQuantity(e.currentTarget.value)
+						clearTimeout(quantityTimer)
+						quantityTimer = setTimeout(
+							() => saveQuantity(e.currentTarget.value, props.clientUpdatedAt()),
+							FIELDS_DEBOUNCE_MS
+						)
+					}}
+					onBlur={(e) => {
+						clearTimeout(quantityTimer)
+						saveQuantity(e.currentTarget.value, props.clientUpdatedAt())
+					}}
+					maxlength={100}
+					placeholder="e.g. abundant, moderate, a few"
+					aria-describedby={quantityError() ? 'listing-quantity-error' : undefined}
+				/>
+				<Show when={quantityError()}>
+					<ErrorMessage
+						id="listing-quantity-error"
+						defaultMessage="Failed to save quantity"
+						error={quantityError()}
+					/>
+				</Show>
+			</ListingDetailField>
+
+			{/* TODO: changing location requires re-geocoding the address; leave as
+			    read-only until we build that flow. */}
+			<ListingDetailField label="Location">
+				<span>
+					{props.listing.city}, {props.listing.state}
+				</span>
+			</ListingDetailField>
+
+			<ListingDetailField label="Notes" id="listing-notes">
+				<textarea
+					id="listing-notes"
+					class="listing-detail-field__input"
+					value={displayNotes()}
+					aria-busy={notesSaving()}
+					onInput={(e) => {
+						setDisplayNotes(e.currentTarget.value)
+						clearTimeout(notesTimer)
+						notesTimer = setTimeout(
+							() => saveNotes(e.currentTarget.value, props.clientUpdatedAt()),
+							FIELDS_DEBOUNCE_MS
+						)
+					}}
+					onBlur={(e) => {
+						clearTimeout(notesTimer)
+						saveNotes(e.currentTarget.value, props.clientUpdatedAt())
+					}}
+					maxlength={1000}
+					aria-describedby={notesError() ? 'listing-notes-error' : undefined}
+				/>
+				<Show when={notesError()}>
+					<ErrorMessage
+						id="listing-notes-error"
+						defaultMessage="Failed to save notes"
+						error={notesError()}
+					/>
+				</Show>
+			</ListingDetailField>
 		</>
 	)
 }
@@ -224,6 +591,23 @@ function ListingDetailPage() {
 		return l && l.status === ListingStatus.available && !isOwner()
 	}
 
+	// Tracks owner's live edits to the title for document title and breadcrumbs.
+	const [editableTitle, setEditableTitle] = createSignal<string | null>(null)
+	const displayTitle = () => editableTitle() ?? listing()?.name ?? ''
+
+	// Tracks the server-side updatedAt for optimistic concurrency control.
+	// Initialized from loader data; updated after each successful save so
+	// concurrent edits to different fields don't spuriously conflict.
+	const ownerListing = () => {
+		const l = listing()
+		return l && 'userId' in l ? (l as OwnerListingView) : undefined
+	}
+	const [liveUpdatedAt, setLiveUpdatedAt] = createSignal<Date | null>(
+		ownerListing()?.updatedAt ?? null
+	)
+	const clientUpdatedAt = () =>
+		Math.floor((liveUpdatedAt()?.getTime() ?? 0) / 1000)
+
 	return (
 		<Show
 			when={listing()}
@@ -243,8 +627,8 @@ function ListingDetailPage() {
 			}
 		>
 			{(l) => (
-				<Layout title={`${l().name} - Pick My Fruit`}>
-					<PageHeader breadcrumbs={[{ label: l().name }]} />
+				<Layout title={`${displayTitle()} - Pick My Fruit`}>
+					<PageHeader breadcrumbs={[{ label: displayTitle() }]} />
 					<main id="main-content" class="listing-show">
 						<Show when={justCreated() && isOwner()}>
 							<Banner variant="success" dismissible>
@@ -258,65 +642,102 @@ function ListingDetailPage() {
 							</Banner>
 						</Show>
 						<article class="listing-detail">
-							<header class="listing-detail-header">
-								<h1>{l().type}</h1>
-								<Show
-									when={isOwner()}
-									fallback={
-										<span class={`badge badge--${getStatusVariant(l().status)}`}>
-											{l().status}
-										</span>
-									}
-								>
-									<OwnerControls
-										listingId={l().id}
-										initialStatus={l().status as ListingStatusValue}
-									/>
-								</Show>
-							</header>
-
-							<ListingPhotosSection
-								isOwner={isOwner()}
-								listingId={l().id}
-								photos={photosForViewerRow(l())}
-							/>
-
-							<div class="listing-info">
-								<Show when={l().variety}>
-									<div class="info-row">
-										<span class="info-label">Variety</span>
-										<span class="info-value">{l().variety}</span>
-									</div>
-								</Show>
-
-								<Show when={l().quantity}>
-									<div class="info-row">
-										<span class="info-label">Quantity</span>
-										<span class="info-value">{l().quantity}</span>
-									</div>
-								</Show>
-
-								<Show when={l().harvestWindow}>
-									<div class="info-row">
-										<span class="info-label">Harvest Window</span>
-										<span class="info-value">{l().harvestWindow}</span>
-									</div>
-								</Show>
-
-								<div class="info-row">
-									<span class="info-label">Location</span>
-									<span class="info-value">
-										{l().city}, {l().state}
+							{/* Public view: h1 + status badge in a flex header row */}
+							<Show when={!isOwner()}>
+								<header class="listing-detail-header">
+									<h1>{displayTitle()}</h1>
+									<span class={`badge badge--${getStatusVariant(l().status)}`}>
+										{l().status}
 									</span>
-								</div>
+								</header>
+							</Show>
 
-								<Show when={l().notes}>
-									<div class="info-row info-notes">
-										<span class="info-label">Notes</span>
-										<span class="info-value">{l().notes}</span>
+							{/* Owner view: single two-column grid — Title, Photos, divider, then all fields */}
+							<Show when={'userId' in l() ? (l() as OwnerListingView) : undefined}>
+								{(ownerListing) => (
+									<div class="listing-info">
+										<OwnerTitleField
+											listing={ownerListing()}
+											clientUpdatedAt={clientUpdatedAt}
+											onNameSaved={setEditableTitle}
+											onUpdated={setLiveUpdatedAt}
+										/>
+										<div class="listing-detail-field listing-detail-field--photos">
+											<span class="listing-detail-field__label">Photos</span>
+											<div class="listing-detail-field__value">
+												<ListingPhotosSection
+													isOwner={true}
+													listingId={l().id}
+													photos={photosForViewerRow(l())}
+												/>
+											</div>
+										</div>
+										<div class="listing-detail-divider" role="presentation" />
+										<div class="listing-detail-field listing-detail-field--visibility">
+											<span
+												class="listing-detail-field__label"
+												id="listing-visibility-label"
+											>
+												Visibility
+											</span>
+											<div class="listing-detail-field__value">
+												<OwnerControls
+													listingId={l().id}
+													initialStatus={l().status as ListingStatusValue}
+													clientUpdatedAt={clientUpdatedAt}
+													onUpdated={setLiveUpdatedAt}
+												/>
+											</div>
+										</div>
+										<OwnerEditableFields
+											listing={ownerListing()}
+											clientUpdatedAt={clientUpdatedAt}
+											onUpdated={setLiveUpdatedAt}
+										/>
 									</div>
-								</Show>
-							</div>
+								)}
+							</Show>
+
+							{/* Public view: photos outside the grid, then a read-only info grid */}
+							<Show when={!isOwner()}>
+								<ListingPhotosSection
+									isOwner={false}
+									listingId={l().id}
+									photos={photosForViewerRow(l())}
+								/>
+								<div class="listing-detail-divider" role="presentation" />
+								<div class="listing-info">
+									<Show when={l().harvestWindow}>
+										<ListingDetailField label="Harvest Window">
+											<span>{l().harvestWindow}</span>
+										</ListingDetailField>
+									</Show>
+
+									<Show when={l().variety}>
+										<ListingDetailField label="Variety">
+											<span>{l().variety}</span>
+										</ListingDetailField>
+									</Show>
+
+									<Show when={l().quantity}>
+										<ListingDetailField label="Quantity">
+											<span>{l().quantity}</span>
+										</ListingDetailField>
+									</Show>
+
+									<ListingDetailField label="Location">
+										<span>
+											{l().city}, {l().state}
+										</span>
+									</ListingDetailField>
+
+									<Show when={l().notes}>
+										<ListingDetailField label="Notes">
+											<span>{l().notes}</span>
+										</ListingDetailField>
+									</Show>
+								</div>
+							</Show>
 
 							<div class="listing-map-section">
 								<Show
@@ -348,7 +769,7 @@ function ListingDetailPage() {
 							</div>
 
 							<Show when={l().status === ListingStatus.unavailable}>
-								<div class="notice notice--centered notice--neutral listing-unavailable">
+								<div class="listing-unavailable">
 									<h3>This listing is currently unavailable</h3>
 									<p>Check back later or browse other available listings.</p>
 									<Link to="/" class="back-link">
@@ -358,7 +779,7 @@ function ListingDetailPage() {
 							</Show>
 
 							<Show when={isOwner()}>
-								<div class="notice notice--centered notice--success listing-owner-notice">
+								<div class="listing-owner-notice">
 									<p>This is your listing.</p>
 									<Link to="/listings/mine" class="back-link">
 										Manage My Listings
