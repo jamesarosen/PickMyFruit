@@ -95,9 +95,12 @@ RUN cd apps/photos && pnpm build
 # Create a standalone deployment for photos with production dependencies only.
 # pnpm deploy produces a flat (hoisted) node_modules without the virtual store,
 # which copies cleanly into the runner image.
-# NOTE: dist/ is excluded by .gitignore so pnpm deploy won't include it;
-# we copy it directly from the builder below.
-RUN pnpm --filter @pmf/photos deploy --prod /photos-standalone
+# --cpu/--os flags mirror the main install so arm64 Sharp binaries are included.
+# NOTE: pnpm deploy copies node_modules (prod-only) + package files; we only
+# take node_modules from /photos-standalone and copy dist/ directly from the
+# builder to keep the runner stage explicit and avoid a redundant copy.
+RUN pnpm --filter @pmf/photos deploy --prod /photos-standalone \
+    --cpu=x64 --cpu=arm64 --os=linux
 
 # Production stage
 FROM node:24-slim AS runner

@@ -24,7 +24,9 @@ primary_region = 'sjc'
 # Process-group entrypoints. One Docker image, two runtime personas.
 # Both commands are relative to WORKDIR /app in the runner stage.
 [processes]
-  web    = "node .output/server/index.mjs"
+  # NODE_OPTIONS is set here (not in [env]) so it applies to web only.
+  # photos does its heavy lifting in native libvips, not the V8 heap.
+  web    = "NODE_OPTIONS='--max-old-space-size=384' node .output/server/index.mjs"
   photos = "node apps/photos/dist/index.js"
 
 # Public ingress — web process group only.
@@ -92,9 +94,10 @@ primary_region = 'sjc'
   initial_size = '1gb'
   processes = ['web']
 
-# Environment variables
-# NODE_OPTIONS is mirrored in docker-compose.yml so local runs reproduce
-# production memory behavior. Keep these in sync.
+# Environment variables shared by all process groups.
+# NODE_OPTIONS is NOT here — it lives in [processes].web so the V8 heap cap
+# only applies to the web process. docker-compose.yml sets it in environment:
+# for the same reason.
 [env]
   EMAIL_PROVIDER = 'resend'
   # Cap glibc malloc arenas — fewer per-thread arenas means lower RSS for
@@ -103,8 +106,6 @@ primary_region = 'sjc'
   MIGRATE_ON_REQUEST = 'true'
   NODE_ENV = 'production'
   MEDIA_ORIGIN = 'https://media.pickmyfruit.com'
-  # Cap V8 heap at ~75% of the 512 MB VM so GC fires before Linux OOM-kills.
-  NODE_OPTIONS = '--max-old-space-size=384'
   STORAGE_PROVIDER = 'tigris'
   # libuv default is 4. On a 1-CPU shared VM the extra threads buy memory
   # pressure with no real parallelism. Keep 2 so I/O and TLS can overlap.
