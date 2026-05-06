@@ -7,6 +7,13 @@ vi.mock('../src/lib/env.server', () => ({
 	},
 }))
 
+const mockCaptureException = vi.fn()
+vi.mock('../src/lib/sentry', () => ({
+	Sentry: {
+		captureException: (...args: unknown[]) => mockCaptureException(...args),
+	},
+}))
+
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
 
@@ -28,18 +35,19 @@ describe('warmPhotosService', () => {
 		mockFetch.mockResolvedValueOnce(new Response('{"ok":true}', { status: 200 }))
 		warmPhotosService()
 		await vi.runAllTimersAsync()
-		expect(mockFetch).toHaveBeenCalledOnce()
+		expect(mockFetch).toHaveBeenCalledTimes(1)
 		const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit]
 		expect(url).toBe('http://photos.test/health')
 		expect(init.method).toBe('GET')
 	})
 
-	it('passes a 500 ms AbortSignal', async () => {
-		mockFetch.mockResolvedValueOnce(new Response('{"ok":true}', { status: 200 }))
+	it('aborts the request after 500 ms', async () => {
+		mockFetch.mockReturnValueOnce(new Promise(() => {}))
 		warmPhotosService()
-		await vi.runAllTimersAsync()
 		const [, init] = mockFetch.mock.calls[0] as [string, RequestInit]
-		expect(init.signal).toBeInstanceOf(AbortSignal)
+		expect(init.signal?.aborted).toBe(false)
+		await vi.advanceTimersByTimeAsync(500)
+		expect(init.signal?.aborted).toBe(true)
 	})
 
 	it('does not throw when fetch rejects', async () => {
@@ -69,5 +77,22 @@ describe('warmPhotosService', () => {
 		const [, init] = mockFetch.mock.calls[0] as [string, RequestInit]
 		const headers = init.headers as Record<string, string> | undefined
 		expect(headers?.['x-internal-token']).toBeUndefined()
+	})
+
+	it('reports non-AbortErrors to Sentry', async () => {
+		const err = new Error('connection refused')
+		mockFetch.mockRejectedValueOnce(err)
+		warmPhotosService()
+		await vi.runAllTimersAsync()
+		expect(mockCaptureException).toHaveBeenCalledTimes(1)
+		expect(mockCaptureException).toHaveBeenCalledWith(err)
+	})
+
+	it('does not report AbortError to Sentry', async () => {
+		const abort = Object.assign(new Error('aborted'), { name: 'AbortError' })
+		mockFetch.mockRejectedValueOnce(abort)
+		warmPhotosService()
+		await vi.runAllTimersAsync()
+		expect(mockCaptureException).not.toHaveBeenCalled()
 	})
 })

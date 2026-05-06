@@ -106,3 +106,11 @@ export const getListingForViewer = createServerFn({ method: 'GET' })
 		}
 		return getPublic(id)
 	})
+
+/** Triggers the photos service warm-up ping; always runs server-side. */
+export const triggerPhotosServiceWarm = createServerFn({
+	method: 'GET',
+}).handler(async () => {
+	const { warmPhotosService } = await import('@/lib/warmPhotosService.server')
+	warmPhotosService()
+})

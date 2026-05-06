@@ -15,7 +15,7 @@ import {
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 import { buildListingMeta } from '@/lib/listing-meta'
 import { Sentry } from '@/lib/sentry'
-import { getListingForViewer } from '@/api/listings'
+import { getListingForViewer, triggerPhotosServiceWarm } from '@/api/listings'
 import type { Listing } from '@/data/schema'
 import type { PublicListing } from '@/data/queries.server'
 import type { OwnerListingView, PublicPhoto } from '@/data/listing'
@@ -44,9 +44,11 @@ export const Route = createFileRoute('/listings/$id')({
 	loader: async ({ params }) => {
 		const listing = await getListingForViewer({ data: Number(params.id) })
 		// Fire-and-forget warm ping so the photos Fly machine wakes before upload.
+		// createServerFn ensures this runs server-side even during SPA navigation;
+		// a bare dynamic import of warmPhotosService.server would be evaluated
+		// client-side, causing env.server.ts validation to throw in the browser.
 		if (listing && 'userId' in listing) {
-			const { warmPhotosService } = await import('@/lib/warmPhotosService.server')
-			warmPhotosService()
+			triggerPhotosServiceWarm().catch(() => {})
 		}
 		return listing
 	},
