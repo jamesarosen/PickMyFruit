@@ -227,12 +227,8 @@ describe('getPhotosForListing', () => {
 
 		const result = await getPhotosForListing(listingId)
 
-		expect(result[0].pubUrl).toBe(
-			`https://cdn.example.com/listing_photos/${id1}.jpg`
-		)
-		expect(result[1].pubUrl).toBe(
-			`https://cdn.example.com/listing_photos/${id2}.jpg`
-		)
+		expect(result[0].pubUrl).toBe(`https://cdn.example.com/${id1}.jpg`)
+		expect(result[1].pubUrl).toBe(`https://cdn.example.com/${id2}.jpg`)
 	})
 
 	it('passes a projection to db.select that includes id/ext/order but not raw_key', async () => {
@@ -327,7 +323,7 @@ describe('getPublicListingById', () => {
 		expect(result).toBeDefined()
 		expect(result!.photos).toHaveLength(1)
 		expect(result!.photos[0].pubUrl).toBe(
-			`https://cdn.example.com/listing_photos/${photoId}.jpg`
+			`https://cdn.example.com/${photoId}.jpg`
 		)
 		expect(result!.photos[0].order).toBe(0)
 	})
@@ -424,15 +420,13 @@ describe('fetchPhotosByListingIds grouping (via getAvailableListings)', () => {
 		const r1 = results.find((r) => r.id === 1)!
 		expect(r1.photos).toHaveLength(2)
 		expect(r1.photos.map((p) => p.pubUrl)).toEqual([
-			`https://cdn.example.com/listing_photos/${id10}.jpg`,
-			`https://cdn.example.com/listing_photos/${id11}.jpg`,
+			`https://cdn.example.com/${id10}.jpg`,
+			`https://cdn.example.com/${id11}.jpg`,
 		])
 
 		const r2 = results.find((r) => r.id === 2)!
 		expect(r2.photos).toHaveLength(1)
-		expect(r2.photos[0].pubUrl).toBe(
-			`https://cdn.example.com/listing_photos/${id20}.jpg`
-		)
+		expect(r2.photos[0].pubUrl).toBe(`https://cdn.example.com/${id20}.jpg`)
 	})
 
 	it('uses [] photos for listings with no matching photo rows', async () => {

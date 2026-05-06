@@ -78,7 +78,7 @@ async function fetchPhotosByListingIds(
 		const existing = map.get(row.listingId) ?? []
 		existing.push({
 			id: row.id,
-			pubUrl: storage.publicUrl(`listing_photos/${row.id}.jpg`),
+			pubUrl: storage.publicUrl(`${row.id}.jpg`),
 			order: row.order,
 		})
 		map.set(row.listingId, existing)
@@ -499,7 +499,7 @@ export async function getPhotosForListing(
 				.orderBy(listingPhotos.order)
 			return rows.map((row) => ({
 				id: row.id,
-				pubUrl: storage.publicUrl(`listing_photos/${row.id}.jpg`),
+				pubUrl: storage.publicUrl(`${row.id}.jpg`),
 				order: row.order,
 			}))
 		}

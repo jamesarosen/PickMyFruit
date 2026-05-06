@@ -229,7 +229,7 @@ export const deletePhoto = createServerFn({ method: 'POST' })
 		// Attempt storage cleanup. On failure, capture the path to Sentry so it can
 		// be reconciled by an ops script — it is no longer reachable from the DB.
 		const rawPathKey = `listing_photos/${deleted.id}${deleted.ext}`
-		const pubPathKey = `listing_photos/${deleted.id}.jpg`
+		const pubPathKey = `${deleted.id}.jpg`
 		const { storage } = await import('@/lib/storage.server')
 		const { Sentry } = await import('@/lib/sentry')
 		await Promise.all([
