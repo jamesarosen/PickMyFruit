@@ -7,9 +7,9 @@ app = 'pickmyfruit'
 # Primary region - SJC (San Jose) is closest to Napa, CA
 primary_region = 'sjc'
 
-# Build configuration
+# Build configuration — one image, two entrypoints.
 [build]
-  dockerfile = "apps/www/Dockerfile"
+  dockerfile = "Dockerfile"
   ignorefile = ".dockerignore"
 
   # VITE_* vars are baked into the JS bundle at build time by Vite.
@@ -21,14 +21,20 @@ primary_region = 'sjc'
   [build.args]
     VITE_SENTRY_ENABLED = "true"
 
-# HTTP service configuration
+# Process-group entrypoints. One Docker image, two runtime personas.
+# Both commands are relative to WORKDIR /app in the runner stage.
+[processes]
+  web    = "node .output/server/index.mjs"
+  photos = "node apps/photos/dist/index.js"
+
+# Public ingress — web process group only.
 [http_service]
   internal_port = 3000
   force_https = false # handled in @/middleware/tls
   auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
-  processes = ['app']
+  processes = ['web']
   # max_machines = 1 — keep to avoid duplicate reconciliation sweeps.
   # reconcilePendingPhotos is idempotent but concurrent machines issue
   # redundant headPhoto requests to the photo service.
@@ -55,11 +61,36 @@ primary_region = 'sjc'
       # Accept JSON response
       Accept = 'application/json'
 
-# Persistent volume for SQLite database
+# Flycast — photos process group only; private to the Fly org, auto-start on demand.
+# Flycast puts Fly Proxy in front of this internal service so callers trigger
+# auto-start. See https://fly.io/docs/blueprints/private-applications-flycast/
+# Web reaches photos at http://pickmyfruit.flycast:8080 (set via PHOTOS_BASE_URL).
+[[services]]
+  internal_port        = 8080
+  protocol             = "tcp"
+  processes            = ["photos"]
+  auto_stop_machines   = "stop"
+  auto_start_machines  = true
+  min_machines_running = 0
+
+  [[services.ports]]
+    port     = 8080
+    handlers = ["http"]
+
+  [[services.checks]]
+    interval   = '30s'
+    timeout    = '5s'
+    grace_period = '15s'
+    method     = 'GET'
+    path       = '/health'
+    protocol   = 'http'
+
+# Persistent volume for SQLite database (web only; photos has no persistence).
 [mounts]
-  source = 'data'
+  source    = 'data'
   destination = '/app/data'
   initial_size = '1gb'
+  processes = ['web']
 
 # Environment variables
 # NODE_OPTIONS is mirrored in docker-compose.yml so local runs reproduce
@@ -78,17 +109,27 @@ primary_region = 'sjc'
   # libuv default is 4. On a 1-CPU shared VM the extra threads buy memory
   # pressure with no real parallelism. Keep 2 so I/O and TLS can overlap.
   UV_THREADPOOL_SIZE = '2'
+  # Web reaches the photos service over Fly's internal Flycast network.
+  # Override with PHOTOS_BASE_URL Fly secret if the hostname ever changes.
+  PHOTOS_BASE_URL = 'http://pickmyfruit.flycast:8080'
 
-# VM resources
-# Memory and CPU limits are mirrored in docker-compose.yml's deploy.resources.
-# Bumped from 256 MB to 512 MB on 2026-04-27: a single 12 MP iPhone JPEG drives
-# RSS up ~120 MB inside Sharp (libvips decoded RGBA + intermediate buffers),
-# leaving no margin for the rest of the process. 512 MB gives Sharp comfortable
-# headroom while still being a small VM.
+# VM resources — scoped per process group.
+# IMPORTANT: keep processes = [...] on every [[vm]] block; an unscoped block
+# applies to ALL process groups and would size photos at 512 MB or web at 256 MB.
 [[vm]]
-  size = 'shared-cpu-1x'
-  memory = '512mb'
-  cpus = 1
+  processes = ['web']
+  size      = 'shared-cpu-1x'
+  memory    = '512mb'
+  cpus      = 1
+
+# photos can run in less memory: no SQLite, no Nitro, pure transform pipeline.
+# Bumped to 512 MB from plan's 256 MB: a single 12 MP iPhone JPEG drives
+# Sharp RSS up ~120 MB; 512 MB matches web and gives comfortable headroom.
+[[vm]]
+  processes = ['photos']
+  size      = 'shared-cpu-1x'
+  memory    = '512mb'
+  cpus      = 1
 
 # Deployment configuration
 [deploy]
