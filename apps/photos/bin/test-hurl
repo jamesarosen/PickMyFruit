@@ -65,16 +65,21 @@ docker run --rm -d \
   --name "$LS_CONTAINER" \
   -p "${LS_PORT}:4566" \
   -e SERVICES=s3 \
-  localstack/localstack:latest > /dev/null
+  localstack/localstack:4 > /dev/null
 
 echo "=== Waiting for LocalStack to be ready ==="
-for i in $(seq 1 30); do
+for i in $(seq 1 60); do
+  # Exit early if the container has already crashed (auto-removed by --rm).
+  if ! docker inspect "$LS_CONTAINER" >/dev/null 2>&1; then
+    echo "ERROR: LocalStack container stopped unexpectedly" >&2
+    exit 1
+  fi
   if curl -sf "http://localhost:${LS_PORT}/_localstack/health" | grep -qE '"s3"\s*:\s*"(running|available)"'; then
     echo "LocalStack ready after ${i}s"
     break
   fi
-  if [[ $i -eq 30 ]]; then
-    echo "ERROR: LocalStack did not become ready in 30s" >&2
+  if [[ $i -eq 60 ]]; then
+    echo "ERROR: LocalStack did not become ready in 60s" >&2
     docker logs "$LS_CONTAINER" >&2
     exit 1
   fi

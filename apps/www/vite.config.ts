@@ -84,6 +84,16 @@ export default defineConfig(({ command, mode }) => {
 			// so browsers do not auto-fetch them. sentry-cli (run in the Dockerfile
 			// build step after pnpm build) can still locate and upload them by path.
 			sourcemap: 'hidden',
+			rollupOptions: {
+				// Mark Node.js built-ins as external for the browser (client) bundle.
+				// Without this, Rollup analyses their named exports against Vite's
+				// __vite-browser-external stub and fails when it can't find exports like
+				// `Transform` from `node:stream`. Server-only modules (*.server.ts) that
+				// import these are excluded from the client output by TanStack Start's
+				// server/client split; making them Rollup-external prevents the analysis
+				// error even when they are in the module graph.
+				external: (id: string) => id.startsWith('node:'),
+			},
 		},
 		// Enable sourcemaps in the SSR Vite environment so Nitro has source-mapped
 		// input when it builds the final server bundle. Without this, server-side
