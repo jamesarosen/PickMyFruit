@@ -1,7 +1,6 @@
 # Missing token
 POST http://localhost:{{port}}/transform/{{photo_id}}
 Content-Type: image/jpeg
-[Body]
 file,apps/photos/tests/fixtures/sample.jpg;
 
 HTTP 401
@@ -12,7 +11,6 @@ jsonpath "$.error" == "unauthorized"
 POST http://localhost:{{port}}/transform/{{photo_id}}
 x-internal-token: wrong-token
 Content-Type: image/jpeg
-[Body]
 file,apps/photos/tests/fixtures/sample.jpg;
 
 HTTP 401

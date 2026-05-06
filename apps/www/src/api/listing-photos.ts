@@ -192,7 +192,7 @@ export const addPhotoToListing = createServerFn({ method: 'POST' })
 
 			return {
 				id: photo.id,
-				pubUrl: storage.publicUrl(`listing_photos/${photo.id}.jpg`),
+				pubUrl: storage.publicUrl(`${photo.id}.jpg`),
 			}
 		} finally {
 			await unlinkUploadStaging(tempPath)

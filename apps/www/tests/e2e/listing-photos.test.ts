@@ -22,7 +22,9 @@ test.describe('Listing photos', () => {
 		const photo = page.getByRole('img', { name: /listing photo/i })
 		await expect(photo).toBeVisible()
 		const photoSrc = await photo.getAttribute('src')
-		expect(photoSrc).toContain('/api/uploads/pub/listing_photos/')
+		// Memory storage: /api/uploads/pub/{id}.jpg
+		// Tigris/LocalStack: https?://{origin}/pub/{id}.jpg
+		expect(photoSrc).toMatch(/pub\/[0-9a-f-]+\.jpg/)
 
 		const photoResponse = await page.request.get(photoSrc!)
 		expect(photoResponse.ok()).toBeTruthy()

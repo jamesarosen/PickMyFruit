@@ -1,7 +1,6 @@
 POST http://localhost:{{port}}/transform/{{other_photo_id}}
 x-internal-token: {{token}}
 Content-Type: text/plain
-[Body]
 hello, this is not an image
 
 HTTP 415

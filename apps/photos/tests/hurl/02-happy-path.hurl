@@ -1,7 +1,6 @@
 POST http://localhost:{{port}}/transform/{{photo_id}}
 x-internal-token: {{token}}
 Content-Type: image/jpeg
-[Body]
 file,apps/photos/tests/fixtures/sample.jpg;
 
 HTTP 200

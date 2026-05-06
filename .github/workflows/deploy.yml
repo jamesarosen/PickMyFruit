@@ -66,6 +66,16 @@ jobs:
       BETTER_AUTH_SECRET: test-secret-for-ci-minimum-32-characters
       BETTER_AUTH_URL: http://localhost:5174
       VITE_SENTRY_DSN: https://test@test.ingest.sentry.io/123
+      # Photos service + shared LocalStack S3 config for E2E
+      PHOTOS_BASE_URL: http://localhost:8080
+      STORAGE_PROVIDER: tigris
+      AWS_ENDPOINT_URL_S3: http://localhost:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+      BUCKET_NAME: pmf-e2e-bucket
+      MEDIA_ORIGIN: http://localhost:4566/pmf-e2e-bucket
+      INTERNAL_TOKEN: e2e-test-token
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -74,6 +84,52 @@ jobs:
           node-version: "24"
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
+
+      - name: Build photos service
+        working-directory: .
+        run: pnpm --filter @pmf/photos build
+
+      - name: Start LocalStack
+        working-directory: .
+        run: |
+          docker run --rm -d \
+            --name pmf-photos-localstack-e2e \
+            -p 4566:4566 \
+            -e SERVICES=s3 \
+            localstack/localstack:4
+          for i in $(seq 1 60); do
+            if ! docker inspect pmf-photos-localstack-e2e >/dev/null 2>&1; then
+              echo "ERROR: LocalStack stopped unexpectedly" >&2; exit 1
+            fi
+            if curl -sf "http://localhost:4566/_localstack/health" | grep -qE '"s3"\s*:\s*"(running|available)"'; then
+              echo "LocalStack ready after ${i}s"; break
+            fi
+            [ $i -eq 60 ] && echo "ERROR: LocalStack not ready in 60s" >&2 && exit 1
+            sleep 1
+          done
+          AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 \
+            aws --endpoint-url=http://localhost:4566 s3 mb s3://pmf-e2e-bucket
+
+      - name: Start photos service
+        working-directory: .
+        run: |
+          STORAGE_PROVIDER=tigris \
+          AWS_ENDPOINT_URL_S3=http://localhost:4566 \
+          AWS_ACCESS_KEY_ID=test \
+          AWS_SECRET_ACCESS_KEY=test \
+          AWS_REGION=us-east-1 \
+          BUCKET_NAME=pmf-e2e-bucket \
+          INTERNAL_TOKEN=e2e-test-token \
+          PORT=8080 \
+          NODE_ENV=production \
+            node apps/photos/dist/index.js &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/health > /dev/null; then
+              echo "Photos service ready after ${i}s"; break
+            fi
+            [ $i -eq 30 ] && echo "ERROR: Photos service not ready in 30s" >&2 && exit 1
+            sleep 1
+          done
 
       - name: Get Playwright version
         id: playwright-version
