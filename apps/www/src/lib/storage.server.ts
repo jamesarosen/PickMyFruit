@@ -166,6 +166,10 @@ export class TigrisStorageAdapter implements StorageAdapter {
 		this.client = new S3Client({
 			region: 'auto',
 			endpoint: opts.endpointUrl,
+			// Required for S3-compatible services (LocalStack, Tigris) that use a custom
+			// endpoint: without this, SDK v3 rewrites the URL to virtual-hosted style
+			// ({bucket}.{host}), which fails DNS resolution on localhost-based endpoints.
+			forcePathStyle: true,
 			// Default changed to WHEN_SUPPORTED in SDK v3 — streaming bodies then require
 			// x-amz-decoded-content-length, which is undefined for pipe()-based streams.
 			requestChecksumCalculation: 'WHEN_REQUIRED',
