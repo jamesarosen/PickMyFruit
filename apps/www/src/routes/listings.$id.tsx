@@ -41,7 +41,15 @@ const PLACEHOLDER_EMBED = {
 
 export const Route = createFileRoute('/listings/$id')({
 	validateSearch: listingSearchSchema,
-	loader: ({ params }) => getListingForViewer({ data: Number(params.id) }),
+	loader: async ({ params }) => {
+		const listing = await getListingForViewer({ data: Number(params.id) })
+		// Fire-and-forget warm ping so the photos Fly machine wakes before upload.
+		if (listing && 'userId' in listing) {
+			const { warmPhotosService } = await import('@/lib/warmPhotosService.server')
+			warmPhotosService()
+		}
+		return listing
+	},
 	head: ({ loaderData }) => {
 		// TODO: generate richer embed images for listings. Open Graph / Twitter /
 		// Slack crawlers prefer different aspect ratios and resolutions (e.g.
