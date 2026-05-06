@@ -35,6 +35,8 @@ jobs:
 
       - name: Install Hurl
         uses: gacts/install-hurl@v1
+        with:
+          version: "6.1.1"
 
       - name: Run Hurl integration tests
         run: bash apps/photos/bin/test-hurl --skip-build
