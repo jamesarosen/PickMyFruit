@@ -169,8 +169,8 @@ else) is essentially Proposal B with a polite name.
 
 ## Decision
 
-**Proposal B is accepted, deployed as a single Fly app with two process
-groups behind Flycast.** The durable-volume option goes away. All app
+**Proposal B is accepted, implemented as a single Fly app with two process
+groups behind Flycast.** The durable-volume option is removed. All app
 blobs live in Tigris (different buckets per environment, an in-memory
 adapter for tests). One `pickmyfruit` Fly app builds one Docker image and
 runs it under two entrypoints (`web` and `photos`) as separate process
@@ -196,7 +196,7 @@ The cost is one Fly concept to learn and one extra hostname
 See [Private applications and Flycast](https://fly.io/docs/blueprints/private-applications-flycast/)
 and [Autostart/autostop private apps](https://fly.io/docs/blueprints/autostart-internal-apps/).
 
-The rest of this document is the implementation plan.
+The rest of this document is the implementation plan and as-built notes.
 
 ---
 
@@ -659,3 +659,53 @@ in isolation before web is wired to it.
   before the `PUT` lands, it may cache the 404. Web should only render
   the `<img>` after the upload returns 200; we never speculatively
   point the browser at the URL before then.
+
+---
+
+## As built (B 1.0)
+
+All 14 planned commits were delivered on branch
+`claude/image-upload-service-tdd-BUKMv`. Notable deviations from the
+plan:
+
+### Dockerfile placement
+The root `Dockerfile` builds both apps in one image. `apps/www/Dockerfile`
+is retained for docker-compose local dev (web only). The `pnpm deploy
+--prod` step for photos requires `--cpu=x64 --cpu=arm64 --os=linux` to
+match the workspace install flags and preserve the arm64 Sharp binary
+(found and fixed in code review before merge).
+
+### NODE_OPTIONS scoping
+`NODE_OPTIONS=--max-old-space-size=384` was moved from the global `[env]`
+table in `fly.toml` into the `[processes].web` command string, so the V8
+heap cap applies only to the web process. Photos does its heavy work in
+native libvips, not the V8 heap.
+
+### Warm-on-edit ping — createServerFn required
+The plan sketched the warm ping as a dynamic import inside the route
+loader. In practice, TanStack Start executes plain loader body code
+client-side during SPA navigation; a dynamic import of
+`warmPhotosService.server` in that position would cause `env.server.ts`
+to throw in the browser (empty `process.env`). The ping is therefore
+wrapped in a `triggerPhotosServiceWarm createServerFn` exported from
+`apps/www/src/api/listings.ts`, ensuring it is always an RPC call on the
+client.
+
+### photos VM memory — 512 MB, not 256 MB
+The plan sized the photos VM at 256 MB. A single 12 MP iPhone JPEG drives
+Sharp RSS up ~120 MB during the decode → resize → encode pipeline; 256 MB
+leaves no margin. Both groups are sized at 512 MB.
+
+### Test suite locations
+- Hurl integration suite: `apps/photos/tests/hurl/` (8 files)
+- Runner script: `apps/photos/bin/test-hurl`
+- Vitest unit + acceptance: `apps/photos/src/**/*.test.ts` and
+  `apps/photos/tests/acceptance/`
+- www unit tests for the new modules: `apps/www/tests/`
+
+### Observability
+Cold-start telemetry (`coldStart`, `bootMs`, `sharpMs`, `tigrisHeadMs`,
+`tigrisPutMs`) is emitted on every transform span. Web logs a structured
+event when `coldStart = true` for dashboard counting. The warm-on-edit
+ping means cold starts on the upload path should be rare after the first
+page load by an owner.
