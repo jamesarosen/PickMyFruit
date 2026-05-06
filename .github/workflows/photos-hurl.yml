@@ -28,13 +28,16 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --filter @pmf/photos...
+        run: pnpm install --frozen-lockfile
+
+      - name: Build photos service
+        run: pnpm --filter @pmf/photos build
 
       - name: Install Hurl
         uses: gacts/install-hurl@v1
 
       - name: Run Hurl integration tests
-        run: bash apps/photos/bin/test-hurl
+        run: bash apps/photos/bin/test-hurl --skip-build
 
       - name: Upload LocalStack logs on failure
         if: failure()
