@@ -699,13 +699,16 @@ leaves no margin. Both groups are sized at 512 MB.
 ### Test suite locations
 - Hurl integration suite: `apps/photos/tests/hurl/` (8 files)
 - Runner script: `apps/photos/bin/test-hurl`
-- Vitest unit + acceptance: `apps/photos/src/**/*.test.ts` and
-  `apps/photos/tests/acceptance/`
+- Vitest unit + acceptance: `apps/photos/tests/**/*.test.ts`
+  (includes `tests/acceptance/`, `tests/image-semantics/`,
+  `tests/otel/`, `tests/storage/`, `tests/health.test.ts`)
 - www unit tests for the new modules: `apps/www/tests/`
 
 ### Observability
 Cold-start telemetry (`coldStart`, `bootMs`, `sharpMs`, `tigrisHeadMs`,
-`tigrisPutMs`) is emitted on every transform span. Web logs a structured
-event when `coldStart = true` for dashboard counting. The warm-on-edit
+`tigrisPutMs`) is emitted as OTel span attributes on the photos service
+side (`apps/photos/src/routes/transform.ts`). The `coldStart` field is
+also present in the `TransformResult` type returned to web, making it
+available for future structured logging or alerting. The warm-on-edit
 ping means cold starts on the upload path should be rare after the first
 page load by an owner.
