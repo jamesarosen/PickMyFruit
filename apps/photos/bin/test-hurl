@@ -133,6 +133,7 @@ hurl \
   --variable "photo_id=${PHOTO_ID}" \
   --variable "absent_photo_id=${ABSENT_PHOTO_ID}" \
   --variable "other_photo_id=${OTHER_PHOTO_ID}" \
+  --file-root "$REPO_ROOT" \
   --test \
   apps/photos/tests/hurl/01-health.hurl \
   apps/photos/tests/hurl/02-happy-path.hurl \
