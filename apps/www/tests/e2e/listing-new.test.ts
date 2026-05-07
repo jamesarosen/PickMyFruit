@@ -7,6 +7,7 @@ test.describe('New Listing', () => {
 	test('unauthenticated user can create a listing via magic-link (token entry)', async ({
 		page,
 		testUser,
+		nominatimMock,
 	}) => {
 		// Arrive unauthenticated — cookies cleared by context fixture
 		await page.goto('/listings/new')
@@ -33,6 +34,10 @@ test.describe('New Listing', () => {
 		)
 		await page.getByRole('button', { name: 'Share my produce' }).click()
 		await magicLinkResponse
+
+		// The form must geocode before triggering magic-link auth — guards
+		// against a regression where the request bypasses Nominatim entirely.
+		expect(nominatimMock.callCount).toBeGreaterThan(0)
 
 		// Magic-link waiting UI
 		await expect(

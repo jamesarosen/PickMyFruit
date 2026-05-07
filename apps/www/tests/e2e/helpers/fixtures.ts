@@ -1,4 +1,4 @@
-import { test as base } from '@playwright/test'
+import { test as nominatimBase } from './nominatim-mock'
 import {
 	type TestUser,
 	type TestListing,
@@ -12,7 +12,7 @@ type TestFixtures = {
 	testListing: TestListing
 }
 
-export const test = base.extend<TestFixtures>({
+export const test = nominatimBase.extend<TestFixtures>({
 	// Auto-fixture: clears cookies before every test
 	context: async ({ context }, playwrightUse) => {
 		await context.clearCookies()

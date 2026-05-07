@@ -44,9 +44,8 @@ export type ListingFormData = z.infer<typeof listingFormSchema>
 
 // Schema for API input (with geocoded data)
 export const createListingSchema = listingFormSchema.extend({
-	lat: z.number(),
-	lng: z.number(),
-	h3Index: z.string(),
+	lat: z.number().gte(-90).lte(90),
+	lng: z.number().gte(-180).lte(180),
 })
 
 export type CreateListingData = z.infer<typeof createListingSchema>
