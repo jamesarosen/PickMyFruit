@@ -94,12 +94,6 @@ export default defineConfig(({ command, mode }) => {
 			},
 		},
 		server: {},
-		// drizzle-orm/libsql/migrator is server-only. Without this exclusion, Vite
-		// discovers it during the first dev-server request and triggers a full page
-		// reload mid-test, breaking Solid JS hydration.
-		optimizeDeps: {
-			exclude: ['drizzle-orm/libsql/migrator'],
-		},
 		plugins: [
 			tsconfigPaths(),
 			tanstackStart(),

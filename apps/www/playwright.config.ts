@@ -37,7 +37,7 @@ export default defineConfig({
 			DATA_DIR: resolve(__dirname, 'test-uploads'),
 			EMAIL_FROM: 'Test <test@example.com>',
 			EMAIL_PROVIDER: 'silent',
-			GEOCODING_PROVIDER: 'stub',
+			GEOCODING_PROVIDER: 'mock',
 			HMAC_SECRET: 'test-secret-for-e2e-minimum-32-characters',
 			PORT: '5174',
 			STORAGE_PROVIDER: 'local',

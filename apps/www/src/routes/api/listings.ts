@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/solid-router'
 import { z } from 'zod'
 import { listingFormSchema } from '@/lib/validation'
-import { geocodeAddress } from '@/lib/geocoding'
 import { Sentry } from '@/lib/sentry'
 import { produceTypes } from '@/lib/produce-types'
 
@@ -64,6 +63,7 @@ export const Route = createFileRoute('/api/listings')({
 				const formData = parsed.data
 
 				// Geocode the address
+				const { geocodeAddress } = await import('@/lib/geocoding.server')
 				let geocodeResult
 				try {
 					geocodeResult = await geocodeAddress({
