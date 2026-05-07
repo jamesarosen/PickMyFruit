@@ -1,6 +1,5 @@
 import { latLngToCell } from 'h3-js'
 import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
-import { serverEnv } from '@/lib/env.server'
 
 export interface GeocodingResult {
 	lat: number
@@ -40,6 +39,7 @@ const STUB_LNG = -122.2869
 export async function geocodeAddress(
 	input: GeocodingInput
 ): Promise<GeocodingResult> {
+	const { serverEnv } = await import('@/lib/env.server')
 	if (serverEnv.geocoding.PROVIDER === 'stub') {
 		return {
 			lat: STUB_LAT,
