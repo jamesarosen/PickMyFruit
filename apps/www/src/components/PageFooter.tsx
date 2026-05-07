@@ -1,10 +1,12 @@
 import { Link } from '@tanstack/solid-router'
+import { BuyMeACoffee } from './BuyMeACoffee'
 import './PageFooter.css'
 import { SupportEmail } from './SupportEmail'
 
 export function PageFooter() {
 	return (
 		<footer class="page-footer">
+			<BuyMeACoffee />
 			<div class="container">
 				<div class="footer-left">
 					<span class="footer-avatar">JAR</span>
