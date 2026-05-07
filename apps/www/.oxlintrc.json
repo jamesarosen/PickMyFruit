@@ -105,6 +105,22 @@
 			}
 		},
 		{
+			// Playwright fixture functions use `use` as a conventional parameter name,
+			// which the react-hooks rule incorrectly identifies as a React hook call.
+			"files": ["tests/e2e/**/*.ts"],
+			"rules": {
+				"react-hooks/rules-of-hooks": "off"
+			}
+		},
+		{
+			// ListingForm is a complex orchestration component that legitimately
+			// requires more than 10 imports. Raising the limit for this file only.
+			"files": ["src/components/ListingForm.tsx"],
+			"rules": {
+				"import/max-dependencies": ["warn", { "max": 15 }]
+			}
+		},
+		{
 			"files": [
 				"src/**/*.test.ts",
 				"src/**/*.test.tsx",

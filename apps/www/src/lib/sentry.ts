@@ -5,6 +5,7 @@ import {
 	init,
 	captureException as sdkCaptureException,
 	captureMessage as sdkCaptureMessage,
+	addBreadcrumb,
 	addIntegration,
 	startSpan,
 	withScope,
@@ -122,6 +123,7 @@ export const Sentry = {
 		return sdkCaptureMessage(message, captureContext)
 	},
 
+	addBreadcrumb,
 	addIntegration,
 	startSpan,
 	withScope,

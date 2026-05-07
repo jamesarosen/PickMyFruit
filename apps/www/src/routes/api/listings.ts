@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/solid-router'
 import { z } from 'zod'
-import { listingFormSchema } from '@/lib/validation'
+import { latLngToCell } from 'h3-js'
+import { createListingSchema } from '@/lib/validation'
+import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
 import { Sentry } from '@/lib/sentry'
 import { produceTypes } from '@/lib/produce-types'
 
@@ -54,28 +56,16 @@ export const Route = createFileRoute('/api/listings')({
 					return Response.json({ error: 'Invalid JSON body' }, { status: 400 })
 				}
 
-				// Validate form data
-				const parsed = listingFormSchema.safeParse(body)
+				// Validate body — client supplies lat/lng/displayName from browser geocoding
+				const parsed = createListingSchema.safeParse(body)
 				if (!parsed.success) {
 					return Response.json({ error: parsed.error.flatten() }, { status: 400 })
 				}
 
-				const formData = parsed.data
+				const { lat, lng, displayName: _displayName, ...formData } = parsed.data
 
-				// Geocode the address
-				const { geocodeAddress } = await import('@/lib/geocoding.server')
-				let geocodeResult
-				try {
-					geocodeResult = await geocodeAddress({
-						address: formData.address,
-						city: formData.city,
-						state: formData.state,
-						zip: formData.zip || undefined,
-					})
-				} catch (error) {
-					const message = error instanceof Error ? error.message : 'Geocoding failed'
-					return Response.json({ error: message }, { status: 400 })
-				}
+				// Re-derive h3Index server-side; never trust a client-supplied cell index
+				const h3Index = latLngToCell(lat, lng, H3_RESOLUTIONS.STORAGE)
 
 				// Create the listing
 				try {
@@ -89,9 +79,9 @@ export const Route = createFileRoute('/api/listings')({
 						city: formData.city,
 						state: formData.state,
 						zip: formData.zip || null,
-						lat: geocodeResult.lat,
-						lng: geocodeResult.lng,
-						h3Index: geocodeResult.h3Index,
+						lat,
+						lng,
+						h3Index,
 						userId: session.user.id,
 						notes: formData.notes || null,
 						status: 'available',
