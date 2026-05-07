@@ -28,9 +28,13 @@ export interface TestUser {
 	updatedAt: Date
 }
 
-// SQLite does not enforce foreign keys by default; opt in for every connection.
 const client = createClient({ url: TEST_DB_URL })
+// Mirror the pragmas set on the app's connection in db.server.ts so this
+// second connection (used by fixtures for seeding/teardown) cooperates with
+// the dev server under WAL instead of fighting it for a write lock.
 await client.execute('PRAGMA foreign_keys = ON')
+await client.execute('PRAGMA journal_mode = WAL')
+await client.execute('PRAGMA busy_timeout = 5000')
 const db = drizzle(client)
 
 export function generateTestUser(): TestUser {
