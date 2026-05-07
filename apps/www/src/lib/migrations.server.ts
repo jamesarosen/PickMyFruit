@@ -1,4 +1,3 @@
-import { migrate } from 'drizzle-orm/libsql/migrator'
 import { db } from '@/data/db.server'
 import { Sentry } from '@/lib/sentry'
 import { logger } from '@/lib/logger.server'
@@ -27,6 +26,7 @@ export function runMigrations(): Promise<void> {
 	pending ??= (async () => {
 		const start = Date.now()
 		logger.info('Running database migrations')
+		const { migrate } = await import('drizzle-orm/libsql/migrator')
 		await migrate(db, { migrationsFolder: './drizzle' })
 		logger.info({ elapsed: Date.now() - start }, 'Database migrations complete')
 	})().catch((err) => {

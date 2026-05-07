@@ -49,6 +49,7 @@ export default defineConfig({
 						DATABASE_URL: `file:${dbPath}`,
 						EMAIL_FROM: 'Test <test@example.com>',
 						EMAIL_PROVIDER: 'silent',
+						GEOCODING_PROVIDER: 'mock',
 						HMAC_SECRET: 'test-secret-do-not-use-in-production-min32chars',
 						NODE_ENV: 'test',
 						STORAGE_PROVIDER: 'local',
