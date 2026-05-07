@@ -82,6 +82,7 @@ const outputSchema = z
 		EMAIL_FROM: z
 			.string()
 			.regex(/^.+\s<[^@]+@[^>]+>$/, 'Must be in "Display Name <email>" format'),
+		GEOCODING_PROVIDER: z.enum(['nominatim', 'mock']).prefault('nominatim'),
 		HMAC_SECRET: z.string().min(32),
 		MIGRATE_ON_REQUEST: z.stringbool().prefault('false'),
 		NODE_ENV: z.string().prefault('development'),
@@ -105,6 +106,15 @@ const outputSchema = z
 				code: 'custom',
 				path: ['STORAGE_PROVIDER'],
 				message: 'Must be "tigris" in production',
+			})
+		}
+
+		// Synthetic geocoding is for tests only; real lookups are required in production.
+		if (env.NODE_ENV === 'production' && env.GEOCODING_PROVIDER !== 'nominatim') {
+			ctx.addIssue({
+				code: 'custom',
+				path: ['GEOCODING_PROVIDER'],
+				message: 'Must be "nominatim" in production',
 			})
 		}
 	})
