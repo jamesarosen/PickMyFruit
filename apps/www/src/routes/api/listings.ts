@@ -62,7 +62,7 @@ export const Route = createFileRoute('/api/listings')({
 					return Response.json({ error: parsed.error.flatten() }, { status: 400 })
 				}
 
-				const { lat, lng, displayName: _displayName, ...formData } = parsed.data
+				const { lat, lng, ...formData } = parsed.data
 
 				// Re-derive h3Index server-side; never trust a client-supplied cell index
 				const h3Index = latLngToCell(lat, lng, H3_RESOLUTIONS.STORAGE)

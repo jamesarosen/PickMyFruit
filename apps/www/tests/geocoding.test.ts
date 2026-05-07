@@ -32,14 +32,8 @@ vi.mock('../src/lib/env.client', () => ({
 	},
 }))
 
-function makeNominatimResponse(
-	lat: number,
-	lng: number,
-	displayName: string
-): string {
-	return JSON.stringify([
-		{ lat: String(lat), lon: String(lng), display_name: displayName },
-	])
+function makeNominatimResponse(lat: number, lng: number): string {
+	return JSON.stringify([{ lat: String(lat), lon: String(lng) }])
 }
 
 function mockFetch(body: string, status = 200): void {
@@ -64,23 +58,19 @@ describe('geocodeAddress — happy path', () => {
 		{ lat: 38.2975, lng: -122.2869, label: 'Napa, CA' },
 		{ lat: 37.7749, lng: -122.4194, label: 'San Francisco, CA' },
 		{ lat: 34.0522, lng: -118.2437, label: 'Los Angeles, CA' },
-	])(
-		'returns $label coords and correct h3Index',
-		async ({ lat, lng, label }) => {
-			const address = faker.location.streetAddress()
-			const city = faker.location.city()
-			const state = faker.location.state({ abbreviated: true })
+	])('returns $label coords and correct h3Index', async ({ lat, lng }) => {
+		const address = faker.location.streetAddress()
+		const city = faker.location.city()
+		const state = faker.location.state({ abbreviated: true })
 
-			mockFetch(makeNominatimResponse(lat, lng, label))
+		mockFetch(makeNominatimResponse(lat, lng))
 
-			const result = await geocodeAddress({ address, city, state })
+		const result = await geocodeAddress({ address, city, state })
 
-			expect(result.lat).toBeCloseTo(lat)
-			expect(result.lng).toBeCloseTo(lng)
-			expect(result.displayName).toBe(label)
-			expect(result.h3Index).toBe(latLngToCell(lat, lng, H3_RESOLUTIONS.STORAGE))
-		}
-	)
+		expect(result.lat).toBeCloseTo(lat)
+		expect(result.lng).toBeCloseTo(lng)
+		expect(result.h3Index).toBe(latLngToCell(lat, lng, H3_RESOLUTIONS.STORAGE))
+	})
 })
 
 describe('geocodeAddress — h3Index derivation', () => {
@@ -88,7 +78,7 @@ describe('geocodeAddress — h3Index derivation', () => {
 		const lat = 38.2975
 		const lng = -122.2869
 
-		mockFetch(makeNominatimResponse(lat, lng, 'Napa'))
+		mockFetch(makeNominatimResponse(lat, lng))
 
 		const result = await geocodeAddress({
 			address: faker.location.streetAddress(),

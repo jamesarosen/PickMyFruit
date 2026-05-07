@@ -46,7 +46,6 @@ export type ListingFormData = z.infer<typeof listingFormSchema>
 export const createListingSchema = listingFormSchema.extend({
 	lat: z.number().gte(-90).lte(90),
 	lng: z.number().gte(-180).lte(180),
-	displayName: z.string().min(1),
 })
 
 export type CreateListingData = z.infer<typeof createListingSchema>

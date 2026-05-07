@@ -107,13 +107,12 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 		// Geocode before any auth check so failures surface immediately and
 		// the coords are stored in sessionStorage for the unauth round-trip.
 		setFormState('submitting')
-		let geocoded: { lat: number; lng: number; displayName: string }
+		let geocoded: { lat: number; lng: number }
 		try {
 			const result = await geocodeAddress(parsed.data)
 			geocoded = {
 				lat: result.lat,
 				lng: result.lng,
-				displayName: result.displayName,
 			}
 		} catch (err) {
 			if (err instanceof GeocodingNotFoundError) {

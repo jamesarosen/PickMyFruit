@@ -7,7 +7,6 @@ export const geocodingResultSchema = z.object({
 	lat: z.number().gte(-90).lte(90),
 	lng: z.number().gte(-180).lte(180),
 	h3Index: z.string().min(1),
-	displayName: z.string().min(1),
 })
 
 /** A geocoded location with H3 index and display name. */
@@ -16,7 +15,6 @@ export type GeocodingResult = z.infer<typeof geocodingResultSchema>
 const nominatimResponseSchema = z.object({
 	lat: z.coerce.number(),
 	lon: z.coerce.number(),
-	display_name: z.string(),
 })
 
 /** Address fields used as geocoding input. */
@@ -27,8 +25,11 @@ export interface GeocodingInput {
 	zip?: string
 }
 
+// Browsers cannot set User-Agent (forbidden header); Nominatim accepts the
+// page Referer for identification (sent automatically) and the email param
+// as an additional contact point per their ToS.
 const GEOCODE_URL =
-	'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us'
+	'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&email=help@pickmyfruit.com'
 
 /** Nominatim returned an empty result set — user input issue, not a bug. */
 export class GeocodingNotFoundError extends Error {
@@ -158,7 +159,6 @@ export async function geocodeAddress(
 				lat: result.lat,
 				lng: result.lon,
 				h3Index: latLngToCell(result.lat, result.lon, H3_RESOLUTIONS.STORAGE),
-				displayName: result.display_name,
 			})
 		}
 	)
