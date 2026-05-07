@@ -27,12 +27,29 @@ const GEOCODE_URL =
 /**
  * Geocode an address using OpenStreetMap's Nominatim API.
  * Rate limited to 1 request/second - fine for MVP.
+ * In test mode (DATABASE_URL=*test*), returns a fixed location.
  *
  * @throws Error if geocoding fails or no results found
  */
 export async function geocodeAddress(
 	input: GeocodingInput
 ): Promise<GeocodingResult> {
+	// Mock geocoding for tests to avoid rate limiting
+	if (
+		typeof process !== 'undefined' &&
+		process.env.DATABASE_URL?.includes('test')
+	) {
+		const lat = 38.2966234
+		const lng = -122.2893688
+		const h3Index = latLngToCell(lat, lng, H3_RESOLUTIONS.STORAGE)
+		return {
+			lat,
+			lng,
+			h3Index,
+			displayName: `${input.address}, ${input.city}, ${input.state} ${input.zip || ''}`,
+		}
+	}
+
 	const { address, city, state, zip } = input
 	const query = [address, city, state, zip].filter(Boolean).join(', ')
 	const url = new URL(GEOCODE_URL)

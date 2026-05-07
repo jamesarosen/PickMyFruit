@@ -13,9 +13,23 @@ type TestFixtures = {
 }
 
 export const test = base.extend<TestFixtures>({
-	// Auto-fixture: clears cookies before every test
+	// Auto-fixture: clears cookies before every test and mocks geocoding
 	context: async ({ context }, playwrightUse) => {
 		await context.clearCookies()
+		// Mock Nominatim geocoding API to avoid 403 rate limiting in tests
+		await context.route('https://nominatim.openstreetmap.org/**', (route) => {
+			// Return a mock response for any address
+			route.fulfill({
+				status: 200,
+				body: JSON.stringify([
+					{
+						lat: '38.2966234',
+						lon: '-122.2893688',
+						display_name: 'Test Address, Napa, California 94558, United States',
+					},
+				]),
+			})
+		})
 		await playwrightUse(context)
 	},
 
