@@ -10,6 +10,11 @@ const emailSchema = z.discriminatedUnion('PROVIDER', [
 	}),
 ])
 
+const geocodingSchema = z.discriminatedUnion('PROVIDER', [
+	z.object({ PROVIDER: z.literal('nominatim') }),
+	z.object({ PROVIDER: z.literal('stub') }),
+])
+
 const mediaOriginSchema = z.preprocess(
 	(val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
 	z
@@ -53,6 +58,7 @@ function preprocessEnv(raw: unknown): unknown {
 		BUCKET_NAME,
 		DATA_DIR,
 		EMAIL_PROVIDER = 'console',
+		GEOCODING_PROVIDER = 'nominatim',
 		RESEND_API_KEY,
 		STORAGE_PROVIDER = 'local',
 		MEDIA_ORIGIN,
@@ -61,6 +67,7 @@ function preprocessEnv(raw: unknown): unknown {
 	return {
 		...rest,
 		email: { PROVIDER: EMAIL_PROVIDER, RESEND_API_KEY },
+		geocoding: { PROVIDER: GEOCODING_PROVIDER },
 		storage: {
 			PROVIDER: STORAGE_PROVIDER,
 			AWS_ACCESS_KEY_ID,
@@ -87,9 +94,19 @@ const outputSchema = z
 		NODE_ENV: z.string().prefault('development'),
 		SHARP_CONCURRENCY: z.coerce.number().int().positive().prefault(1),
 		email: emailSchema,
+		geocoding: geocodingSchema,
 		storage: storageSchema,
 	})
 	.superRefine((env, ctx) => {
+		// Stub geocoding must not be used in production.
+		if (env.NODE_ENV === 'production' && env.geocoding.PROVIDER !== 'nominatim') {
+			ctx.addIssue({
+				code: 'custom',
+				path: ['GEOCODING_PROVIDER'],
+				message: 'Must be "nominatim" in production',
+			})
+		}
+
 		// Sending real emails is required in production; the console stub must not be used.
 		if (env.NODE_ENV === 'production' && env.email.PROVIDER !== 'resend') {
 			ctx.addIssue({

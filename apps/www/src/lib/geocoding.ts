@@ -1,5 +1,6 @@
 import { latLngToCell } from 'h3-js'
 import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
+import { serverEnv } from '@/lib/env.server'
 
 export interface GeocodingResult {
 	lat: number
@@ -24,15 +25,30 @@ export interface GeocodingInput {
 const GEOCODE_URL =
 	'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us'
 
+// Fixed coordinates for Napa, CA — used when GEOCODING_PROVIDER=stub.
+const STUB_LAT = 38.2975
+const STUB_LNG = -122.2869
+
 /**
  * Geocode an address using OpenStreetMap's Nominatim API.
  * Rate limited to 1 request/second - fine for MVP.
+ * When GEOCODING_PROVIDER=stub, returns fixed Napa, CA coordinates without
+ * making a network request (useful for tests and dev environments).
  *
  * @throws Error if geocoding fails or no results found
  */
 export async function geocodeAddress(
 	input: GeocodingInput
 ): Promise<GeocodingResult> {
+	if (serverEnv.geocoding.PROVIDER === 'stub') {
+		return {
+			lat: STUB_LAT,
+			lng: STUB_LNG,
+			h3Index: latLngToCell(STUB_LAT, STUB_LNG, H3_RESOLUTIONS.STORAGE),
+			displayName: `${input.address}, ${input.city}, ${input.state}`,
+		}
+	}
+
 	const { address, city, state, zip } = input
 	const query = [address, city, state, zip].filter(Boolean).join(', ')
 	const url = new URL(GEOCODE_URL)
