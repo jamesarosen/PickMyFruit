@@ -48,14 +48,13 @@ test.describe('Authentication', () => {
 		const tokenInput = page.locator('input#magic-link-token')
 		await tokenInput.pressSequentially('invalid-token-12345', { delay: 20 })
 
-		// Click verify and wait for response
-		const verifyResponsePromise = page.waitForResponse((resp) =>
-			resp.url().includes('/api/auth/magic-link/verify')
-		)
+		// Wait for the UI to reflect the rejection. better-auth's client calls
+		// the verify endpoint with `redirect: 'manual'`, and the server responds
+		// with a 302 to an error callback. Playwright's `waitForResponse` does
+		// not fire for these manual-redirect responses, even though the request
+		// completes and the app reacts to it. Polling on the visible error
+		// message is the reliable signal.
 		await page.getByRole('button', { name: 'Verify' }).click()
-		await verifyResponsePromise
-
-		// Should show error
 		await expect(page.locator('.token-error')).toBeVisible({ timeout: 10000 })
 	})
 

@@ -32,9 +32,12 @@ const client = createClient({ url: TEST_DB_URL })
 // Mirror the pragmas set on the app's connection in db.server.ts so this
 // second connection (used by fixtures for seeding/teardown) cooperates with
 // the dev server under WAL instead of fighting it for a write lock.
+// busy_timeout MUST be set before journal_mode — switching journal mode
+// requires an exclusive lock, and without busy_timeout the PRAGMA fails
+// immediately with SQLITE_BUSY when the dev server is mid-write.
+await client.execute('PRAGMA busy_timeout = 5000')
 await client.execute('PRAGMA foreign_keys = ON')
 await client.execute('PRAGMA journal_mode = WAL')
-await client.execute('PRAGMA busy_timeout = 5000')
 const db = drizzle(client)
 
 export function generateTestUser(): TestUser {
