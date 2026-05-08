@@ -9,9 +9,17 @@ const client = createClient({
 	authToken: serverEnv.DATABASE_AUTH_TOKEN,
 })
 
-// SQLite does not enforce foreign keys by default; opt in for every connection.
 try {
+	// busy_timeout must be set first — switching journal_mode requires an
+	// exclusive lock, and without busy_timeout that PRAGMA fails immediately
+	// with SQLITE_BUSY when another connection is mid-write.
+	await client.execute('PRAGMA busy_timeout = 5000')
+	// Foreign keys are off by default; enable for every connection.
 	await client.execute('PRAGMA foreign_keys = ON')
+	// WAL allows concurrent reads + a single writer with far less lock
+	// contention than the default rollback journal — critical when the e2e
+	// suite opens a second connection from test-db.ts to seed/teardown data.
+	await client.execute('PRAGMA journal_mode = WAL')
 } catch (err) {
 	Sentry.captureException(err)
 	throw err

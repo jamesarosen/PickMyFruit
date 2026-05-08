@@ -8,6 +8,7 @@ import ProduceTypeSelector from '@/components/ProduceTypeSelector'
 import type { AddressFields } from '@/data/schema'
 import { authClient } from '@/lib/auth-client'
 import { Sentry } from '@/lib/sentry'
+import { geocodeAddress, GeocodingNotFoundError } from '@/lib/geocoding'
 import { listingFormSchema } from '@/lib/validation'
 import '@/components/ListingForm.css'
 
@@ -103,8 +104,31 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 			return
 		}
 
+		// Geocode before any auth check so failures surface immediately and
+		// the coords are stored in sessionStorage for the unauth round-trip.
+		setFormState('submitting')
+		let geocoded: { lat: number; lng: number }
+		try {
+			const result = await geocodeAddress(parsed.data)
+			geocoded = {
+				lat: result.lat,
+				lng: result.lng,
+			}
+		} catch (err) {
+			if (err instanceof GeocodingNotFoundError) {
+				setSubmitError(err.message)
+			} else {
+				Sentry.captureException(err)
+				setSubmitError('Could not look up your address. Please try again.')
+			}
+			setFormState('error')
+			return
+		}
+
+		const listingData = { ...parsed.data, ...geocoded }
+
 		if (isAuthenticated()) {
-			await submitListing(parsed.data)
+			await submitListing(listingData)
 		} else {
 			// Validate email before triggering the magic-link flow
 			const emailParsed = emailSchema.safeParse(email().trim())
@@ -116,9 +140,10 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 				return
 			}
 
-			// Store form data so it can be auto-submitted after magic link auth
+			// Store form data (including geocoded coords) so it can be auto-submitted
+			// after magic link auth without re-geocoding.
 			try {
-				sessionStorage.setItem(PENDING_LISTING_KEY, JSON.stringify(parsed.data))
+				sessionStorage.setItem(PENDING_LISTING_KEY, JSON.stringify(listingData))
 			} catch {
 				// QuotaExceededError or similar — not fatal, continue with magic link flow
 			}

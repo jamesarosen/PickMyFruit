@@ -15,14 +15,18 @@ export default defineConfig({
 		['html', { open: 'never' }],
 		...(process.env.CI ? [['github'] as const] : []),
 	],
-	globalSetup: './tests/e2e/global-setup.ts',
 	use: {
 		baseURL: 'http://localhost:5174',
 		trace: 'on-first-retry',
 	},
 	projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 	webServer: {
-		command: 'pnpm dev',
+		// Reset + migrate the DB BEFORE Vite starts so the dev server does not
+		// hold a SQLite write lock while drizzle-kit applies migrations. Doing
+		// this in Playwright's globalSetup races with webServer startup —
+		// Playwright awaits webServer URL readiness before running globalSetup,
+		// by which point Vite has already opened the database.
+		command: 'node tests/e2e/setup-db.mjs && pnpm dev',
 		url: 'http://localhost:5174/login',
 		reuseExistingServer: false, // Always start fresh for isolation
 		timeout: 120000,
@@ -37,7 +41,6 @@ export default defineConfig({
 			DATA_DIR: resolve(__dirname, 'test-uploads'),
 			EMAIL_FROM: 'Test <test@example.com>',
 			EMAIL_PROVIDER: 'silent',
-			GEOCODING_PROVIDER: 'mock',
 			HMAC_SECRET: 'test-secret-for-e2e-minimum-32-characters',
 			PORT: '5174',
 			STORAGE_PROVIDER: 'local',
