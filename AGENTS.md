@@ -122,22 +122,24 @@ The only service is the **Solid JS web application** in `apps/www`. It uses an e
 
 ### Common commands (run from repo root)
 
-| Task | Command |
-|---|---|
-| Dev server (port 5173) | `pnpm dev` (from `apps/www`) |
-| Lint | `pnpm lint` |
-| Typecheck | `pnpm typecheck` |
-| Unit tests | `pnpm test:run` |
-| E2E tests | `pnpm test:e2e` (from `apps/www`) |
-| Format check | `pnpm format:check` |
-| DB schema sync (dev) | `pnpm db:push` (from `apps/www`) |
-| Quality gate (all checks) | `bash bin/quality-gate.sh` |
+| Task                                                   | Command                           |
+| ------------------------------------------------------ | --------------------------------- |
+| Dev server (port 5173)                                 | `pnpm dev` (from `apps/www`)      |
+| Lint                                                   | `pnpm lint`                       |
+| Typecheck                                              | `pnpm typecheck`                  |
+| Unit tests                                             | `pnpm test:run`                   |
+| E2E tests                                              | `pnpm test:e2e` (from `apps/www`) |
+| Format check                                           | `pnpm format:check`               |
+| DB schema sync (dev)                                   | `pnpm db:push` (from `apps/www`)  |
+| Quality gate (all checks)                              | `bash bin/quality-gate.sh`        |
+| Per-file format                                        | `bash bin/after-write.sh <path>`  |
+| Per-turn gate (format + lint + typecheck + unit tests) | `bash bin/after-turn.sh`          |
+| Pre-push gate (turn gate + E2E)                        | `bash bin/before-push.sh`         |
 
 ### Commit gate (required)
 
-- Before every commit, run `bash bin/code-quality.sh` from the repo root.
-- Do not commit unless `bash bin/code-quality.sh` passes.
-- If it fails, fix the reported formatting, linting, or test issue, then rerun `bash bin/code-quality.sh` until it passes.
+- Before every commit, run `bash bin/after-turn.sh` from the repo root. The git pre-push hook runs `bash bin/before-push.sh` (quality gate + E2E tests) automatically on `git push`. Never skip it with `--no-verify`.
+- If it fails, fix the reported formatting, linting, or test issue, then rerun `bash bin/after-turn.sh` until it passes.
 
 ### Gotchas
 

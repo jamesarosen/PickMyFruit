@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Quality gate: runs typecheck, lint, tests, and format check.
-# Used by /deliver before commit and by code-quality.sh (Stop hook).
+# Called by bin/after-turn.sh (Stop hook) and bin/before-push.sh (pre-push hook).
 # Exits with status 2 if any check fails.
 
 set -o pipefail
