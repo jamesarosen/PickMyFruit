@@ -203,7 +203,7 @@ async function uploadListingPhotoLocked(
 	const rawPathKey = `listing_photos/${id}${opts.fileExt}`
 	const pubPathKey = `listing_photos/${id}.jpg`
 
-	logger.info(
+	logger.debug(
 		{
 			phase: 'start',
 			listingPhotoId: id,
@@ -332,7 +332,7 @@ async function uploadListingPhotoLocked(
 		phase = 'error'
 		throw err
 	} finally {
-		logger.info(
+		logger.debug(
 			{
 				phase,
 				listingPhotoId: id,
