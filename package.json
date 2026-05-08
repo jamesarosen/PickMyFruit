@@ -26,7 +26,8 @@
 		"test:watch": "pnpm run -r test:watch",
 		"docker:up": "docker compose up --build",
 		"docker:down": "docker compose down",
-		"docker:logs": "docker compose logs -f"
+		"docker:logs": "docker compose logs -f",
+		"postinstall": "bash bin/install-git-hooks.sh"
 	},
 	"pnpm": {
 		"supportedArchitectures": {

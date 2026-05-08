@@ -22,6 +22,10 @@ COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 # Copy app package.json files to maintain workspace structure
 COPY apps/www/package.json ./apps/www/package.json
 
+# Needed by the root postinstall script. Copied before `pnpm install` so the
+# script exists when postinstall fires; it self-skips when no `.git` is present.
+COPY bin/install-git-hooks.sh ./bin/install-git-hooks.sh
+
 # Copy packages if any (for future workspace packages)
 # COPY packages/*/package.json ./packages/
 
