@@ -56,14 +56,15 @@ describe('produceTypes', () => {
 
 	it('all categories are from the allowed set', () => {
 		const allowed = new Set([
-			'fruit',
-			'vegetable',
-			'herb',
 			'egg',
+			'floral',
+			'fruit',
+			'herb',
 			'honey',
-			'seedling',
-			'preserved',
 			'other',
+			'preserved',
+			'seedling',
+			'vegetable',
 		])
 		for (const t of produceTypes) {
 			expect(allowed.has(t.category)).toBe(true)

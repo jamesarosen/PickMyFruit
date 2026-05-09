@@ -124,8 +124,9 @@ ginger,herb,Ginger,Ginger,ginger,ginger,An aromatic rhizome used fresh or dried 
 comb-honey,honey,Comb Honey,Comb Honey,comb honey,comb honey,Fresh honeycomb with wax cells still intact and naturally drizzling.
 honey,honey,Honey,Honey,honey,honey,Pure raw honey harvested from backyard or local hives.
 infused-honey,honey,Infused Honey,Infused Honey,infused honey,infused honey,Honey infused with herbs or spices for a unique flavor.
-dried-flowers,other,Dried Flowers,Dried Flowers,dried flowers,dried flowers,Dried garden flowers for decorative or culinary use.
-edible-flowers,other,Edible Flowers,Edible Flowers,edible flowers,edible flowers,Fresh garden blossoms safe to eat and beautiful on dishes.
+cut-flowers,floral,Cut Flowers,Cut Flowers,cut flowers,cut flowers,Fresh-cut stems and blooms for bouquets and floral arrangements.
+dried-flowers,floral,Dried Flowers,Dried Flowers,dried flowers,dried flowers,Dried garden flowers for decorative or culinary use.
+edible-flowers,floral,Edible Flowers,Edible Flowers,edible flowers,edible flowers,Fresh garden blossoms safe to eat and beautiful on dishes.
 microgreens,other,Microgreens,Microgreens,microgreens,microgreens,Young tender seedlings harvested just after sprouting.
 mushrooms,other,Mushrooms,Mushrooms,mushrooms,mushrooms,Cultivated or foraged fungi with earthy flavors.
 other,other,Other,Produce,other,produce,Any produce type not listed here.
