@@ -31,8 +31,10 @@ describe(LocalStorageAdapter, () => {
 				mimeType: 'image/png',
 			})
 
+			// publicUrl strips the file extension because Nitro's dev static
+			// handler intercepts requests for paths with image extensions.
 			const url = adapter.publicUrl('listings/1/test.png')
-			expect(url).toBe('/api/uploads/pub/listings/1/test.png')
+			expect(url).toBe('/api/uploads/pub/listings/1/test')
 
 			// File is actually on disk
 			const written = await readFile(

@@ -1,13 +1,15 @@
 import { z } from 'zod'
 import { produceTypeSlugs } from '@/lib/produce-types'
 
-const optionalZip = z.preprocess(
-	(val) => (val === '' || val === null ? undefined : val),
-	z
-		.string()
-		.regex(/^\d{5}(-\d{4})?$/, 'Invalid ZIP code')
-		.optional()
-)
+const optionalZip = z
+	.preprocess(
+		(val) => (val === '' || val === null ? undefined : val),
+		z
+			.string()
+			.regex(/^\d{5}(-\d{4})?$/, 'Invalid ZIP code')
+			.optional()
+	)
+	.optional()
 
 // Coerce null to empty string for required string fields (triggers min(1) error)
 const requiredString = (message: string, max: number = 200) =>
@@ -34,10 +36,12 @@ export const listingFormSchema = z.object({
 		z.string().length(2, 'State must be 2 characters')
 	),
 	zip: optionalZip,
-	notes: z.preprocess(
-		(val) => (val === '' || val === null ? undefined : val),
-		z.string().max(1000).optional()
-	),
+	notes: z
+		.preprocess(
+			(val) => (val === '' || val === null ? undefined : val),
+			z.string().max(1000).optional()
+		)
+		.optional(),
 })
 
 export type ListingFormData = z.infer<typeof listingFormSchema>
@@ -56,10 +60,12 @@ export type CreateListingData = z.infer<typeof createListingSchema>
 
 export const inquiryFormSchema = z.object({
 	listingId: z.number().int().positive('Invalid listing'),
-	note: z.preprocess(
-		(val) => (val === '' || val === null ? undefined : val),
-		z.string().max(500, 'Note must be 500 characters or less').optional()
-	),
+	note: z
+		.preprocess(
+			(val) => (val === '' || val === null ? undefined : val),
+			z.string().max(500, 'Note must be 500 characters or less').optional()
+		)
+		.optional(),
 })
 
 export type InquiryFormData = z.infer<typeof inquiryFormSchema>

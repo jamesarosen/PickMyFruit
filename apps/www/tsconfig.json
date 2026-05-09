@@ -25,7 +25,10 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["src/*"]
-		}
+		},
+
+		/* TypeScript 6 migration */
+		"ignoreDeprecations": "6.0"
 	},
 	"include": ["src", "tests"],
 	"exclude": ["dist", "node_modules"]

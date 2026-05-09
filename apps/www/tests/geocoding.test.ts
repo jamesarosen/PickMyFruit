@@ -18,8 +18,8 @@ vi.mock('../src/lib/sentry', () => ({
 	},
 }))
 
-// Stub env.client (pulled in transitively by sentry.ts)
-vi.mock('../src/lib/env.client', () => ({
+// Stub env (pulled in transitively by sentry.ts)
+vi.mock('../src/lib/env', () => ({
 	clientEnv: {
 		sentryDsn: undefined,
 		sentryEnabled: false,

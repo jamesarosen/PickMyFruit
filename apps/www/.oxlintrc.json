@@ -31,7 +31,6 @@
 		"eslint/no-magic-numbers": "off",
 		"eslint/max-lines-per-function": "off",
 		"eslint/max-statements": "off",
-		"eslint/one-var": "off",
 		"eslint/capitalized-comments": "off",
 		"eslint/no-inline-comments": "off",
 		"eslint/no-warning-comments": "off",
@@ -79,7 +78,21 @@
 		"eslint-plugin-vitest/prefer-called-once": "off",
 
 		// Jest plugin incorrectly flags non-test files
-		"jest/require-hook": "off"
+		"jest/require-hook": "off",
+
+		// no-shadow triggers on idiomatic patterns like createErrorSignal() destructuring
+		// and function parameter names that happen to match outer scope identifiers
+		"eslint/no-shadow": "off",
+
+		// __dirname, __filename, and _-prefixed internal identifiers are legitimate
+		"eslint/no-underscore-dangle": "off",
+
+		// Type parameters on vi.fn() are excessively verbose and offer little value
+		// for simple mock functions in test files
+		"vitest/require-mock-type-parameters": "off",
+
+		// Vitest globals are imported explicitly in this project (no vitest globals config)
+		"vitest/no-importing-vitest-globals": "off"
 	},
 	"settings": {
 		"jsx-a11y": {
@@ -142,7 +155,17 @@
 				 * @see https://vitest.dev/guide/mocking/modules.html
 				 */
 				"no-untyped-mock-factory": "off",
-				"jest/no-untyped-mock-factory": "off"
+				"jest/no-untyped-mock-factory": "off",
+
+				// Vitest supports describe(SomeClass, ...) using the class name as the title
+				"jest/valid-title": "off",
+				"vitest/valid-title": "off",
+
+				// Vitest supports expect(value, message) 2-argument form for failure messages
+				"jest/valid-expect": "off",
+
+				// .rejects.toThrow() without a message is acceptable when testing any error
+				"jest/require-to-throw-message": "off"
 			}
 		}
 	]

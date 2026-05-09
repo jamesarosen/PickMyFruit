@@ -1,14 +1,16 @@
 import { Sentry } from '@/lib/sentry'
 import { createFileRoute } from '@tanstack/solid-router'
 
-const MIME_TYPES: Record<string, string> = {
-	jpg: 'image/jpeg',
-	jpeg: 'image/jpeg',
-	png: 'image/png',
-	webp: 'image/webp',
-}
-
-/** Serves public uploads for the local storage adapter (development only). */
+/**
+ * Serves public uploads for the local storage adapter (development only).
+ *
+ * The URL deliberately omits the file extension. Nitro's dev static-asset
+ * handler intercepts paths with image extensions before route matching, so
+ * a URL like `/api/uploads/pub/listing_photos/<id>.jpg` short-circuits to a
+ * 404 without ever reaching this handler. Public listing photos are always
+ * stored as JPEG (`uploadListingPhotoLocked` writes `<id>.jpg`), so the
+ * route appends `.jpg` to locate the file on disk.
+ */
 export const Route = createFileRoute('/api/uploads/$')({
 	server: {
 		handlers: {
@@ -28,14 +30,12 @@ export const Route = createFileRoute('/api/uploads/$')({
 					return new Response(null, { status: 404 })
 				}
 
-				// Listing photos are intentionally world-readable — no auth check needed here.
-				const pathWithinDir = key.slice('pub/'.length)
+				const pathWithinDir = `${key.slice('pub/'.length)}.jpg`
 				const { storage } = await import('@/lib/storage.server')
 				let body: ReadableStream
 				try {
 					body = await storage.readWebStream('pub', pathWithinDir)
 				} catch (err) {
-					// Only a missing file is a 404; other I/O errors (permissions, disk-full) are 500.
 					if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
 						return new Response(null, { status: 404 })
 					}
@@ -43,11 +43,9 @@ export const Route = createFileRoute('/api/uploads/$')({
 					return new Response(null, { status: 500 })
 				}
 
-				const ext = key.split('.').pop()?.toLowerCase() ?? ''
-				const contentType = MIME_TYPES[ext] ?? 'application/octet-stream'
 				return new Response(body, {
 					headers: {
-						'Content-Type': contentType,
+						'Content-Type': 'image/jpeg',
 						'Content-Disposition': 'inline',
 					},
 				})
