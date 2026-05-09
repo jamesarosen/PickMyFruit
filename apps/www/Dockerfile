@@ -41,7 +41,7 @@ COPY . .
 # VITE_* variables are replaced at build time; they cannot be injected at
 # runtime via Fly secrets.
 # See fly.toml [build.args]
-# See env.client.ts
+# See env.ts
 ARG VITE_SENTRY_DSN
 ARG VITE_SENTRY_ENABLED
 ARG VITE_SENTRY_ERROR_SAMPLE_RATE

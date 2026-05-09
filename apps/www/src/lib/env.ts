@@ -55,7 +55,7 @@ if (!result.success) {
 }
 
 /**
- * Validated client-side environment variables.
+ * Validated build-time environment variables exposed via `import.meta.env`.
  *
  * Properties use camelCase with the VITE_ prefix stripped since that prefix
  * is a build-tool detail. Compare with serverEnv, which keeps canonical

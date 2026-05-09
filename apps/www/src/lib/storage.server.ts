@@ -145,7 +145,18 @@ export class LocalStorageAdapter implements StorageAdapter {
 	}
 
 	publicUrl(pathWithinDir: string): string {
-		return `/api/uploads/pub/${pathWithinDir}`
+		// @TODO Restore the file extension once nitrojs/nitro#4252 is fixed.
+		// Nitro 3.0.260429-beta's dev server intercepts URLs with image
+		// extensions before route handlers run, so `/api/uploads/pub/<id>.jpg`
+		// 404s with a bare `default-src 'none'` CSP. Stripping the extension
+		// here is a workaround; the route in `routes/api/uploads/$.ts`
+		// re-appends `.jpg` when reading from disk. Once Nitro routes
+		// extensioned paths to dynamic handlers again, drop the strip and the
+		// re-append so the URL on the wire matches the on-disk filename and
+		// browsers/CDNs can rely on the extension for caching/MIME inference.
+		// https://github.com/nitrojs/nitro/issues/4252
+		const withoutExt = pathWithinDir.replace(/\.(jpe?g|png|webp)$/i, '')
+		return `/api/uploads/pub/${withoutExt}`
 	}
 
 	async delete(dir: 'raw' | 'pub', pathWithinDir: string): Promise<void> {

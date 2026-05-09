@@ -11,7 +11,7 @@ import {
 	withScope,
 } from '@sentry/solidstart'
 import type { CaptureContext, SeverityLevel } from '@sentry/solidstart'
-import { clientEnv } from './env.client'
+import { clientEnv } from './env'
 import isNetworkError from 'is-network-error'
 
 const isServer = typeof window === 'undefined'
