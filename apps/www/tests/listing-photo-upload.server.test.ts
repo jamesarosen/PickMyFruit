@@ -30,11 +30,11 @@ vi.mock('../src/lib/env.server', () => ({
 	serverEnv: { SHARP_CONCURRENCY: 1 },
 }))
 
-const mockLoggerInfo = vi.fn()
+const mockLoggerDebug = vi.fn()
 vi.mock('../src/lib/logger.server', () => ({
 	logger: {
-		info: mockLoggerInfo,
-		debug: vi.fn(),
+		info: vi.fn(),
+		debug: mockLoggerDebug,
 		warn: vi.fn(),
 		error: vi.fn(),
 	},
@@ -177,7 +177,7 @@ describe('uploadListingPhoto', () => {
 			storage: makeStorage(),
 		})
 
-		const phases = mockLoggerInfo.mock.calls
+		const phases = mockLoggerDebug.mock.calls
 			.map(([fields]) => fields as { phase?: string; rssBytes?: number })
 			.filter((f) => f.phase === 'start' || f.phase === 'end')
 		expect(phases.map((f) => f.phase)).toEqual(['start', 'end'])

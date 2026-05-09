@@ -42,6 +42,7 @@ export default defineConfig({
 			EMAIL_FROM: 'Test <test@example.com>',
 			EMAIL_PROVIDER: 'silent',
 			HMAC_SECRET: 'test-secret-for-e2e-minimum-32-characters',
+			NODE_ENV: 'test',
 			PORT: '5174',
 			STORAGE_PROVIDER: 'local',
 		},
