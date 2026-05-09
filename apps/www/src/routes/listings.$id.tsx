@@ -251,10 +251,11 @@ function OwnerTitleField(props: {
 				value={displayName()}
 				aria-busy={isSaving()}
 				onInput={(e) => {
-					setDisplayName(e.currentTarget.value)
+					const value = e.currentTarget.value
+					setDisplayName(value)
 					clearTimeout(nameTimer)
 					nameTimer = setTimeout(
-						() => saveName(e.currentTarget.value, props.clientUpdatedAt()),
+						() => saveName(value, props.clientUpdatedAt()),
 						FIELDS_DEBOUNCE_MS
 					)
 				}}
@@ -443,10 +444,11 @@ function OwnerEditableFields(props: {
 					value={displayHarvest()}
 					aria-busy={harvestSaving()}
 					onInput={(e) => {
-						setDisplayHarvest(e.currentTarget.value)
+						const value = e.currentTarget.value
+						setDisplayHarvest(value)
 						clearTimeout(harvestTimer)
 						harvestTimer = setTimeout(
-							() => saveHarvest(e.currentTarget.value, props.clientUpdatedAt()),
+							() => saveHarvest(value, props.clientUpdatedAt()),
 							FIELDS_DEBOUNCE_MS
 						)
 					}}
@@ -474,10 +476,11 @@ function OwnerEditableFields(props: {
 					value={displayVariety()}
 					aria-busy={varietySaving()}
 					onInput={(e) => {
-						setDisplayVariety(e.currentTarget.value)
+						const value = e.currentTarget.value
+						setDisplayVariety(value)
 						clearTimeout(varietyTimer)
 						varietyTimer = setTimeout(
-							() => saveVariety(e.currentTarget.value, props.clientUpdatedAt()),
+							() => saveVariety(value, props.clientUpdatedAt()),
 							FIELDS_DEBOUNCE_MS
 						)
 					}}
@@ -506,10 +509,11 @@ function OwnerEditableFields(props: {
 					value={displayQuantity()}
 					aria-busy={quantitySaving()}
 					onInput={(e) => {
-						setDisplayQuantity(e.currentTarget.value)
+						const value = e.currentTarget.value
+						setDisplayQuantity(value)
 						clearTimeout(quantityTimer)
 						quantityTimer = setTimeout(
-							() => saveQuantity(e.currentTarget.value, props.clientUpdatedAt()),
+							() => saveQuantity(value, props.clientUpdatedAt()),
 							FIELDS_DEBOUNCE_MS
 						)
 					}}
@@ -545,10 +549,11 @@ function OwnerEditableFields(props: {
 					value={displayNotes()}
 					aria-busy={notesSaving()}
 					onInput={(e) => {
-						setDisplayNotes(e.currentTarget.value)
+						const value = e.currentTarget.value
+						setDisplayNotes(value)
 						clearTimeout(notesTimer)
 						notesTimer = setTimeout(
-							() => saveNotes(e.currentTarget.value, props.clientUpdatedAt()),
+							() => saveNotes(value, props.clientUpdatedAt()),
 							FIELDS_DEBOUNCE_MS
 						)
 					}}
