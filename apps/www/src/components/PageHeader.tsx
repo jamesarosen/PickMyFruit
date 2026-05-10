@@ -19,6 +19,7 @@ import { authClient } from '@/lib/auth-client'
 import { displayName } from '@/lib/display-name'
 import './PageHeader.css'
 import NamePromptBanner from './NamePromptBanner'
+import { BuyMeACoffee } from './BuyMeACoffee'
 
 export type Breadcrumb = {
 	/** Visible text for this crumb. */
@@ -125,6 +126,8 @@ export default function PageHeader(props: PageHeaderProps) {
 						</span>
 						<span class="page-header__logo-text">Pick My Fruit</span>
 					</Link>
+
+					<BuyMeACoffee />
 
 					<DropdownMenu open={menuOpen()} onOpenChange={setMenuOpen}>
 						{/* aria-label is stable; Kobalte manages aria-expanded and aria-haspopup */}

@@ -8,17 +8,17 @@ function buildCspDirectives(extraImgSrc: string[]): string[] {
 		"default-src 'self'",
 		// Solid's HydrationScript injects an inline script for SSR hydration.
 		// @todo replace 'unsafe-inline' with nonce-based CSP when Solid supports it
-		// cdnjs.buymeacoffee.com serves the Buy Me a Coffee (BMAC) button widget script.
+		// cdnjs.buymeacoffee.com: BMAC.
 		"script-src 'self' 'unsafe-inline' https://cdnjs.buymeacoffee.com",
 		// 'unsafe-inline' is required for Solid JSX style="" attributes and MapLibre GL.
 		// If JSX inline styles are moved to CSS classes, 'unsafe-inline' can be dropped and
 		// replaced with 'sha256-VQTei97aMH9YclKPQM3e8rL/RXSmj3lPwKVXZgaN2QA=' to whitelist
 		// only the static @layer ordering <style> block in RootShell.
-		// fonts.bunny.net serves the Bree font stylesheet injected by the BMAC button script.
-		"style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
+		// fonts.bunny.net & fonts.googleapis.com: BMAC.
+		"style-src 'self' 'unsafe-inline' https://fonts.bunny.net https://fonts.googleapis.com",
 		imgSrc,
-		// fonts.bunny.net serves the Bree font files used by the BMAC button widget.
-		"font-src 'self' https://fonts.bunny.net",
+		// fonts.bunny.net & fonts.gstatic.com: BMAC.
+		"font-src 'self' https://fonts.bunny.net https://fonts.gstatic.com",
 		[
 			"connect-src 'self'",
 			'https://*.openfreemap.org',
