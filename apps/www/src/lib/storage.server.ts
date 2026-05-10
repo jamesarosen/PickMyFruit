@@ -22,6 +22,15 @@ export type StorageBody = Readable
 const multipartUploadPartSize = 5 * 1024 * 1024
 
 /**
+ * Cache-Control for public image objects: 1 day fresh, 30 days stale-while-revalidate
+ * and stale-if-error. Treats keys as effectively immutable in app logic (new content
+ * = new key) while preserving a same-day window to invalidate URLs for urgent fixes
+ * (e.g. EXIF leakage).
+ */
+export const publicImageCacheControl =
+	'public, max-age=86400, stale-while-revalidate=2592000, stale-if-error=2592000'
+
+/**
  * Pass-through Transform that counts bytes flowing through it. Used to record
  * `storage.bytes_written` on upload spans without buffering or interfering
  * with downstream backpressure (a plain PassThrough with a 'data' listener
@@ -206,7 +215,9 @@ export class TigrisStorageAdapter implements StorageAdapter {
 			Key: key,
 			Body: counter.stream,
 			ContentType: opts.mimeType,
-			...(dir === 'pub' ? { ACL: 'public-read' } : {}),
+			...(dir === 'pub'
+				? { ACL: 'public-read', CacheControl: publicImageCacheControl }
+				: {}),
 		}
 		await Sentry.startSpan(
 			{
