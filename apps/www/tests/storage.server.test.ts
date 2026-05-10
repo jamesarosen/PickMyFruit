@@ -9,6 +9,7 @@ import { text } from 'node:stream/consumers'
 import {
 	LocalStorageAdapter,
 	TigrisStorageAdapter,
+	publicImageCacheControl,
 } from '../src/lib/storage.server'
 
 describe(LocalStorageAdapter, () => {
@@ -236,6 +237,83 @@ describe(TigrisStorageAdapter, () => {
 	})
 
 	describe('upload', () => {
+		/**
+		 * Spins up a stub S3 endpoint that records every request, runs `fn` against
+		 * a TigrisStorageAdapter pointing at it, then returns the captured requests.
+		 */
+		async function withCapturingS3<T>(
+			fn: (adapter: TigrisStorageAdapter) => Promise<T>
+		): Promise<{
+			result: T
+			requests: { method: string; url: string; headers: Record<string, string> }[]
+		}> {
+			const requests: {
+				method: string
+				url: string
+				headers: Record<string, string>
+			}[] = []
+			const server = createServer((req, res) => {
+				requests.push({
+					method: req.method ?? '',
+					url: req.url ?? '',
+					headers: Object.fromEntries(
+						Object.entries(req.headers).map(([k, v]) => [
+							k,
+							Array.isArray(v) ? v.join(',') : (v ?? ''),
+						])
+					),
+				})
+				req.resume()
+				req.on('end', () => {
+					res.writeHead(200)
+					res.end()
+				})
+			})
+			await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+			try {
+				const { port } = server.address() as AddressInfo
+				const localAdapter = new TigrisStorageAdapter({
+					bucketName: 'test-bucket',
+					accessKeyId: 'fake',
+					secretAccessKey: 'fake',
+					endpointUrl: `http://127.0.0.1:${port}`,
+					mediaOrigin: defaultMediaOrigin,
+				})
+				const result = await fn(localAdapter)
+				return { result, requests }
+			} finally {
+				await new Promise<void>((resolve, reject) =>
+					server.close((err) => (err ? reject(err) : resolve()))
+				)
+			}
+		}
+
+		it('sends Cache-Control on pub uploads', async () => {
+			const { requests } = await withCapturingS3((adapter) =>
+				adapter.upload(
+					'pub',
+					'listings/1/uuid.jpg',
+					Readable.from(Buffer.from('hello')),
+					{ mimeType: 'image/jpeg' }
+				)
+			)
+			const put = requests.find((r) => r.method === 'PUT')
+			expect(put?.headers['cache-control']).toBe(publicImageCacheControl)
+		})
+
+		it('does not send Cache-Control on raw uploads', async () => {
+			const { requests } = await withCapturingS3((adapter) =>
+				adapter.upload(
+					'raw',
+					'listings/1/uuid.jpg',
+					Readable.from(Buffer.from('hello')),
+					{ mimeType: 'image/jpeg' }
+				)
+			)
+			const put = requests.find((r) => r.method === 'PUT')
+			expect(put?.headers['cache-control']).toBeUndefined()
+		})
+
 		it('uploads a Readable stream without throwing x-amz-decoded-content-length error', async () => {
 			// Regression: AWS SDK v3 defaults to WHEN_SUPPORTED for requestChecksumCalculation,
 			// which requires x-amz-decoded-content-length for streaming bodies. That header is
