@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/solid-start'
 import { getRequestHeaders } from '@tanstack/solid-start/server'
 import { z } from 'zod'
 import { errorMiddleware, UserError } from '@/lib/server-error-middleware'
+import { NotFoundError } from '@/lib/user-error'
 import { Sentry } from '@/lib/sentry'
 import { updateListingSchema } from '@/lib/validation'
 import type { AddressFields, Listing } from '@/data/schema'
@@ -72,12 +73,24 @@ export const getNearbyListings = createServerFn({ method: 'GET' })
 		return query(data.lat, data.lng, data.limit)
 	})
 
-const getListingByIdValidator = z.coerce.number().int().positive()
+/**
+ * Strict positive integer listing id from route params or RPC input; `.parse`
+ * throws {@link NotFoundError} when the value is malformed (TanStack-compatible
+ * not-found; see `notFound()` in Router docs).
+ */
+export const listingIdParamSchema = z.coerce
+	.string()
+	.regex(/^\d+$/)
+	.transform((s) => Number.parseInt(s, 10))
+	.pipe(z.number().int().positive())
+	.catch(() => {
+		throw new NotFoundError('Listing not found')
+	})
 
 /** Fetches a single listing by ID, omitting sensitive fields. Excludes private listings. */
 export const getPublicListingById = createServerFn({ method: 'GET' })
 	.middleware([errorMiddleware])
-	.inputValidator((id: number) => getListingByIdValidator.parse(id))
+	.inputValidator((id: unknown) => listingIdParamSchema.parse(id))
 	.handler(async ({ data: id }) => {
 		const { getPublicListingById: query } = await import('@/data/queries.server')
 		return query(id)
@@ -86,7 +99,7 @@ export const getPublicListingById = createServerFn({ method: 'GET' })
 /** Fetches a listing for the current viewer — owners see full data, others see public fields. */
 export const getListingForViewer = createServerFn({ method: 'GET' })
 	.middleware([errorMiddleware])
-	.inputValidator((id: number) => getListingByIdValidator.parse(id))
+	.inputValidator((id: unknown) => listingIdParamSchema.parse(id))
 	.handler(async ({ data: id }) => {
 		const headers = getRequestHeaders()
 		const { auth } = await import('@/lib/auth.server')
