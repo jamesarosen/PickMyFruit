@@ -9,4 +9,10 @@ describe('escapeHtml', () => {
 	it('leaves alphanumeric text unchanged', () => {
 		expect(escapeHtml('abc123')).toBe('abc123')
 	})
+
+	it('escapes ampersands in URLs for safe href interpolation', () => {
+		expect(escapeHtml('https://example.com/cb?a=1&b=2')).toBe(
+			'https://example.com/cb?a=1&amp;b=2'
+		)
+	})
 })
