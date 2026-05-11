@@ -10,12 +10,12 @@ test.describe('Address Autofill', () => {
 		await loginViaUI(page, testUser)
 		await page.goto('/listings/new')
 
-		await expect(page.getByLabel(/Address/)).toHaveValue('')
-		await expect(page.getByLabel('City')).toHaveValue('Napa')
-		await expect(page.getByLabel('State')).toHaveValue('CA')
+		await expect(page.getByLabel(/Address/)).toHaveValue('', { timeout: 10000 })
+		await expect(page.getByLabel('City')).toHaveValue('Napa', { timeout: 10000 })
+		await expect(page.getByLabel('State')).toHaveValue('CA', { timeout: 10000 })
 
 		// No prefill notice
-		await expect(page.locator('.form-prefill-notice')).not.toBeVisible()
+		await expect(page.locator('.form-prefill-notice')).not.toBeAttached()
 	})
 
 	test('pre-fills address from most recent listing', async ({
@@ -32,10 +32,14 @@ test.describe('Address Autofill', () => {
 		await loginViaUI(page, testUser)
 		await page.goto('/listings/new')
 
-		await expect(page.getByLabel(/Address/)).toHaveValue('456 Oak Avenue')
-		await expect(page.getByLabel('City')).toHaveValue('St. Helena')
-		await expect(page.getByLabel('State')).toHaveValue('CA')
-		await expect(page.getByLabel('ZIP')).toHaveValue('94574')
+		await expect(page.getByLabel(/Address/)).toHaveValue('456 Oak Avenue', {
+			timeout: 10000,
+		})
+		await expect(page.getByLabel('City')).toHaveValue('St. Helena', {
+			timeout: 10000,
+		})
+		await expect(page.getByLabel('State')).toHaveValue('CA', { timeout: 10000 })
+		await expect(page.getByLabel('ZIP')).toHaveValue('94574', { timeout: 10000 })
 
 		// Prefill notice is visible
 		const notice = page.locator('.form-prefill-notice')

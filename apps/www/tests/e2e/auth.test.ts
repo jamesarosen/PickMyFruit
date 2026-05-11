@@ -67,7 +67,6 @@ test.describe('Authentication', () => {
 		await expect.poll(() => nav.isSignedIn(), { timeout: 10000 }).toBeTruthy()
 
 		await page.reload()
-		await page.waitForLoadState('networkidle')
 
 		await expect(page).toHaveURL('/listings/mine')
 		await expect.poll(() => nav.isSignedIn(), { timeout: 5000 }).toBeTruthy()
