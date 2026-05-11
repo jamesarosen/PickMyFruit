@@ -6,6 +6,7 @@ import { tanstackStartCookies } from 'better-auth/tanstack-start/solid'
 import { db } from '../data/db.server'
 import { serverEnv } from './env.server'
 import { logger } from './logger.server'
+import { escapeHtml } from './html-escape.server'
 import { profileNameSchema } from './validation'
 
 const sendMagicLinkEmail = async ({
@@ -28,6 +29,9 @@ const sendMagicLinkEmail = async ({
 		const { Resend } = await import('resend')
 		const resend = new Resend(serverEnv.email.RESEND_API_KEY)
 
+		const safeUrl = escapeHtml(url)
+		const safeToken = escapeHtml(token)
+
 		const { error } = await resend.emails.send({
 			from: serverEnv.EMAIL_FROM,
 			to: email,
@@ -42,7 +46,9 @@ const sendMagicLinkEmail = async ({
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
 	<h1 style="color: #2d5016; margin-bottom: 24px;">Welcome to Pick My Fruit!</h1>
 	<p>Click the button below to sign in:</p>
-	<a href="${url}" style="display: inline-block; padding: 14px 28px; background: #4a7c23; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 16px 0;">Sign In</a>
+	<a href="${safeUrl}" style="display: inline-block; padding: 14px 28px; background: #4a7c23; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 16px 0;">Sign In</a>
+	<p style="margin-top: 28px;">If the button does not work, go to the sign-in page on Pick My Fruit and paste the token below into the &ldquo;Or enter the token&rdquo; field.</p>
+	<p style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 1.35rem; text-align: center; margin: 12px 0 0 0; letter-spacing: 0.02em;">${safeToken}</p>
 	<p style="color: #666; font-size: 14px; margin-top: 24px;">This link expires in 5 minutes. If you didn't request this, you can safely ignore this email.</p>
 </body>
 </html>

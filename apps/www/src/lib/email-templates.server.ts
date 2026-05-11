@@ -1,6 +1,7 @@
 import { buildUnavailableUrl } from './hmac.server'
 import { serverEnv } from './env.server'
 import { logger } from './logger.server'
+import { escapeHtml } from './html-escape.server'
 
 interface InquiryEmailData {
 	baseUrl: string
@@ -79,15 +80,6 @@ export function buildInquiryEmailHtml(data: InquiryEmailData): string {
   </p>
 </body>
 </html>`
-}
-
-function escapeHtml(text: string): string {
-	return text
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
-		.replace(/'/g, '&#039;')
 }
 
 /** Sends an inquiry notification email. Throws on failure. */
