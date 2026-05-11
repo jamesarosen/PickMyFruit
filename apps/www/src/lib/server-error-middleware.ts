@@ -1,8 +1,8 @@
 import { createMiddleware } from '@tanstack/solid-start'
 import { setResponseStatus } from '@tanstack/solid-start/server'
 import { Sentry } from './sentry'
-export { UserError } from './user-error'
-import { UserError } from './user-error'
+export { isNotFoundError, NotFoundError, UserError } from './user-error'
+import { isNotFoundError, UserError } from './user-error'
 
 /**
  * Middleware that captures exceptions server-side and converts them
@@ -20,6 +20,10 @@ export const errorMiddleware = createMiddleware({ type: 'function' }).server(
 				if (error.status) {
 					setResponseStatus(error.status)
 				}
+				throw error
+			}
+
+			if (isNotFoundError(error)) {
 				throw error
 			}
 

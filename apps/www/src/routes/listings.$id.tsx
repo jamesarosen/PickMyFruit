@@ -16,7 +16,11 @@ import {
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 import { buildListingMeta } from '@/lib/listing-meta'
 import { Sentry } from '@/lib/sentry'
-import { getListingForViewer, updateListing } from '@/api/listings'
+import {
+	getListingForViewer,
+	listingIdParamSchema,
+	updateListing,
+} from '@/api/listings'
 import type { Listing } from '@/data/schema'
 import type { PublicListing } from '@/data/queries.server'
 import type { OwnerListingView, PublicPhoto } from '@/data/listing'
@@ -27,6 +31,23 @@ const listingSearchSchema = z.object({
 	created: z.boolean().optional(),
 	marked: z.enum(['unavailable']).optional(),
 })
+
+function ListingNotFoundFallback() {
+	return (
+		<Layout title="Listing Not Found - Pick My Fruit">
+			<PageHeader breadcrumbs={[{ label: 'Listing' }]} />
+			<main id="main-content" class="listing-show">
+				<div class="listing-not-found">
+					<h1>Listing Not Found</h1>
+					<p>This listing may have been removed or doesn't exist.</p>
+					<Link to="/" class="back-link">
+						Back to Home
+					</Link>
+				</div>
+			</main>
+		</Layout>
+	)
+}
 
 /**
  * Fallback embed image used when a listing has no cover photo. Matches the
@@ -42,7 +63,9 @@ const PLACEHOLDER_EMBED = {
 
 export const Route = createFileRoute('/listings/$id')({
 	validateSearch: listingSearchSchema,
-	loader: ({ params }) => getListingForViewer({ data: Number(params.id) }),
+	loader: ({ params }) =>
+		getListingForViewer({ data: listingIdParamSchema.parse(params.id) }),
+	notFoundComponent: ListingNotFoundFallback,
 	head: ({ loaderData }) => {
 		// TODO: generate richer embed images for listings. Open Graph / Twitter /
 		// Slack crawlers prefer different aspect ratios and resolutions (e.g.
@@ -614,23 +637,7 @@ function ListingDetailPage() {
 		Math.floor((liveUpdatedAt()?.getTime() ?? 0) / 1000)
 
 	return (
-		<Show
-			when={listing()}
-			fallback={
-				<Layout title="Listing Not Found - Pick My Fruit">
-					<PageHeader breadcrumbs={[{ label: 'Listing' }]} />
-					<main id="main-content" class="listing-show">
-						<div class="listing-not-found">
-							<h1>Listing Not Found</h1>
-							<p>This listing may have been removed or doesn't exist.</p>
-							<Link to="/" class="back-link">
-								Back to Home
-							</Link>
-						</div>
-					</main>
-				</Layout>
-			}
-		>
+		<Show when={listing()} fallback={<ListingNotFoundFallback />}>
 			{(l) => (
 				<Layout title={`${displayTitle()} - Pick My Fruit`}>
 					<PageHeader breadcrumbs={[{ label: displayTitle() }]} />
