@@ -39,7 +39,7 @@ function parseCsv(raw: string): ProduceType[] {
 				namePluralSentenceCase,
 			}
 		})
-		.toSorted((a, b) =>
+		.sort((a, b) =>
 			a.nameSingularTitleCase.localeCompare(b.nameSingularTitleCase)
 		)
 }
