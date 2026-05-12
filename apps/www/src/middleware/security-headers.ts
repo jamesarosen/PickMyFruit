@@ -31,32 +31,20 @@ function buildCspDirectives(extraImgSrc: string[]): string[] {
 	]
 }
 
-// Resolved once on the first request and cached; avoids a static import of a
-// *.server module from this non-server file while still paying the import cost
-// only once.
-let _cspImgSrcHosts: string[] | undefined
-
-/** Hosts allowed in `img-src` for listing photos (Tigris bucket CDN and optional custom origin). */
-async function resolveListingImageOriginsForCsp(): Promise<string[]> {
-	if (_cspImgSrcHosts === undefined) {
-		const { serverEnv } = await import('@/lib/env.server')
-		const hosts: string[] = []
-		if (serverEnv.storage.PROVIDER === 'tigris') {
-			hosts.push(serverEnv.storage.mediaOrigin)
-		}
-		_cspImgSrcHosts = hosts
-	}
-	return _cspImgSrcHosts
-}
-
 /**
  * Applies all security headers to a `Headers` object.
+ *
+ * `imgSrcHosts` should contain any additional origins (e.g. the Tigris media
+ * CDN) that listing photos may be served from. Callers in server contexts
+ * typically resolve this from `serverEnv.storage`.
  *
  * Does not include HSTS, which is handled by the TLS middleware (`tls.ts`)
  * alongside HTTP-to-HTTPS and apex-to-www redirects.
  */
-export async function applySecurityHeaders(headers: Headers): Promise<void> {
-	const imgSrcHosts = await resolveListingImageOriginsForCsp()
+export function applySecurityHeaders(
+	headers: Headers,
+	imgSrcHosts: string[] = []
+): void {
 	const csp = buildCspDirectives(imgSrcHosts).join('; ')
 	headers.set('Content-Security-Policy', csp)
 	// Legacy fallback for browsers that predate CSP frame-ancestors
@@ -69,11 +57,21 @@ export async function applySecurityHeaders(headers: Headers): Promise<void> {
 	)
 }
 
+// Resolved once on the first request and cached.
+let _cspImgSrcHosts: string[] | undefined
+
 /** Sets security response headers on all responses. */
 export const securityHeadersMiddleware = createMiddleware().server(
 	async ({ next }) => {
 		const result = await next()
-		await applySecurityHeaders(result.response.headers)
+		if (_cspImgSrcHosts === undefined) {
+			const { serverEnv } = await import('@/lib/env.server')
+			_cspImgSrcHosts =
+				serverEnv.storage.PROVIDER === 'tigris'
+					? [serverEnv.storage.mediaOrigin]
+					: []
+		}
+		applySecurityHeaders(result.response.headers, _cspImgSrcHosts)
 		return result
 	}
 )
