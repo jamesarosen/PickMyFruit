@@ -1,12 +1,11 @@
 import { defineConfig } from 'vitest/config'
 import solid from 'vite-plugin-solid'
-import tsconfigPaths from 'vite-tsconfig-paths'
 import path from 'node:path'
 
 const dbPath = path.resolve(__dirname, 'data', 'test.db')
 
 export default defineConfig({
-	plugins: [tsconfigPaths(), solid()],
+	plugins: [solid()],
 	test: {
 		environment: 'jsdom',
 		globals: true,
@@ -80,6 +79,7 @@ export default defineConfig({
 	},
 	resolve: {
 		conditions: ['development', 'browser'],
+		tsconfigPaths: true,
 		alias: {
 			// Mock TanStack Start server modules that require build environment
 			// More specific path must come first
