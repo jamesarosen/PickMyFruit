@@ -1,5 +1,5 @@
 import { cellToParent } from 'h3-js'
-import type { Listing } from './schema'
+import type { Listing } from './schema.server'
 import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
 
 /** Public photo shape returned to clients. */

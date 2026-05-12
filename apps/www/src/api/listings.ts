@@ -5,7 +5,7 @@ import { errorMiddleware, UserError } from '@/lib/server-error-middleware'
 import { NotFoundError } from '@/lib/user-error'
 import { Sentry } from '@/lib/sentry'
 import { updateListingSchema } from '@/lib/validation'
-import type { AddressFields, Listing } from '@/data/schema'
+import type { AddressFields, Listing } from '@/data/schema.server'
 import type { OwnerListingView } from '@/data/listing'
 
 /** Fetches the current user's listings, or empty array if not authenticated. */

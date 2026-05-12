@@ -10,7 +10,7 @@ import {
 	type NewInquiry,
 	type AddressFields,
 	type ListingPhoto,
-} from './schema'
+} from './schema.server'
 import { eq, desc, and, ne, isNull, gt, inArray, sql } from 'drizzle-orm'
 import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
 import { Sentry } from '@/lib/sentry'
@@ -24,7 +24,7 @@ import {
 import { ALLOWED_EXT } from '@/lib/listing-photo-upload.server'
 export { type PublicListing, type OwnerListingView } from './listing'
 
-export type { AddressFields } from './schema'
+export type { AddressFields } from './schema.server'
 
 /** Thrown when a DB invariant is violated — e.g. an INSERT RETURNING produces no row. */
 export class DataInvariantError extends Error {

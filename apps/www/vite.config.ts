@@ -96,7 +96,34 @@ export default defineConfig(({ command, mode }) => {
 		server: {},
 		plugins: [
 			tsconfigPaths(),
-			tanstackStart(),
+			tanstackStart({
+				// Defense-in-depth: deny client-graph imports of server-only packages.
+				// File-level `*.server.*` protection is built in; this extends it to
+				// third-party modules that would silently pull a Node-only build (or
+				// secrets) into the browser bundle.
+				// https://tanstack.com/start/v0/docs/framework/react/guide/import-protection
+				importProtection: {
+					client: {
+						specifiers: [
+							'@libsql/client',
+							/^@libsql\/client\//,
+							'@aws-sdk/client-s3',
+							'@aws-sdk/lib-storage',
+							'better-auth', // subpaths like better-auth/solid are client-safe
+							'resend',
+							'pino',
+							'pino-pretty',
+							'sharp',
+							'exiftool-vendored',
+							'exiftool-vendored.pl',
+							'drizzle-kit',
+							/^drizzle-kit\//,
+							'nitro',
+							/^nitro\//,
+						],
+					},
+				},
+			}),
 			// traceDeps copies @libsql's native binaries into .output/server/node_modules/
 			// so the production bundle can resolve them without a full node_modules install.
 			// sourcemap: true makes Nitro's Rollup pass emit .map files for the final

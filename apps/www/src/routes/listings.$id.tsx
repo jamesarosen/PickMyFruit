@@ -21,7 +21,7 @@ import {
 	listingIdParamSchema,
 	updateListing,
 } from '@/api/listings'
-import type { Listing } from '@/data/schema'
+import type { Listing } from '@/data/schema.server'
 import type { PublicListing } from '@/data/queries.server'
 import type { OwnerListingView, PublicPhoto } from '@/data/listing'
 import '@/routes/listing-show.css'
