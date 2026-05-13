@@ -45,6 +45,8 @@ export default defineConfig({
 			NODE_ENV: 'test',
 			PORT: '5174',
 			STORAGE_PROVIDER: 'local',
+			/** Enables `/root-error` loader to throw into the root error boundary (see `api/e2e-root-error.ts`). */
+			E2E_THROW_ROOT_ERROR: '1',
 		},
 	},
 })

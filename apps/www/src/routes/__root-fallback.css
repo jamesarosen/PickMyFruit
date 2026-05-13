@@ -1,0 +1,12 @@
+@layer page {
+	.root-fallback-page .root-fallback-main {
+		padding: 40px 16px;
+		text-align: center;
+	}
+
+	.root-fallback-page .root-fallback-lede {
+		color: var(--color-text-muted);
+		margin: 16px auto 24px;
+		max-width: 42rem;
+	}
+}
