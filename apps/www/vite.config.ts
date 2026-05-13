@@ -1,5 +1,4 @@
 import { defineConfig, loadEnv } from 'vite'
-import tsconfigPaths from 'vite-tsconfig-paths'
 import { tanstackStart } from '@tanstack/solid-start/plugin/vite'
 import { nitro } from 'nitro/vite'
 import solid from 'vite-plugin-solid'
@@ -93,9 +92,11 @@ export default defineConfig(({ command, mode }) => {
 				build: { sourcemap: 'hidden' },
 			},
 		},
+		resolve: {
+			tsconfigPaths: true,
+		},
 		server: {},
 		plugins: [
-			tsconfigPaths(),
 			tanstackStart({
 				// Defense-in-depth: deny client-graph imports of server-only packages.
 				// File-level `*.server.*` protection is built in; this extends it to
