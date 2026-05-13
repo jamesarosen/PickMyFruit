@@ -1,0 +1,66 @@
+@layer page {
+	.support-page {
+		padding: 48px 0 80px;
+
+		.container {
+			max-width: 720px;
+			margin: 0 auto;
+			padding-inline: clamp(16px, 4vw, 48px);
+		}
+
+		.support-page__intro {
+			margin-bottom: 32px;
+
+			h1 {
+				font-size: 2rem;
+				margin: 0 0 12px;
+			}
+		}
+
+		.support-page__subhead {
+			color: var(--color-quiet);
+			font-size: 1.1rem;
+			margin: 0;
+		}
+
+		section {
+			margin-top: 32px;
+
+			h2 {
+				font-size: 1.25rem;
+				margin: 0 0 12px;
+			}
+
+			p,
+			li {
+				line-height: 1.6;
+				color: var(--color-text);
+			}
+
+			ul {
+				padding-left: 1.25em;
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+			}
+		}
+
+		.support-page__portrait {
+			float: right;
+			width: clamp(120px, 30%, 200px);
+			height: auto;
+			aspect-ratio: 1 / 1;
+			object-fit: cover;
+			border-radius: 50%;
+			margin: 0 0 12px 20px;
+			shape-outside: circle();
+		}
+
+		.support-page__cta {
+			display: flex;
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 16px;
+		}
+	}
+}

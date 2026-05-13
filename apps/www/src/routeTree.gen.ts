@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as SupportRouteImport } from './routes/support'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -17,6 +18,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as CssTestRouteImport } from './routes/css-test'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SupportGoRouteImport } from './routes/support.go'
 import { Route as ListingsNewRouteImport } from './routes/listings/new'
 import { Route as ListingsMineRouteImport } from './routes/listings/mine'
 import { Route as ListingsIdRouteImport } from './routes/listings.$id'
@@ -29,6 +31,11 @@ import { Route as ApiListingsIdUnavailableRouteImport } from './routes/api/listi
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -65,6 +72,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SupportGoRoute = SupportGoRouteImport.update({
+  id: '/go',
+  path: '/go',
+  getParentRoute: () => SupportRoute,
 } as any)
 const ListingsNewRoute = ListingsNewRouteImport.update({
   id: '/listings/new',
@@ -116,12 +128,14 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
+  '/support': typeof SupportRouteWithChildren
   '/terms': typeof TermsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRouteWithChildren
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
+  '/support/go': typeof SupportGoRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
@@ -134,12 +148,14 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
+  '/support': typeof SupportRouteWithChildren
   '/terms': typeof TermsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRouteWithChildren
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
+  '/support/go': typeof SupportGoRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
@@ -153,12 +169,14 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
+  '/support': typeof SupportRouteWithChildren
   '/terms': typeof TermsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRouteWithChildren
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
+  '/support/go': typeof SupportGoRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
@@ -173,12 +191,14 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/privacy-policy'
     | '/profile'
+    | '/support'
     | '/terms'
     | '/api/health'
     | '/api/listings'
     | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
+    | '/support/go'
     | '/api/auth/$'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
@@ -191,12 +211,14 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/privacy-policy'
     | '/profile'
+    | '/support'
     | '/terms'
     | '/api/health'
     | '/api/listings'
     | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
+    | '/support/go'
     | '/api/auth/$'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
@@ -209,12 +231,14 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/privacy-policy'
     | '/profile'
+    | '/support'
     | '/terms'
     | '/api/health'
     | '/api/listings'
     | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
+    | '/support/go'
     | '/api/auth/$'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
@@ -228,6 +252,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   ProfileRoute: typeof ProfileRoute
+  SupportRoute: typeof SupportRouteWithChildren
   TermsRoute: typeof TermsRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiListingsRoute: typeof ApiListingsRouteWithChildren
@@ -245,6 +270,13 @@ declare module '@tanstack/solid-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -295,6 +327,13 @@ declare module '@tanstack/solid-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/support/go': {
+      id: '/support/go'
+      path: '/go'
+      fullPath: '/support/go'
+      preLoaderRoute: typeof SupportGoRouteImport
+      parentRoute: typeof SupportRoute
     }
     '/listings/new': {
       id: '/listings/new'
@@ -355,6 +394,17 @@ declare module '@tanstack/solid-router' {
   }
 }
 
+interface SupportRouteChildren {
+  SupportGoRoute: typeof SupportGoRoute
+}
+
+const SupportRouteChildren: SupportRouteChildren = {
+  SupportGoRoute: SupportGoRoute,
+}
+
+const SupportRouteWithChildren =
+  SupportRoute._addFileChildren(SupportRouteChildren)
+
 interface ApiListingsRouteChildren {
   ApiListingsIdUnavailableRoute: typeof ApiListingsIdUnavailableRoute
 }
@@ -375,6 +425,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   ProfileRoute: ProfileRoute,
+  SupportRoute: SupportRouteWithChildren,
   TermsRoute: TermsRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiListingsRoute: ApiListingsRouteWithChildren,

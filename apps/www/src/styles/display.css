@@ -1,0 +1,34 @@
+@layer utilities {
+	/**
+	 * @see https://tailwindcss.com/docs/display#hidden
+	 */
+	.hidden {
+		display: none;
+	}
+
+	@media (min-width: 768px) {
+		/**
+		* @see https://tailwindcss.com/docs/display#block-and-inline
+		* @see https://tailwindcss.com/docs/responsive-design
+		*/
+		.md\:block {
+			display: block;
+		}
+
+		/**
+		* @see https://tailwindcss.com/docs/display#block-and-inline
+		* @see https://tailwindcss.com/docs/responsive-design
+		*/
+		.md\:inline {
+			display: inline;
+		}
+
+		/**
+		* @see https://tailwindcss.com/docs/display#hidden
+		* @see https://tailwindcss.com/docs/responsive-design
+		*/
+		.md\:hidden {
+			display: none;
+		}
+	}
+}

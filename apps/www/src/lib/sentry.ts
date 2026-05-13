@@ -7,6 +7,7 @@ import {
 	captureMessage as sdkCaptureMessage,
 	addBreadcrumb,
 	addIntegration,
+	metrics,
 	startSpan,
 	withScope,
 } from '@sentry/solidstart'
@@ -125,6 +126,7 @@ export const Sentry = {
 
 	addBreadcrumb,
 	addIntegration,
+	metrics,
 	startSpan,
 	withScope,
 }

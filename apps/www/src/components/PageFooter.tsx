@@ -18,6 +18,9 @@ export function PageFooter() {
 				</div>
 				<nav class="footer-nav">
 					<Link to="/about">About</Link>
+					<Link to="/support" search={{ from: 'footer' }}>
+						Support
+					</Link>
 					<Link to="/privacy">Privacy</Link>
 					<Link to="/terms">Terms</Link>
 				</nav>

@@ -126,6 +126,14 @@ export default function PageHeader(props: PageHeaderProps) {
 						<span class="page-header__logo-text">Pick My Fruit</span>
 					</Link>
 
+					<Link
+						to="/support"
+						search={{ from: 'header' }}
+						class="page-header__support-link hidden md:inline"
+					>
+						Support
+					</Link>
+
 					<DropdownMenu open={menuOpen()} onOpenChange={setMenuOpen}>
 						{/* aria-label is stable; Kobalte manages aria-expanded and aria-haspopup */}
 						<DropdownMenu.Trigger
@@ -156,6 +164,14 @@ export default function PageHeader(props: PageHeaderProps) {
 								<Show when={user()}>
 									<DropdownMenuLink to="/listings/mine">My Garden</DropdownMenuLink>
 									<DropdownMenuLink to="/profile">Profile</DropdownMenuLink>
+									<DropdownMenu.Item
+										as="a"
+										href="/support?from=header"
+										closeOnSelect={false}
+										class="page-header__menu-item md:hidden"
+									>
+										Support Pick My Fruit
+									</DropdownMenu.Item>
 									<DropdownMenu.Separator class="page-header__menu-separator" />
 									<DropdownMenu.Item
 										class="page-header__menu-item page-header__menu-item--danger"
@@ -166,6 +182,14 @@ export default function PageHeader(props: PageHeaderProps) {
 								</Show>
 								<Show when={!user()}>
 									<DropdownMenuLink to="/login">Sign In</DropdownMenuLink>
+									<DropdownMenu.Item
+										as="a"
+										href="/support?from=header"
+										closeOnSelect={false}
+										class="page-header__menu-item md:hidden"
+									>
+										Support Pick My Fruit
+									</DropdownMenu.Item>
 								</Show>
 							</DropdownMenu.Content>
 						</DropdownMenu.Portal>
