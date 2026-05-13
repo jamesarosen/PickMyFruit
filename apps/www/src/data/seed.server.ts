@@ -7,7 +7,7 @@ import {
 	user,
 	type NewListing,
 	type NewUser,
-} from './schema'
+} from './schema.server'
 import { logger } from '@/lib/logger.server'
 import { ListingStatus } from '@/lib/validation'
 

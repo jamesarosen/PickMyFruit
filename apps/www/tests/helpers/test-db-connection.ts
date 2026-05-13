@@ -8,7 +8,7 @@
 import { drizzle } from 'drizzle-orm/libsql'
 import { createClient } from '@libsql/client'
 import { beforeEach, afterEach } from 'vitest'
-import * as schema from '../../src/data/schema'
+import * as schema from '../../src/data/schema.server'
 import { setupTestDatabase, type TestDbContext } from './test-db-setup'
 
 /** Convert a database file path to a libsql connection URL. */

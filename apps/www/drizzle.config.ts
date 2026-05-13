@@ -4,7 +4,7 @@ import path from 'node:path'
 const dbPath = path.resolve(__dirname, 'data', 'development.db')
 
 export default {
-	schema: './src/data/schema.ts',
+	schema: './src/data/schema.server.ts',
 	out: './drizzle',
 	dialect: 'sqlite',
 	dbCredentials: {

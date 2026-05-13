@@ -58,6 +58,23 @@ A site for gardeners to share surplus produce with their community.
 - Use test.each to build broad coverage of low-level primitives like formatters and parsers
 - Use faker to generate test data for anything that a user might supply
 
+### Import protection
+
+Server-only code lives in files named `*.server.ts(x)` and must not be reached from the client graph; suffix any new file that imports a server-only package (libsql, AWS SDK, `better-auth` bare entry, `resend`, `pino`, `sharp`, etc.) or otherwise touches secrets/Node APIs, and rely on `import type` or a dynamic `import()` inside a `createServerFn(...).handler` / `createMiddleware().server(...)` callback when client-reachable code needs server types or values. The TanStack Start [import-protection](https://tanstack.com/start/v0/docs/framework/react/guide/import-protection) plugin enforces this in `apps/www/vite.config.ts`.
+
+```ts
+// Good — client-safe file uses `import type` and a server-scoped dynamic import.
+import type { Listing } from "@/data/schema.server";
+export const getListing = createServerFn().handler(async () => {
+	const { db } = await import("@/data/db.server");
+	return db.query.listings.findFirst();
+});
+
+// Bad — client graph statically imports a server module and a Node-only package.
+import { db } from "@/data/db.server";
+import { Resend } from "resend";
+```
+
 ## Project Structure
 
 We use a monorepo structure

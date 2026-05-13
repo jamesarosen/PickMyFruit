@@ -20,7 +20,9 @@ function isServerModule(source) {
 function isServerFile(filename) {
 	// Files named *.server.ts, *.server.tsx, *.server.test.ts, etc. may freely
 	// import other server modules — they are themselves server-only code.
-	return /\.server\./.test(filename)
+	// Files anywhere under a tests/ directory also qualify: Vitest and
+	// Playwright suites run in Node and are never bundled for the browser.
+	return /\.server\./.test(filename) || /(^|\/)tests\//.test(filename)
 }
 
 const rule = {

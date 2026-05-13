@@ -8,7 +8,7 @@ import {
 	listings,
 	inquiries,
 	type NewListing,
-} from '../../../src/data/schema'
+} from '../../../src/data/schema.server'
 import { eq, desc, like } from 'drizzle-orm'
 import { faker } from '@faker-js/faker'
 import { latLngToCell } from 'h3-js'

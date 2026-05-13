@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/libsql'
 import { createClient } from '@libsql/client'
 import { Sentry } from '@/lib/sentry'
-import * as schema from './schema'
+import * as schema from './schema.server'
 import { serverEnv } from '@/lib/env.server'
 
 const client = createClient({
