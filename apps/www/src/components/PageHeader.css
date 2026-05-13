@@ -23,8 +23,8 @@
 
 	.page-header__site-nav {
 		display: flex;
-		justify-content: space-between;
 		align-items: center;
+		gap: 16px;
 		max-width: 1200px;
 		margin: 0 auto;
 		padding: 12px 20px;
@@ -34,6 +34,7 @@
 		display: flex;
 		align-items: center;
 		gap: 8px;
+		margin-inline-end: auto;
 		text-decoration: none;
 		color: var(--color-foreground);
 		font-size: 18px;
@@ -49,6 +50,17 @@
 	.page-header__logo-icon {
 		font-size: 22px;
 		line-height: 1;
+	}
+
+	.page-header__support-link {
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--color-foreground);
+		text-decoration: none;
+	}
+
+	.page-header__support-link:hover {
+		text-decoration: underline;
 	}
 
 	/* ── Menu trigger ──────────────────────────────────────────────────── */

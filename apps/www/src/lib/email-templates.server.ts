@@ -3,6 +3,25 @@ import { serverEnv } from './env.server'
 import { logger } from './logger.server'
 import { escapeHtml } from './html-escape.server'
 
+/** Builds an absolute /support URL with the given source param. */
+function buildSupportUrl(baseUrl: string, from: string): string {
+	const url = new URL('/support', baseUrl)
+	url.searchParams.set('from', from)
+	return url.toString()
+}
+
+/** HTML support footer block appended to selected transactional emails. */
+function supportFooterHtml(baseUrl: string, from: string): string {
+	const href = buildSupportUrl(baseUrl, from)
+	return `
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
+  <p style="color: #666; font-size: 14px;">
+    Pick My Fruit is one person trying to feed more people.<br>
+    If this is useful to you, you can
+    <a href="${href}" style="color: #4a7c23;">support the project</a>.
+  </p>`
+}
+
 interface InquiryEmailData {
 	baseUrl: string
 	gleaner: {
@@ -78,6 +97,8 @@ export function buildInquiryEmailHtml(data: InquiryEmailData): string {
     <a href="${unavailableUrl}" style="color: #4a7c23;">Mark as unavailable</a>
     (link expires in 7 days)
   </p>
+
+  ${supportFooterHtml(data.baseUrl, 'email-inquiry-received')}
 </body>
 </html>`
 }
