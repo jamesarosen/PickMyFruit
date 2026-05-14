@@ -22,9 +22,9 @@ import { Route as SupportGoRouteImport } from './routes/support.go'
 import { Route as ListingsNewRouteImport } from './routes/listings/new'
 import { Route as ListingsMineRouteImport } from './routes/listings/mine'
 import { Route as ListingsIdRouteImport } from './routes/listings.$id'
+import { Route as E2eRootErrorRouteImport } from './routes/e2e/root-error'
 import { Route as ApiListingsRouteImport } from './routes/api/listings'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as _e2e_RootErrorRouteImport } from './routes/__e2e__/root-error'
 import { Route as ApiUploadsSplatRouteImport } from './routes/api/uploads/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiListingsIdUnavailableRouteImport } from './routes/api/listings.$id.unavailable'
@@ -94,6 +94,11 @@ const ListingsIdRoute = ListingsIdRouteImport.update({
   path: '/listings/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const E2eRootErrorRoute = E2eRootErrorRouteImport.update({
+  id: '/e2e/root-error',
+  path: '/e2e/root-error',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiListingsRoute = ApiListingsRouteImport.update({
   id: '/api/listings',
   path: '/api/listings',
@@ -102,11 +107,6 @@ const ApiListingsRoute = ApiListingsRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const _e2e_RootErrorRoute = _e2e_RootErrorRouteImport.update({
-  id: '/__e2e__/root-error',
-  path: '/root-error',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiUploadsSplatRoute = ApiUploadsSplatRouteImport.update({
@@ -136,9 +136,9 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/support': typeof SupportRouteWithChildren
   '/terms': typeof TermsRoute
-  '/root-error': typeof _e2e_RootErrorRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRouteWithChildren
+  '/e2e/root-error': typeof E2eRootErrorRoute
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
@@ -157,9 +157,9 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/support': typeof SupportRouteWithChildren
   '/terms': typeof TermsRoute
-  '/root-error': typeof _e2e_RootErrorRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRouteWithChildren
+  '/e2e/root-error': typeof E2eRootErrorRoute
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
@@ -179,9 +179,9 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/support': typeof SupportRouteWithChildren
   '/terms': typeof TermsRoute
-  '/__e2e__/root-error': typeof _e2e_RootErrorRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRouteWithChildren
+  '/e2e/root-error': typeof E2eRootErrorRoute
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
@@ -202,9 +202,9 @@ export interface FileRouteTypes {
     | '/profile'
     | '/support'
     | '/terms'
-    | '/root-error'
     | '/api/health'
     | '/api/listings'
+    | '/e2e/root-error'
     | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
@@ -223,9 +223,9 @@ export interface FileRouteTypes {
     | '/profile'
     | '/support'
     | '/terms'
-    | '/root-error'
     | '/api/health'
     | '/api/listings'
+    | '/e2e/root-error'
     | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
@@ -244,9 +244,9 @@ export interface FileRouteTypes {
     | '/profile'
     | '/support'
     | '/terms'
-    | '/__e2e__/root-error'
     | '/api/health'
     | '/api/listings'
+    | '/e2e/root-error'
     | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
@@ -266,9 +266,9 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   SupportRoute: typeof SupportRouteWithChildren
   TermsRoute: typeof TermsRoute
-  _e2e_RootErrorRoute: typeof _e2e_RootErrorRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiListingsRoute: typeof ApiListingsRouteWithChildren
+  E2eRootErrorRoute: typeof E2eRootErrorRoute
   ListingsIdRoute: typeof ListingsIdRoute
   ListingsMineRoute: typeof ListingsMineRoute
   ListingsNewRoute: typeof ListingsNewRoute
@@ -369,6 +369,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ListingsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/e2e/root-error': {
+      id: '/e2e/root-error'
+      path: '/e2e/root-error'
+      fullPath: '/e2e/root-error'
+      preLoaderRoute: typeof E2eRootErrorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/listings': {
       id: '/api/listings'
       path: '/api/listings'
@@ -381,13 +388,6 @@ declare module '@tanstack/solid-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/__e2e__/root-error': {
-      id: '/__e2e__/root-error'
-      path: '/root-error'
-      fullPath: '/root-error'
-      preLoaderRoute: typeof _e2e_RootErrorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/uploads/$': {
@@ -447,9 +447,9 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   SupportRoute: SupportRouteWithChildren,
   TermsRoute: TermsRoute,
-  _e2e_RootErrorRoute: _e2e_RootErrorRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiListingsRoute: ApiListingsRouteWithChildren,
+  E2eRootErrorRoute: E2eRootErrorRoute,
   ListingsIdRoute: ListingsIdRoute,
   ListingsMineRoute: ListingsMineRoute,
   ListingsNewRoute: ListingsNewRoute,

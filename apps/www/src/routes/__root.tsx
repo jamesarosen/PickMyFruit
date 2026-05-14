@@ -143,7 +143,11 @@ function NotFound() {
 						Go Home
 					</Link>
 				</main>
-				<PageFooter />
+				{/*
+				 * Root `notFoundComponent` renders inside `RootComponent`’s `<Outlet />`;
+				 * `RootComponent` already appends `<PageFooter />`, so omit it here to avoid
+				 * a double footer on unknown paths (e.g. `/foo/bar/baz`).
+				 */}
 			</div>
 		</Layout>
 	)
