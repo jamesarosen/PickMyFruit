@@ -18,13 +18,13 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as CssTestRouteImport } from './routes/css-test'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as Char126Char126e2eChar126Char126RootErrorRouteImport } from './routes/~~e2e~~/root-error'
 import { Route as SupportGoRouteImport } from './routes/support.go'
 import { Route as ListingsNewRouteImport } from './routes/listings/new'
 import { Route as ListingsMineRouteImport } from './routes/listings/mine'
 import { Route as ListingsIdRouteImport } from './routes/listings.$id'
 import { Route as ApiListingsRouteImport } from './routes/api/listings'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as _e2e_RootErrorRouteImport } from './routes/__e2e__/root-error'
 import { Route as ApiUploadsSplatRouteImport } from './routes/api/uploads/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiListingsIdUnavailableRouteImport } from './routes/api/listings.$id.unavailable'
@@ -74,12 +74,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Char126Char126e2eChar126Char126RootErrorRoute =
-  Char126Char126e2eChar126Char126RootErrorRouteImport.update({
-    id: '/~~e2e~~/root-error',
-    path: '/~~e2e~~/root-error',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const SupportGoRoute = SupportGoRouteImport.update({
   id: '/go',
   path: '/go',
@@ -110,6 +104,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const _e2e_RootErrorRoute = _e2e_RootErrorRouteImport.update({
+  id: '/__e2e__/root-error',
+  path: '/root-error',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiUploadsSplatRoute = ApiUploadsSplatRouteImport.update({
   id: '/api/uploads/$',
   path: '/api/uploads/$',
@@ -137,13 +136,13 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/support': typeof SupportRouteWithChildren
   '/terms': typeof TermsRoute
+  '/root-error': typeof _e2e_RootErrorRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRouteWithChildren
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
   '/support/go': typeof SupportGoRoute
-  '/~~e2e~~/root-error': typeof Char126Char126e2eChar126Char126RootErrorRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
@@ -158,13 +157,13 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/support': typeof SupportRouteWithChildren
   '/terms': typeof TermsRoute
+  '/root-error': typeof _e2e_RootErrorRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRouteWithChildren
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
   '/support/go': typeof SupportGoRoute
-  '/~~e2e~~/root-error': typeof Char126Char126e2eChar126Char126RootErrorRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
@@ -180,13 +179,13 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/support': typeof SupportRouteWithChildren
   '/terms': typeof TermsRoute
+  '/__e2e__/root-error': typeof _e2e_RootErrorRoute
   '/api/health': typeof ApiHealthRoute
   '/api/listings': typeof ApiListingsRouteWithChildren
   '/listings/$id': typeof ListingsIdRoute
   '/listings/mine': typeof ListingsMineRoute
   '/listings/new': typeof ListingsNewRoute
   '/support/go': typeof SupportGoRoute
-  '/~~e2e~~/root-error': typeof Char126Char126e2eChar126Char126RootErrorRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
@@ -203,13 +202,13 @@ export interface FileRouteTypes {
     | '/profile'
     | '/support'
     | '/terms'
+    | '/root-error'
     | '/api/health'
     | '/api/listings'
     | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
     | '/support/go'
-    | '/~~e2e~~/root-error'
     | '/api/auth/$'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
@@ -224,13 +223,13 @@ export interface FileRouteTypes {
     | '/profile'
     | '/support'
     | '/terms'
+    | '/root-error'
     | '/api/health'
     | '/api/listings'
     | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
     | '/support/go'
-    | '/~~e2e~~/root-error'
     | '/api/auth/$'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
@@ -245,13 +244,13 @@ export interface FileRouteTypes {
     | '/profile'
     | '/support'
     | '/terms'
+    | '/__e2e__/root-error'
     | '/api/health'
     | '/api/listings'
     | '/listings/$id'
     | '/listings/mine'
     | '/listings/new'
     | '/support/go'
-    | '/~~e2e~~/root-error'
     | '/api/auth/$'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
@@ -267,12 +266,12 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   SupportRoute: typeof SupportRouteWithChildren
   TermsRoute: typeof TermsRoute
+  _e2e_RootErrorRoute: typeof _e2e_RootErrorRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiListingsRoute: typeof ApiListingsRouteWithChildren
   ListingsIdRoute: typeof ListingsIdRoute
   ListingsMineRoute: typeof ListingsMineRoute
   ListingsNewRoute: typeof ListingsNewRoute
-  Char126Char126e2eChar126Char126RootErrorRoute: typeof Char126Char126e2eChar126Char126RootErrorRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiUploadsSplatRoute: typeof ApiUploadsSplatRoute
 }
@@ -342,13 +341,6 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/~~e2e~~/root-error': {
-      id: '/~~e2e~~/root-error'
-      path: '/~~e2e~~/root-error'
-      fullPath: '/~~e2e~~/root-error'
-      preLoaderRoute: typeof Char126Char126e2eChar126Char126RootErrorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/support/go': {
       id: '/support/go'
       path: '/go'
@@ -389,6 +381,13 @@ declare module '@tanstack/solid-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/__e2e__/root-error': {
+      id: '/__e2e__/root-error'
+      path: '/root-error'
+      fullPath: '/root-error'
+      preLoaderRoute: typeof _e2e_RootErrorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/uploads/$': {
@@ -448,13 +447,12 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   SupportRoute: SupportRouteWithChildren,
   TermsRoute: TermsRoute,
+  _e2e_RootErrorRoute: _e2e_RootErrorRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiListingsRoute: ApiListingsRouteWithChildren,
   ListingsIdRoute: ListingsIdRoute,
   ListingsMineRoute: ListingsMineRoute,
   ListingsNewRoute: ListingsNewRoute,
-  Char126Char126e2eChar126Char126RootErrorRoute:
-    Char126Char126e2eChar126Char126RootErrorRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiUploadsSplatRoute: ApiUploadsSplatRoute,
 }

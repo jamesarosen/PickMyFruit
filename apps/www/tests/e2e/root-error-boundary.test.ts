@@ -9,7 +9,7 @@ test.describe('Root error boundary', () => {
 	test('shows site chrome when a route loader throws (E2E probe)', async ({
 		page,
 	}) => {
-		await page.goto('/~~e2e~~/root-error')
+		await page.goto('/root-error')
 
 		await expect(
 			page.getByRole('heading', { level: 1, name: 'Something went wrong' })
@@ -31,7 +31,7 @@ test.describe('Root error boundary', () => {
 	test('footer remains usable from the root error boundary', async ({
 		page,
 	}) => {
-		await page.goto('/~~e2e~~/root-error')
+		await page.goto('/root-error')
 		await page
 			.getByRole('contentinfo')
 			.getByRole('link', { name: 'About' })
