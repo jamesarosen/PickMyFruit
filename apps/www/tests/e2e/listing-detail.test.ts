@@ -34,6 +34,9 @@ test.describe('Listing Detail Page', () => {
 		await expect(
 			page.getByText("This listing may have been removed or doesn't exist.")
 		).toBeVisible()
+		await expect(
+			page.getByRole('contentinfo').getByRole('link', { name: 'About' })
+		).toBeVisible()
 	})
 
 	test('shows not-found for private listing', async ({ page, testUser }) => {

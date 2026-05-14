@@ -9,13 +9,15 @@ import {
 	type ErrorComponentProps,
 } from '@tanstack/solid-router'
 import { HydrationScript } from 'solid-js/web'
+import Layout from '@/components/Layout'
+import PageHeader from '@/components/PageHeader'
 import { PageFooter } from '@/components/PageFooter'
 import { getSession } from '@/lib/session'
 import { Sentry } from '@/lib/sentry'
+import './__root-fallback.css'
 import '../styles/base.css'
 import '../styles/colors.css'
 import '../styles/focus.css'
-import '../styles/display.css'
 import '../styles/surfaces.css'
 import '../components/button.css'
 import '../components/badge.css'
@@ -111,34 +113,42 @@ function RootError({ error, reset }: ErrorComponentProps) {
 	})
 
 	return (
-		<div id="main-content" style={{ padding: '40px', 'text-align': 'center' }}>
-			<h1>Something went wrong</h1>
-			<p style={{ color: 'var(--color-text-muted)', margin: '16px 0' }}>
-				{error.message}
-			</p>
-			<button
-				onClick={reset}
-				style={{
-					padding: '8px 16px',
-					'background-color': 'var(--color-primary)',
-					color: 'white',
-					border: 'none',
-					'border-radius': '4px',
-					cursor: 'pointer',
-				}}
-			>
-				Try again
-			</button>
-		</div>
+		<Layout title="Something went wrong - Pick My Fruit">
+			<div class="root-fallback-page">
+				<PageHeader />
+				<main id="main-content" class="root-fallback-main">
+					<h1>Something went wrong</h1>
+					<p class="root-fallback-lede">{error.message}</p>
+					<button type="button" class="button button--primary" onClick={reset}>
+						Try again
+					</button>
+				</main>
+				<PageFooter />
+			</div>
+		</Layout>
 	)
 }
 
 function NotFound() {
 	return (
-		<div id="main-content" style={{ padding: '40px', 'text-align': 'center' }}>
-			<h1>Page Not Found</h1>
-			<p>The page you're looking for doesn't exist.</p>
-			<Link to="/">Go Home</Link>
-		</div>
+		<Layout title="Page Not Found - Pick My Fruit">
+			<div class="root-fallback-page">
+				<PageHeader />
+				<main id="main-content" class="root-fallback-main">
+					<h1>Page Not Found</h1>
+					<p class="root-fallback-lede">
+						The page you're looking for doesn't exist.
+					</p>
+					<Link to="/" class="button button--primary">
+						Go Home
+					</Link>
+				</main>
+				{/*
+				 * Root `notFoundComponent` renders inside `RootComponent`’s `<Outlet />`;
+				 * `RootComponent` already appends `<PageFooter />`, so omit it here to avoid
+				 * a double footer on unknown paths (e.g. `/foo/bar/baz`).
+				 */}
+			</div>
+		</Layout>
 	)
 }
