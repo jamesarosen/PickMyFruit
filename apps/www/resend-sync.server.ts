@@ -2,8 +2,15 @@
  * resend-sync worker entrypoint.
  *
  * Runs as a separate process alongside the web app on the same Fly machine.
- * Compile with: esbuild resend-sync.server.ts --bundle --platform=node --outfile=dist/resend-sync.js
- * Run with: node dist/resend-sync.js
+ * Compile with: pnpm build:resend-sync
+ * Run with: node .output/server/resend-sync.mjs
+ *
+ * esbuild is used instead of vite build so that all import.meta.env.* refs
+ * from the shared src/lib/env.ts and src/lib/sentry.ts are stubbed to undefined
+ * at build time — Sentry is intentionally disabled in this process (the
+ * @sentry/solidstart SDK is a Vite/browser SDK, not a Node CLI SDK). If
+ * src/lib/env.ts ever gains import.meta.env.* vars that this worker should
+ * respect, add matching --define flags to the build:resend-sync script.
  *
  * Required env vars:
  *   DATABASE_URL          — libsql file: URL (same as the web process)
