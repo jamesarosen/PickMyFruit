@@ -114,24 +114,31 @@ RUN find apps/www/.output/server/node_modules/@img -name '*.node' | grep -q . ||
 
 # Build the resend-sync worker. Outputs to .output/server/ so it shares the
 # same node_modules lookup path as the web server (native libsql binaries above).
-# import.meta.env.* are replaced at build time with safe no-op values; Sentry
-# is disabled in the worker because the DSN is undefined.
-RUN cd apps/www && pnpm exec esbuild resend-sync.server.ts \
+# import.meta.env.* are inlined from the same VITE_SENTRY_* build args the web
+# build uses, so Sentry runs end-to-end in this process. @sentry/solidstart's
+# `node` export condition resolves to @sentry/node under --platform=node, and
+# tree-shaking removes the Solid-specific exports the worker never imports.
+# `def()` emits a JSON string literal for non-empty values, otherwise the
+# JS keyword `undefined`. Values are URLs, version strings, and numbers — no
+# quote-escaping needed.
+RUN cd apps/www && \
+  def() { if [ -n "$1" ]; then printf '"%s"' "$1"; else printf 'undefined'; fi; } && \
+  pnpm exec esbuild resend-sync.server.ts \
   --bundle --platform=node --format=esm \
   --outfile=.output/server/resend-sync.mjs \
   --external:@babel/core \
   --external:@babel/preset-typescript \
   "--banner:js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);" \
-  --define:import.meta.env.PROD=false \
+  --define:import.meta.env.PROD=true \
   --define:import.meta.env.DEV=false \
   --define:import.meta.env.SSR=true \
-  --define:import.meta.env.MODE=undefined \
-  --define:import.meta.env.VITE_SENTRY_DSN=undefined \
-  --define:import.meta.env.VITE_SENTRY_ENABLED=undefined \
-  --define:import.meta.env.VITE_SENTRY_ERROR_SAMPLE_RATE=undefined \
-  --define:import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE=undefined \
-  --define:import.meta.env.VITE_SENTRY_RELEASE=undefined \
-  --define:import.meta.env.VITE_SENTRY_ENVIRONMENT=undefined
+  --define:import.meta.env.MODE='"production"' \
+  --define:import.meta.env.VITE_SENTRY_DSN="$(def "${VITE_SENTRY_DSN:-}")" \
+  --define:import.meta.env.VITE_SENTRY_ENABLED="$(def "${VITE_SENTRY_ENABLED:-}")" \
+  --define:import.meta.env.VITE_SENTRY_ERROR_SAMPLE_RATE="$(def "${VITE_SENTRY_ERROR_SAMPLE_RATE:-}")" \
+  --define:import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE="$(def "${VITE_SENTRY_TRACES_SAMPLE_RATE:-}")" \
+  --define:import.meta.env.VITE_SENTRY_RELEASE="$(def "${VITE_SENTRY_RELEASE:-}")" \
+  --define:import.meta.env.VITE_SENTRY_ENVIRONMENT="$(def "${VITE_SENTRY_ENVIRONMENT:-}")"
 
 # Production stage
 FROM node:24-slim AS runner

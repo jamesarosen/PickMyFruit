@@ -5,12 +5,21 @@
  * Compile with: pnpm build:resend-sync
  * Run with: node .output/server/resend-sync.mjs
  *
- * esbuild is used instead of vite build so that all import.meta.env.* refs
- * from the shared src/lib/env.ts and src/lib/sentry.ts are stubbed to undefined
- * at build time — Sentry is intentionally disabled in this process (the
- * @sentry/solidstart SDK is a Vite/browser SDK, not a Node CLI SDK). If
- * src/lib/env.ts ever gains import.meta.env.* vars that this worker should
- * respect, add matching --define flags to the build:resend-sync script.
+ * Build tool: esbuild rather than vite build, because vite expects an HTML
+ * entry and pulls in the Solid plugin chain we do not need. esbuild's --define
+ * flags inline the build-time import.meta.env.* values that src/lib/env.ts
+ * and src/lib/sentry.ts read.
+ *
+ * Sentry: @sentry/solidstart's `node` export condition resolves to @sentry/node
+ * under esbuild --platform=node, and tree-shaking removes the Solid-specific
+ * exports the worker never imports. The Dockerfile passes the same
+ * VITE_SENTRY_* build args the web build uses, so Sentry runs end-to-end in
+ * production. The package.json `build:resend-sync` script stubs those values
+ * for local builds, where Sentry is off by default.
+ *
+ * If src/lib/env.ts ever gains import.meta.env.* vars this worker should
+ * respect, add matching --define flags to both the Dockerfile build step and
+ * the package.json `build:resend-sync` script.
  *
  * Required env vars:
  *   DATABASE_URL          — libsql file: URL (same as the web process)
