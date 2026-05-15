@@ -203,4 +203,25 @@ describe('resend-sync integration', () => {
 		expect(rows).toHaveLength(1)
 		expect(JSON.parse(rows[0].value)).toEqual({ updatedAt: 0, userId: '' })
 	})
+
+	it('self-heals when the cursor row is missing (dev db:push case)', async () => {
+		const db = await testDb.getDb()
+		// Simulate a dev DB created via db:push, which mirrors the schema but
+		// does not run the migration's INSERT seed.
+		await db.delete(resendSyncState).where(eq(resendSyncState.key, 'cursor'))
+		await db.insert(user).values({
+			id: 'user_x',
+			email: 'x@example.com',
+			name: 'Ex',
+			phone: null,
+			updatedAt: new Date(13_000_000),
+		})
+
+		const client = okClient()
+		expect(await runCycle(db, client)).toBe(1)
+		expect(await readCursor(db)).toEqual({
+			updatedAt: 13_000_000,
+			userId: 'user_x',
+		})
+	})
 })

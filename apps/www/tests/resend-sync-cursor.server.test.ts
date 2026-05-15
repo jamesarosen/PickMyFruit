@@ -20,17 +20,19 @@ function makeSelectDb(rows: Array<{ value: string }>) {
 	return { select } as unknown as Parameters<typeof readCursor>[0]
 }
 
-/** Builds a mock db that captures the value passed to set() in the update chain. */
-function makeUpdateDb() {
+/** Builds a mock db that captures the value passed to set() in the upsert chain. */
+function makeUpsertDb() {
 	let capturedValue: string | undefined
-	const where = vi.fn().mockResolvedValue(undefined)
-	const set = vi.fn((data: { value: string }) => {
-		capturedValue = data.value
-		return { where }
-	})
-	const update = vi.fn(() => ({ set }))
+	const onConflictDoUpdate = vi.fn(
+		(args: { set: { value: string } }): Promise<void> => {
+			capturedValue = args.set.value
+			return Promise.resolve()
+		}
+	)
+	const values = vi.fn(() => ({ onConflictDoUpdate }))
+	const insert = vi.fn(() => ({ values }))
 	return {
-		db: { update } as unknown as Parameters<typeof writeCursor>[0],
+		db: { insert } as unknown as Parameters<typeof writeCursor>[0],
 		getCapturedValue: () => capturedValue,
 	}
 }
@@ -44,14 +46,16 @@ function makeRoundTripDb(initialValue: string) {
 	const from = vi.fn(() => ({ where: selectWhere }))
 	const select = vi.fn(() => ({ from }))
 
-	const updateWhere = vi.fn().mockResolvedValue(undefined)
-	const set = vi.fn((data: { value: string }) => {
-		stored = data.value
-		return { where: updateWhere }
-	})
-	const update = vi.fn(() => ({ set }))
+	const onConflictDoUpdate = vi.fn(
+		(args: { set: { value: string } }): Promise<void> => {
+			stored = args.set.value
+			return Promise.resolve()
+		}
+	)
+	const values = vi.fn(() => ({ onConflictDoUpdate }))
+	const insert = vi.fn(() => ({ values }))
 
-	return { select, update } as unknown as Parameters<typeof readCursor>[0] &
+	return { select, insert } as unknown as Parameters<typeof readCursor>[0] &
 		Parameters<typeof writeCursor>[0]
 }
 
@@ -120,8 +124,8 @@ describe('readCursor', () => {
 // ---------------------------------------------------------------------------
 
 describe('writeCursor', () => {
-	it('updates the row with JSON-serialized cursor fields', async () => {
-		const { db, getCapturedValue } = makeUpdateDb()
+	it('upserts the row with JSON-serialized cursor fields', async () => {
+		const { db, getCapturedValue } = makeUpsertDb()
 		const cursor: Cursor = { updatedAt: 2_000, userId: 'user-2' }
 		await writeCursor(db, cursor)
 		expect(JSON.parse(getCapturedValue()!)).toEqual(cursor)
