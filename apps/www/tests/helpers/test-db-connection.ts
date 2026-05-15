@@ -5,8 +5,12 @@
  * and cannot load native libsql bindings).
  */
 
-import { drizzle } from 'drizzle-orm/libsql'
-import { createClient } from '@libsql/client'
+// Use the explicit `/libsql/node` subpath so vitest's global resolve.conditions
+// (['development', 'browser']) don't resolve to drizzle-orm/libsql's web entry,
+// which transitively pulls in `ws` and fails ESM/CJS interop inside vitest's
+// module graph. Same reason on @libsql/client.
+import { drizzle } from 'drizzle-orm/libsql/node'
+import { createClient } from '@libsql/client/node'
 import { beforeEach, afterEach } from 'vitest'
 import * as schema from '../../src/data/schema.server'
 import { setupTestDatabase, type TestDbContext } from './test-db-setup'

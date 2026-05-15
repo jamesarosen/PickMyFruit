@@ -73,7 +73,17 @@ export default defineConfig({
 		],
 		server: {
 			deps: {
-				inline: [/@tanstack\/solid-router/, /solid/],
+				inline: [
+					/@tanstack\/solid-router/,
+					/solid/,
+					// @libsql/client's node entry transitively imports `ws` (CJS),
+					// and the chain hrana-client → ws fails Node's strict ESM named
+					// import. Forcing vite to transform these packages restores the
+					// CJS-named-export interop test files rely on.
+					/ws/,
+					/@libsql/,
+					/drizzle-orm/,
+				],
 			},
 		},
 	},
