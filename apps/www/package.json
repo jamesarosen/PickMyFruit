@@ -6,6 +6,7 @@
 	"description": "www.pickmyfruit.com Application",
 	"scripts": {
 		"build": "vite build",
+		"build:resend-sync": "esbuild resend-sync.server.ts --bundle --platform=node --format=esm --outfile=.output/server/resend-sync.mjs --external:@babel/core --external:@babel/preset-typescript \"--banner:js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" --define:import.meta.env.PROD=false --define:import.meta.env.DEV=false --define:import.meta.env.SSR=true --define:import.meta.env.MODE=undefined --define:import.meta.env.VITE_SENTRY_DSN=undefined --define:import.meta.env.VITE_SENTRY_ENABLED=undefined --define:import.meta.env.VITE_SENTRY_ERROR_SAMPLE_RATE=undefined --define:import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE=undefined --define:import.meta.env.VITE_SENTRY_RELEASE=undefined --define:import.meta.env.VITE_SENTRY_ENVIRONMENT=undefined",
 		"dev": "PORT=${PORT:-5173} vite dev",
 		"start": "node .output/server/index.mjs",
 		"format": "pnpm run format:write",
@@ -58,6 +59,7 @@
 	},
 	"devDependencies": {
 		"@faker-js/faker": "10.4.0",
+		"esbuild": "0.28.0",
 		"@playwright/test": "^1.59.1",
 		"@solidjs/testing-library": "^0.8.10",
 		"@testing-library/jest-dom": "^6.9.1",

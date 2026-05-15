@@ -112,6 +112,27 @@ RUN set -e && \
 RUN find apps/www/.output/server/node_modules/@img -name '*.node' | grep -q . || \
   (echo "ERROR: no @img/sharp .node binaries found in .output" && exit 1)
 
+# Build the resend-sync worker. Outputs to .output/server/ so it shares the
+# same node_modules lookup path as the web server (native libsql binaries above).
+# import.meta.env.* are replaced at build time with safe no-op values; Sentry
+# is disabled in the worker because the DSN is undefined.
+RUN cd apps/www && pnpm exec esbuild resend-sync.server.ts \
+  --bundle --platform=node --format=esm \
+  --outfile=.output/server/resend-sync.mjs \
+  --external:@babel/core \
+  --external:@babel/preset-typescript \
+  "--banner:js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);" \
+  --define:import.meta.env.PROD=false \
+  --define:import.meta.env.DEV=false \
+  --define:import.meta.env.SSR=true \
+  --define:import.meta.env.MODE=undefined \
+  --define:import.meta.env.VITE_SENTRY_DSN=undefined \
+  --define:import.meta.env.VITE_SENTRY_ENABLED=undefined \
+  --define:import.meta.env.VITE_SENTRY_ERROR_SAMPLE_RATE=undefined \
+  --define:import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE=undefined \
+  --define:import.meta.env.VITE_SENTRY_RELEASE=undefined \
+  --define:import.meta.env.VITE_SENTRY_ENVIRONMENT=undefined
+
 # Production stage
 FROM node:24-slim AS runner
 

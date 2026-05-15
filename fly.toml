@@ -21,6 +21,14 @@ primary_region = 'sjc'
   [build.args]
     VITE_SENTRY_ENABLED = "true"
 
+# Process groups. Both run from the same image on the same VM so they share
+# the SQLite volume at /app/data. Scale with:
+#   fly scale count app=1 resend_sync=1
+# Keep resend_sync count at exactly 1 — multiple workers would race the cursor.
+[processes]
+  app = "node .output/server/index.mjs"
+  resend_sync = "node .output/server/resend-sync.mjs"
+
 # HTTP service configuration
 [http_service]
   internal_port = 3000
@@ -52,11 +60,12 @@ primary_region = 'sjc'
       # Accept JSON response
       Accept = 'application/json'
 
-# Persistent volume for SQLite database
-[mounts]
+# Persistent volume for SQLite database — shared by both process groups.
+[[mounts]]
   source = 'data'
   destination = '/app/data'
   initial_size = '1gb'
+  processes = ['app', 'resend_sync']
 
 # Environment variables
 # NODE_OPTIONS and SHARP_CONCURRENCY are mirrored in docker-compose.yml so
@@ -75,6 +84,8 @@ primary_region = 'sjc'
   # Serialize libvips work — the VM is still 1 shared CPU, so parallel image
   # processing buys memory pressure without real throughput.
   SHARP_CONCURRENCY = '1'
+  RESEND_SYNC_POLL_MS = '60000'
+  RESEND_SYNC_PROVIDER = 'resend'
   STORAGE_PROVIDER = 'tigris'
   # libuv default is 4. On a 1-CPU shared VM the extra threads buy memory
   # pressure with no real parallelism. Keep 2 so I/O and TLS can overlap.
