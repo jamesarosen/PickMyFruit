@@ -70,4 +70,41 @@ describe('runCycle', () => {
 		await runCycle(db, resendClient)
 		expect(mockProcessOneRow).toHaveBeenCalledWith(db, resendClient)
 	})
+
+	it('stops between rows when the abort signal fires', async () => {
+		const controller = new AbortController()
+		mockProcessOneRow.mockImplementation(async () => {
+			controller.abort()
+			return 'processed'
+		})
+
+		const processed = await runCycle(db, resendClient, controller.signal)
+
+		expect(processed).toBe(1)
+		expect(mockProcessOneRow).toHaveBeenCalledTimes(1)
+	})
+
+	it('finishes the in-flight row even after abort fires mid-processing', async () => {
+		const controller = new AbortController()
+		// processOneRow is allowed to complete and advance the cursor; the loop
+		// observes the signal only after that.
+		mockProcessOneRow.mockImplementationOnce(async () => {
+			controller.abort()
+			return 'processed'
+		})
+
+		const processed = await runCycle(db, resendClient, controller.signal)
+
+		expect(processed).toBe(1)
+	})
+
+	it('drains to completion when no signal is provided', async () => {
+		mockProcessOneRow
+			.mockResolvedValueOnce('processed')
+			.mockResolvedValueOnce('processed')
+			.mockResolvedValueOnce('drained')
+
+		expect(await runCycle(db, resendClient)).toBe(2)
+		expect(mockProcessOneRow).toHaveBeenCalledTimes(3)
+	})
 })

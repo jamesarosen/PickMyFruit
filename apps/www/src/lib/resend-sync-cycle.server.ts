@@ -10,13 +10,19 @@ type Db = LibSQLDatabase<typeof schema>
 
 /**
  * Runs one full sync cycle: calls processOneRow in a tight loop until the
- * queue is drained or a transient failure stalls progress.
+ * queue is drained, a transient failure stalls progress, or the abort signal
+ * fires between rows.
+ *
+ * The in-flight row always finishes before the loop observes the signal —
+ * a Resend success without the cursor commit would mean the row gets re-sent
+ * on next start. The signal check runs after each cursor advance.
  *
  * Returns the count of rows processed (cursor-advanced) this cycle.
  */
 export async function runCycle(
 	db: Db,
-	resendClient: ResendClient
+	resendClient: ResendClient,
+	signal?: AbortSignal
 ): Promise<number> {
 	let processed = 0
 
@@ -30,6 +36,8 @@ export async function runCycle(
 		if (result === 'drained' || result === 'stalled') break
 
 		processed++
+
+		if (signal?.aborted) break
 	}
 
 	if (processed > 0) {

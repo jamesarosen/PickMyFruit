@@ -42,7 +42,8 @@ export async function runWorker(deps: WorkerDeps): Promise<void> {
 	// oxlint-disable-next-line no-await-in-loop
 	while (!signal.aborted) {
 		// oxlint-disable-next-line no-await-in-loop
-		await runCycle(db, resendClient)
+		await runCycle(db, resendClient, signal)
+		if (signal.aborted) break
 		// oxlint-disable-next-line no-await-in-loop
 		await sleep(pollMs, signal)
 	}

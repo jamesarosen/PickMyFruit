@@ -5,10 +5,14 @@ import { sleep, runWorker } from '../src/lib/resend-sync-main.server'
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockRunCycle = vi.fn<(db: unknown, client: unknown) => Promise<number>>()
+const mockRunCycle =
+	vi.fn<
+		(db: unknown, client: unknown, signal?: AbortSignal) => Promise<number>
+	>()
 
 vi.mock('../src/lib/resend-sync-cycle.server', () => ({
-	runCycle: (db: unknown, client: unknown) => mockRunCycle(db, client),
+	runCycle: (db: unknown, client: unknown, signal?: AbortSignal) =>
+		mockRunCycle(db, client, signal),
 }))
 
 vi.mock('../src/lib/logger.server', () => ({
@@ -111,7 +115,7 @@ describe('runWorker', () => {
 		expect(mockRunCycle).toHaveBeenCalledOnce()
 	})
 
-	it('passes the db and resendClient through to runCycle', async () => {
+	it('passes the db, resendClient, and signal through to runCycle', async () => {
 		const controller = new AbortController()
 
 		mockRunCycle.mockImplementationOnce(async () => {
@@ -121,6 +125,6 @@ describe('runWorker', () => {
 
 		await runWorker({ db, resendClient, pollMs: 0, signal: controller.signal })
 
-		expect(mockRunCycle).toHaveBeenCalledWith(db, resendClient)
+		expect(mockRunCycle).toHaveBeenCalledWith(db, resendClient, controller.signal)
 	})
 })
