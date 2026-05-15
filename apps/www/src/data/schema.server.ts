@@ -11,22 +11,26 @@ import { sql } from 'drizzle-orm'
 // Better Auth Tables
 // ============================================================================
 
-export const user = sqliteTable('user', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	email: text('email').notNull().unique(),
-	emailVerified: integer('email_verified', { mode: 'boolean' })
-		.notNull()
-		.default(false),
-	image: text('image'),
-	phone: text('phone'), // Custom field for Pick My Fruit
-	createdAt: integer('created_at', { mode: 'timestamp_ms' })
-		.notNull()
-		.default(sql`(unixepoch() * 1000)`),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-		.notNull()
-		.default(sql`(unixepoch() * 1000)`),
-})
+export const user = sqliteTable(
+	'user',
+	{
+		id: text('id').primaryKey(),
+		name: text('name').notNull(),
+		email: text('email').notNull().unique(),
+		emailVerified: integer('email_verified', { mode: 'boolean' })
+			.notNull()
+			.default(false),
+		image: text('image'),
+		phone: text('phone'), // Custom field for Pick My Fruit
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`),
+	},
+	(table) => [index('user_updated_at_id_idx').on(table.updatedAt, table.id)]
+)
 
 export type User = typeof user.$inferSelect
 export type NewUser = typeof user.$inferInsert
@@ -202,3 +206,14 @@ export const listingPhotos = sqliteTable(
 
 export type ListingPhoto = typeof listingPhotos.$inferSelect
 export type NewListingPhoto = typeof listingPhotos.$inferInsert
+
+// ============================================================================
+// Resend Sync State Table
+// ============================================================================
+
+/** Key/value store for the resend-sync worker cursor and settings. */
+export const resendSyncState = sqliteTable('resend_sync_state', {
+	key: text('key').primaryKey(),
+	value: text('value').notNull(),
+	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+})
