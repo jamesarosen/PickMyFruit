@@ -35,7 +35,7 @@ function okClient(): ResendClient & { calls: unknown[] } {
 	const fn = vi.fn(async (contact) => {
 		calls.push(contact)
 		return { kind: 'ok' as const } satisfies ResendResult
-	}) as ResendClient & { calls: unknown[] }
+	}) as unknown as ResendClient & { calls: unknown[] }
 	fn.calls = calls
 	return fn
 }
