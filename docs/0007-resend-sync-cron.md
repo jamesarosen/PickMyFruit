@@ -40,12 +40,21 @@ Email **templating** (moving magic-link and inquiry bodies into Resend Templates
 | **`app`**         | Serves HTTP; Better Auth writes `user` rows as usual. **No changes** to the request path.                            |
 | **`resend-sync`** | Long-running process. On a timer (`RESEND_SYNC_POLL_MS`), runs a sync cycle until the queue is drained, then sleeps. |
 
-**Why same machine, not a scheduled Fly Machine?** Fly volumes are pinned to a single machine. A scheduled Machine would either need its own volume (loses access to the live `user` table) or replicated storage (not in scope — see Non-goals). Fly's [Task scheduling blueprint](https://fly.io/docs/blueprints/task-scheduling/) covers the multi-process option (separate `[processes]` group, same image, same volume) and an in-container cron daemon; we use the former.
+**Which Fly scheduling option?** Fly's [Task scheduling guide](https://fly.io/docs/blueprints/task-scheduling/) lists four options. SQLite volumes are pinned to a single machine, which rules two of them out:
+
+| Option                 | Same machine as volume?                                                 | Verdict for us                          |
+| ---------------------- | ----------------------------------------------------------------------- | --------------------------------------- |
+| **Cron Manager**       | No — spins up one-off Machines per job                                  | Rejected: no access to the SQLite file. |
+| **Scheduled Machines** | No — separate Machine on an interval                                    | Rejected: same reason.                  |
+| **Supercronic**        | Yes — cron daemon inside the container, scaled as its own process group | **Viable.**                             |
+| **In-app scheduler**   | Yes — `setInterval` inside the `app` process                            | Viable but unwanted (see below).        |
 
 **Why a separate process, not an interval inside `app`?** Two small wins, no significant cost:
 
 - Steady-state RSS for the web process stays lower; the worker can be killed/restarted independently of request serving.
 - Worker crashes or hung Resend calls do not consume web-process event-loop time or sockets.
+
+**Why our own Node loop instead of Supercronic?** Supercronic shines when you have several unrelated cron entries to manage from a `crontab` file. We have exactly one job, and the worker's loop is already trivial (sleep → drain → sleep). Adding Supercronic + a separate cron file is more moving parts than a single Node entrypoint that calls `setInterval` and listens for `SIGTERM`. We get the same Fly-level shape — a `cron` (or `resend_sync`) process group scaled to **1** alongside `app` — without the extra dependency. If we add a second scheduled task later, revisit Supercronic.
 
 The web process never imports worker code; the worker never serves HTTP.
 
@@ -173,6 +182,7 @@ Centralize PRAGMA setup so the worker and the web server agree.
 ## Deployment
 
 - **`fly.toml`:** second `[processes]` group `resend_sync` with its own command (e.g. `node apps/www/dist/resend-sync.js`); same image, same `[[mounts]]`, no `[[services]]`.
+- **Scale:** `fly scale count app=1 resend_sync=1`. **Exactly one** copy of `resend_sync` — multiple workers would race on the cursor and double-upsert. (Fly's task-scheduling guide makes the same point about Supercronic: only run one.)
 - **Secrets:** `RESEND_API_KEY`, audience ID, available to the `resend_sync` process.
 - **Env:** `RESEND_SYNC_POLL_MS`, `DATABASE_URL` (or file path) identical to the web process.
 - **Local dev:** `pnpm` script to run the worker alongside `pnpm dev`, sharing the same `.db` file. Optional and not on the critical path for shipping.
