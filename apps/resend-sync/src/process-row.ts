@@ -35,15 +35,23 @@ export async function processOneRow(
 
 	if (apiResult.kind === "network-error" || apiResult.kind === "server-error") {
 		const status = apiResult.kind === "server-error" ? apiResult.status : 0;
-		Sentry.captureException(
+		const err =
 			apiResult.kind === "network-error"
 				? apiResult.error
-				: new Error(`internal API ${apiResult.status}: ${apiResult.message}`),
+				: new Error(`internal API ${apiResult.status}: ${apiResult.message}`);
+		logger.warn(
 			{
-				fingerprint: ["resend-sync", "upstream-unavailable"],
-				extra: { source: "www", status },
+				err: { message: err.message, name: err.name },
+				status,
+				retryAfterMs:
+					apiResult.kind === "server-error" ? apiResult.retryAfterMs : null,
 			},
+			"resend-sync: stalled — internal API unavailable",
 		);
+		Sentry.captureException(err, {
+			fingerprint: ["resend-sync", "upstream-unavailable"],
+			extra: { source: "www", status },
+		});
 		if (apiResult.kind === "server-error" && apiResult.retryAfterMs) {
 			await deps.bucket.honorRetryAfter(apiResult.retryAfterMs);
 		}
@@ -52,7 +60,12 @@ export async function processOneRow(
 
 	if (apiResult.kind === "client-error") {
 		// A 4xx from our own internal API is a programming error, not a poisoned row.
+		// Most common cause in dev: INTERNAL_API_SECRET mismatch → www returns 404.
 		// Treat as a stall — humans need to fix the contract or the secret.
+		logger.warn(
+			{ status: apiResult.status, message: apiResult.message },
+			"resend-sync: stalled — internal API rejected the request (check INTERNAL_API_SECRET)",
+		);
 		Sentry.captureException(
 			new Error(`internal API ${apiResult.status}: ${apiResult.message}`),
 			{
@@ -96,8 +109,17 @@ export async function processOneRow(
 	}
 
 	if (upsertResult.kind === "client-error") {
-		// 4xx is permanent — advance past the row so we never retry.
+		// 4xx is permanent for this row — advance past it so we never retry.
+		// Logged at warn so dev (where Sentry is typically off) still sees it.
 		await writeCursorFile(deps.cursorPath, body.nextCursor);
+		logger.warn(
+			{
+				userId: user.id,
+				status: upsertResult.status,
+				message: upsertResult.message,
+			},
+			"resend-sync: Resend 4xx — row skipped (check RESEND_API_KEY / contact data)",
+		);
 		Sentry.captureException(
 			new Error(`Resend 4xx for ${user.id}: ${upsertResult.message}`),
 			{
@@ -121,6 +143,16 @@ export async function processOneRow(
 			: new Error(
 					`Resend ${upsertResult.status} for ${user.id}: ${upsertResult.message}`,
 				);
+	logger.warn(
+		{
+			userId: user.id,
+			err: { message: err.message, name: err.name },
+			status: upsertResult.kind === "server-error" ? upsertResult.status : null,
+			retryAfterMs:
+				upsertResult.kind === "server-error" ? upsertResult.retryAfterMs : null,
+		},
+		"resend-sync: stalled — Resend unavailable",
+	);
 	Sentry.captureException(err, {
 		fingerprint: ["resend-sync", "resend-unavailable"],
 		extra: {
