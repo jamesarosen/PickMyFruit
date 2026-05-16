@@ -59,3 +59,44 @@ services:
       start_period: 5s
       retries: 3
     restart: unless-stopped
+
+  # Mirrors fly.toml's `resend_sync` process group. Runs from the same image
+  # as `web` (built once) so the local layout matches production: two
+  # processes, one image, one shared volume at /app/data.
+  resend_sync:
+    build:
+      context: .
+      dockerfile: apps/www/Dockerfile
+      args:
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN}
+        VITE_SENTRY_ENABLED: ${VITE_SENTRY_ENABLED}
+    command: ["node", "apps/resend-sync/dist/main.js"]
+    depends_on:
+      web:
+        condition: service_healthy
+    volumes:
+      # Same volume as `web` — the worker writes /app/data/resend-sync/cursor.json
+      # and only `web` opens the SQLite file.
+      - ./apps/www/data:/app/data
+    env_file:
+      - path: ./apps/www/.env.development.local
+        required: false
+      - path: ./apps/www/.env.development
+        required: false
+      - path: ./apps/www/.env
+        required: false
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: development
+      # Talk to the `web` service over Docker's user-defined network.
+      # The TLS middleware's `.flycast` carve-out does not apply here, so
+      # the URL must be plain http://web:3000 (no x-forwarded-proto=https).
+      INTERNAL_API_URL: http://web:3000
+      # Override the dev default (which points at apps/www/data/ via a
+      # relative path) so the worker writes inside the shared /app/data mount.
+      RESEND_SYNC_CURSOR_PATH: /app/data/resend-sync/cursor.json
+      # Poll fast in dev so an edit-cycle surfaces within seconds.
+      RESEND_SYNC_POLL_MS: "2000"
+      SENTRY_ENVIRONMENT: resend-sync
+    restart: unless-stopped
