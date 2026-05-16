@@ -6,26 +6,33 @@
 export type ResendDispatcher = object;
 
 /**
- * Resend Contacts upsert client.
+ * Resend Contacts upsert client (Topics API).
  *
- * Resend has no native upsert. We use the documented existence check
- * (`GET /audiences/{id}/contacts/{email}`) to decide between create
- * (`POST`) and update (`PATCH`):
+ * Resend has no native upsert. We use the existence check
+ * (`GET /contacts/{email}`) to decide between create (`POST`) and update
+ * (`PATCH`), then ensure the contact is subscribed to the Newsletter topic:
  *
- * - 404 from GET → `POST` a new contact with `unsubscribed: false`
- *   (matches Resend's default for fresh contacts).
- * - 200 from GET → `PATCH` with the new field values. The PATCH body
- *   intentionally omits `unsubscribed` so the user's current Resend
- *   opt-in state is preserved across syncs. **Never blindly re-subscribe
- *   a user who opted out** (CAN-SPAM / GDPR).
+ * 1. `GET /contacts/{email}` — 404 → create, 200 → update.
+ * 2a. 404: `POST /contacts` with `unsubscribed: false`. Fresh contacts default
+ *     to subscribed; honour that rather than guessing the user's preference.
+ * 2b. 200: `PATCH /contacts/{id}` with name fields only. The PATCH body
+ *     intentionally omits `unsubscribed` so the user's current Resend opt-in
+ *     state is preserved across syncs. **Never blindly re-subscribe a user who
+ *     opted out** (CAN-SPAM / GDPR).
+ * 3. `GET /contacts/{id}/topics` — check whether the Newsletter topic is
+ *    already present (any subscription value).
+ * 4. If absent: `PATCH /contacts/{id}/topics` with `[{id, subscription: "opt_in"}]`.
+ *    If present: no-op — preserve the user's existing subscription state.
  *
- * When the `user` schema gains a subscription field, include it on both
- * the POST and the PATCH as `unsubscribed: !user.subscribed` so opt-outs
- * made in-app propagate to Resend.
+ * When the `user` schema gains a subscription field, include it on both the
+ * POST and the PATCH as `unsubscribed: !user.subscribed` so opt-outs made
+ * in-app propagate to Resend.
  *
  * @see https://resend.com/docs/api-reference/contacts/get-contact
  * @see https://resend.com/docs/api-reference/contacts/create-contact
  * @see https://resend.com/docs/api-reference/contacts/update-contact
+ * @see https://resend.com/docs/api-reference/contacts/get-contact-topics
+ * @see https://resend.com/docs/api-reference/contacts/update-contact-topics
  */
 
 export interface ResendContact {
@@ -54,9 +61,9 @@ export type ResendUpsert = (
 	contact: ResendContact,
 ) => Promise<ResendUpsertResult>;
 
-export interface ResendClientConfig {
+/** Shared config for all Resend API helpers. */
+export interface ResendBaseConfig {
 	apiKey: string;
-	audienceId: string;
 	/** Base URL for the Resend API. Override in tests. */
 	baseUrl?: string;
 	/** undici Agent with keep-alive so a backfill reuses connections. */
@@ -65,11 +72,29 @@ export interface ResendClientConfig {
 	fetchImpl?: typeof fetch;
 }
 
+export interface ResendClientConfig extends ResendBaseConfig {
+	/** The Resend topic ID to subscribe contacts to (Newsletter). */
+	topicId: string;
+}
+
 const DEFAULT_BASE_URL = "https://api.resend.com";
 
 interface ResendErrorBody {
 	name?: string;
 	message?: string;
+}
+
+interface ResendContactBody {
+	id?: string;
+}
+
+interface ResendTopicEntry {
+	id: string;
+	name?: string;
+}
+
+interface ResendListBody {
+	data: ResendTopicEntry[];
 }
 
 function splitName(fullName: string): {
@@ -119,14 +144,67 @@ function classify(response: Response, message: string): ResendUpsertResult {
 	};
 }
 
+function makeInit(
+	method: string,
+	authHeader: string,
+	dispatcher: ResendDispatcher | undefined,
+	body?: unknown,
+): RequestInit {
+	const init: RequestInit = {
+		method,
+		headers: {
+			authorization: authHeader,
+			"content-type": "application/json",
+		},
+	};
+	if (body !== undefined) init.body = JSON.stringify(body);
+	if (dispatcher) {
+		// undici's `dispatcher` is non-standard; fetch ignores it without an
+		// undici-aware loader, and Node's @types/undici-types differs from the
+		// installed undici. Stash via a cast — the runtime check is fine.
+		(init as Record<string, unknown>).dispatcher = dispatcher;
+	}
+	return init;
+}
+
 /**
- * Returns a function that upserts a single contact. The function is
- * idempotent — Resend upserts are safe to retry.
+ * Fetches all Resend topics (up to 100) and returns the ID of the one named
+ * "Newsletter", or `null` if not found.
+ *
+ * Called once at worker boot. The caller is expected to treat `null` as fatal.
+ *
+ * @see https://resend.com/docs/api-reference/topics/list-topics
+ */
+export async function findNewsletterTopicId(
+	config: ResendBaseConfig,
+): Promise<string | null> {
+	const baseUrl = config.baseUrl ?? DEFAULT_BASE_URL;
+	const fetchImpl = config.fetchImpl ?? fetch;
+	const authHeader = `Bearer ${config.apiKey}`;
+
+	let response: Response;
+	try {
+		response = await fetchImpl(
+			`${baseUrl}/topics?limit=100`,
+			makeInit("GET", authHeader, config.dispatcher),
+		);
+	} catch {
+		return null;
+	}
+	if (!response.ok) return null;
+
+	const body = (await response.json()) as ResendListBody;
+	return body.data.find((t) => t.name === "Newsletter")?.id ?? null;
+}
+
+/**
+ * Returns a function that upserts a single contact into Resend and ensures
+ * they are subscribed to the Newsletter topic. The function is idempotent.
  */
 export function createResendUpsert(config: ResendClientConfig): ResendUpsert {
 	const baseUrl = config.baseUrl ?? DEFAULT_BASE_URL;
 	const fetchImpl = config.fetchImpl ?? fetch;
-	const audienceId = config.audienceId;
+	const { topicId } = config;
 	const authHeader = `Bearer ${config.apiKey}`;
 
 	async function call(
@@ -134,78 +212,116 @@ export function createResendUpsert(config: ResendClientConfig): ResendUpsert {
 		path: string,
 		body?: unknown,
 	): Promise<Response> {
-		const init: RequestInit = {
-			method,
-			headers: {
-				authorization: authHeader,
-				"content-type": "application/json",
-			},
-		};
-		if (body !== undefined) init.body = JSON.stringify(body);
-		if (config.dispatcher) {
-			// undici's `dispatcher` is non-standard; fetch ignores it without an
-			// undici-aware loader, and Node's @types/undici-types differs from the
-			// installed undici. Stash via a cast — the runtime check is fine.
-			(init as Record<string, unknown>).dispatcher = config.dispatcher;
-		}
-		return fetchImpl(`${baseUrl}${path}`, init);
+		return fetchImpl(
+			`${baseUrl}${path}`,
+			makeInit(method, authHeader, config.dispatcher, body),
+		);
 	}
 
 	return async (contact) => {
 		const { firstName, lastName } = splitName(contact.name);
 		const emailEncoded = encodeURIComponent(contact.email);
 
+		// Step 1: existence check.
 		let getResponse: Response;
 		try {
-			getResponse = await call(
-				"GET",
-				`/audiences/${audienceId}/contacts/${emailEncoded}`,
-			);
+			getResponse = await call("GET", `/contacts/${emailEncoded}`);
 		} catch (err) {
 			return { kind: "network-error", error: err as Error };
 		}
 
+		let contactId: string;
+
 		if (getResponse.status === 404) {
+			// Step 2a: new contact.
 			let createResponse: Response;
 			try {
-				createResponse = await call(
-					"POST",
-					`/audiences/${audienceId}/contacts`,
-					{
-						email: contact.email,
-						first_name: firstName,
-						last_name: lastName,
-						// See opt-out guard above before changing this.
-						unsubscribed: false,
-					},
-				);
+				createResponse = await call("POST", "/contacts", {
+					email: contact.email,
+					first_name: firstName,
+					last_name: lastName,
+					// See opt-out guard above before changing this.
+					unsubscribed: false,
+				});
 			} catch (err) {
 				return { kind: "network-error", error: err as Error };
 			}
-			if (createResponse.ok) return { kind: "ok" };
-			return classify(createResponse, await readErrorMessage(createResponse));
-		}
-
-		if (!getResponse.ok) {
+			if (!createResponse.ok) {
+				return classify(createResponse, await readErrorMessage(createResponse));
+			}
+			const createBody = (await createResponse.json()) as ResendContactBody;
+			if (!createBody.id) {
+				return {
+					kind: "client-error",
+					status: 200,
+					message: "Resend POST /contacts response missing id",
+				};
+			}
+			contactId = createBody.id;
+		} else if (!getResponse.ok) {
 			return classify(getResponse, await readErrorMessage(getResponse));
-		}
+		} else {
+			// Step 2b: existing contact — parse ID then update name fields.
+			const getBody = (await getResponse.json()) as ResendContactBody;
+			if (!getBody.id) {
+				return {
+					kind: "client-error",
+					status: 200,
+					message: "Resend GET /contacts response missing id",
+				};
+			}
+			contactId = getBody.id;
 
-		let patchResponse: Response;
-		try {
-			patchResponse = await call(
-				"PATCH",
-				`/audiences/${audienceId}/contacts/${emailEncoded}`,
-				{
+			let patchResponse: Response;
+			try {
+				patchResponse = await call("PATCH", `/contacts/${contactId}`, {
 					first_name: firstName,
 					last_name: lastName,
 					// Intentional: PATCH must not include `unsubscribed`. Preserve the
 					// user's Resend opt-in state across syncs.
-				},
+				});
+			} catch (err) {
+				return { kind: "network-error", error: err as Error };
+			}
+			if (!patchResponse.ok) {
+				return classify(patchResponse, await readErrorMessage(patchResponse));
+			}
+		}
+
+		// Step 3: check existing topic subscriptions.
+		let topicsResponse: Response;
+		try {
+			topicsResponse = await call(
+				"GET",
+				`/contacts/${contactId}/topics?limit=100`,
 			);
 		} catch (err) {
 			return { kind: "network-error", error: err as Error };
 		}
-		if (patchResponse.ok) return { kind: "ok" };
-		return classify(patchResponse, await readErrorMessage(patchResponse));
+		if (!topicsResponse.ok) {
+			return classify(topicsResponse, await readErrorMessage(topicsResponse));
+		}
+		const topicsBody = (await topicsResponse.json()) as ResendListBody;
+		const alreadySubscribed = topicsBody.data.some((t) => t.id === topicId);
+
+		if (alreadySubscribed) {
+			// Preserve existing subscription — do not overwrite opt_out with opt_in.
+			return { kind: "ok" };
+		}
+
+		// Step 4: subscribe to Newsletter topic with opt_in default.
+		let subscribeResponse: Response;
+		try {
+			subscribeResponse = await call("PATCH", `/contacts/${contactId}/topics`, [
+				{ id: topicId, subscription: "opt_in" },
+			]);
+		} catch (err) {
+			return { kind: "network-error", error: err as Error };
+		}
+		if (subscribeResponse.ok) return { kind: "ok" };
+		return classify(
+			subscribeResponse,
+			await readErrorMessage(subscribeResponse),
+		);
 	};
 }

@@ -15,6 +15,7 @@ import { logger } from "./logger.js";
 import { createInternalApiClient } from "./internal-api-client.js";
 import {
 	createResendUpsert,
+	findNewsletterTopicId,
 	type ResendUpsert,
 	type ResendContact,
 } from "./resend-client.js";
@@ -81,14 +82,31 @@ function createDisabledResendClient(): ResendUpsert {
 	};
 }
 
-const resend: ResendUpsert =
-	env.provider.RESEND_SYNC_PROVIDER === "resend"
-		? createResendUpsert({
-				apiKey: env.provider.RESEND_API_KEY,
-				audienceId: env.provider.RESEND_AUDIENCE_ID,
-				dispatcher,
-			})
-		: createDisabledResendClient();
+let resend: ResendUpsert;
+if (env.provider.RESEND_SYNC_PROVIDER === "resend") {
+	const topicId = await findNewsletterTopicId({
+		apiKey: env.provider.RESEND_API_KEY,
+		dispatcher,
+	});
+	if (!topicId) {
+		logger.fatal(
+			{ apiUrl: env.INTERNAL_API_URL },
+			'resend-sync: "Newsletter" topic not found in Resend; exiting',
+		);
+		Sentry.captureException(new Error('Resend "Newsletter" topic not found'), {
+			fingerprint: ["resend-sync", "newsletter-topic-not-found"],
+		});
+		await Sentry.close(2_000).catch(() => undefined);
+		process.exit(1);
+	}
+	resend = createResendUpsert({
+		apiKey: env.provider.RESEND_API_KEY,
+		topicId,
+		dispatcher,
+	});
+} else {
+	resend = createDisabledResendClient();
+}
 
 const bucket = createTokenBucket({
 	ratePerSec: env.RESEND_API_RATE_PER_SEC,

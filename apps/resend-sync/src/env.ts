@@ -10,7 +10,6 @@ const providerSchema = z.discriminatedUnion("RESEND_SYNC_PROVIDER", [
 	z.object({
 		RESEND_SYNC_PROVIDER: z.literal("resend"),
 		RESEND_API_KEY: z.string().min(1),
-		RESEND_AUDIENCE_ID: z.string().min(1),
 	}),
 	z.object({
 		RESEND_SYNC_PROVIDER: z.literal("disabled"),
@@ -30,7 +29,6 @@ const baseEnv = z
 			.prefault("/app/data/resend-sync/cursor.json"),
 		RESEND_SYNC_PROVIDER: z.string().prefault("disabled"),
 		RESEND_API_KEY: z.string().optional(),
-		RESEND_AUDIENCE_ID: z.string().optional(),
 		SENTRY_DSN: z.string().optional(),
 		SENTRY_ENVIRONMENT: z.string().prefault("resend-sync"),
 		SENTRY_RELEASE: z.string().optional(),
@@ -40,7 +38,6 @@ const baseEnv = z
 		const provider = providerSchema.safeParse({
 			RESEND_SYNC_PROVIDER: env.RESEND_SYNC_PROVIDER,
 			RESEND_API_KEY: env.RESEND_API_KEY,
-			RESEND_AUDIENCE_ID: env.RESEND_AUDIENCE_ID,
 		});
 		if (!provider.success) {
 			for (const issue of provider.error.issues) {
@@ -69,7 +66,6 @@ const baseEnv = z
 		const provider = providerSchema.parse({
 			RESEND_SYNC_PROVIDER: env.RESEND_SYNC_PROVIDER,
 			RESEND_API_KEY: env.RESEND_API_KEY,
-			RESEND_AUDIENCE_ID: env.RESEND_AUDIENCE_ID,
 		});
 		return {
 			INTERNAL_API_URL: env.INTERNAL_API_URL,

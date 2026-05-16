@@ -6,7 +6,6 @@ const minimalResend = {
 	INTERNAL_API_SECRET: "long-enough-internal-api-secret-aaa",
 	RESEND_SYNC_PROVIDER: "resend",
 	RESEND_API_KEY: "rk_test",
-	RESEND_AUDIENCE_ID: "aud_1",
 };
 
 const minimalDisabled = {
@@ -32,7 +31,6 @@ describe("parseWorkerEnv", () => {
 		expect(env.provider).toEqual({
 			RESEND_SYNC_PROVIDER: "resend",
 			RESEND_API_KEY: "rk_test",
-			RESEND_AUDIENCE_ID: "aud_1",
 		});
 	});
 

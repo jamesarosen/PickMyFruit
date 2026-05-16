@@ -84,7 +84,7 @@ describe("processOneRow", () => {
 			cursorPath,
 		});
 		expect(out).toBe("processed");
-		expect(bucket.taken).toEqual([2]);
+		expect(bucket.taken).toEqual([4]);
 		expect((await readCursorFile(cursorPath)).cursor).toBe("cursor-after-u1");
 		expect(resend).toHaveBeenCalledWith({
 			id: "u1",
