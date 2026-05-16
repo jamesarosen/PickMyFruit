@@ -27,6 +27,7 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as _e2e_RootErrorRouteImport } from './routes/__e2e__/root-error'
 import { Route as ApiUploadsSplatRouteImport } from './routes/api/uploads/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as InternalV1UsersNextRouteImport } from './routes/internal/v1/users/next'
 import { Route as ApiListingsIdUnavailableRouteImport } from './routes/api/listings.$id.unavailable'
 
 const TermsRoute = TermsRouteImport.update({
@@ -119,6 +120,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InternalV1UsersNextRoute = InternalV1UsersNextRouteImport.update({
+  id: '/internal/v1/users/next',
+  path: '/internal/v1/users/next',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiListingsIdUnavailableRoute =
   ApiListingsIdUnavailableRouteImport.update({
     id: '/$id/unavailable',
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
+  '/internal/v1/users/next': typeof InternalV1UsersNextRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
+  '/internal/v1/users/next': typeof InternalV1UsersNextRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -189,6 +197,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
+  '/internal/v1/users/next': typeof InternalV1UsersNextRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -212,6 +221,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
+    | '/internal/v1/users/next'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
+    | '/internal/v1/users/next'
   id:
     | '__root__'
     | '/'
@@ -254,6 +265,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
+    | '/internal/v1/users/next'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -274,6 +286,7 @@ export interface RootRouteChildren {
   ListingsNewRoute: typeof ListingsNewRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiUploadsSplatRoute: typeof ApiUploadsSplatRoute
+  InternalV1UsersNextRoute: typeof InternalV1UsersNextRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -404,6 +417,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/internal/v1/users/next': {
+      id: '/internal/v1/users/next'
+      path: '/internal/v1/users/next'
+      fullPath: '/internal/v1/users/next'
+      preLoaderRoute: typeof InternalV1UsersNextRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/listings/$id/unavailable': {
       id: '/api/listings/$id/unavailable'
       path: '/$id/unavailable'
@@ -455,6 +475,7 @@ const rootRouteChildren: RootRouteChildren = {
   ListingsNewRoute: ListingsNewRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiUploadsSplatRoute: ApiUploadsSplatRoute,
+  InternalV1UsersNextRoute: InternalV1UsersNextRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

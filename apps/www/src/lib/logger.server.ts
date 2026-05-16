@@ -34,6 +34,7 @@ const REDACTED_PATHS = [
 	// HTTP layer
 	'req.headers.authorization',
 	'req.headers.cookie',
+	'req.headers["x-internal-auth"]',
 	'res.headers["set-cookie"]',
 ]
 
