@@ -21,6 +21,7 @@ COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 
 # Copy app package.json files to maintain workspace structure
 COPY apps/www/package.json ./apps/www/package.json
+COPY apps/resend-sync/package.json ./apps/resend-sync/package.json
 
 # Needed by the root postinstall script. Copied before `pnpm install` so the
 # script exists when postinstall fires; it self-skips when no `.git` is present.
@@ -32,7 +33,9 @@ COPY bin/install-git-hooks.sh ./bin/install-git-hooks.sh
 # Install dependencies using pnpm workspace.
 # --cpu and --os flags (pnpm 10.14+) explicitly install optional binaries for
 # all target architectures so the image runs on both x64 and arm64 hosts.
-RUN pnpm install --frozen-lockfile --filter @pickmyfruit/www... \
+RUN pnpm install --frozen-lockfile \
+    --filter @pickmyfruit/www... \
+    --filter @pickmyfruit/resend-sync... \
     --cpu=x64 --cpu=arm64 --os=linux
 
 # Copy the entire workspace (excluding dockerignored files)
@@ -112,6 +115,11 @@ RUN set -e && \
 RUN find apps/www/.output/server/node_modules/@img -name '*.node' | grep -q . || \
   (echo "ERROR: no @img/sharp .node binaries found in .output" && exit 1)
 
+# Build the resend-sync worker with plain tsc — no Vite, no esbuild, no
+# import.meta.env shimming. The worker is a Node binary and reads SENTRY_DSN
+# (not VITE_SENTRY_DSN) at runtime.
+RUN cd apps/resend-sync && pnpm build
+
 # Production stage
 FROM node:24-slim AS runner
 
@@ -121,21 +129,29 @@ WORKDIR /app
 COPY --from=builder /app/apps/www/.output ./.output
 COPY --from=builder /app/apps/www/package.json ./package.json
 
+# resend-sync worker bundle and a minimal node_modules slice for its deps.
+COPY --from=builder /app/apps/resend-sync/dist ./apps/resend-sync/dist
+COPY --from=builder /app/apps/resend-sync/package.json ./apps/resend-sync/package.json
+COPY --from=builder /app/apps/resend-sync/node_modules ./apps/resend-sync/node_modules
+
 # Migration SQL files are read from disk at runtime by drizzle-orm/libsql/migrator.
 # They must be at ./drizzle relative to the working directory (/app/drizzle).
 COPY --from=builder /app/apps/www/drizzle ./drizzle
 RUN test -f /app/drizzle/meta/_journal.json || \
   (echo "ERROR: drizzle migrations missing from image" && exit 1)
 
-# Create directory for SQLite database
-RUN mkdir -p /app/data
+# Create directory for SQLite database (shared with the worker via the Fly
+# volume) and the resend-sync cursor directory.
+RUN mkdir -p /app/data /app/data/resend-sync
 
 # Expose port 3000
 EXPOSE 3000
 
-# Health check
+# Health check (applies to the web process only; the resend_sync process group
+# does not bind a TCP port, so Fly's process-level liveness suffices).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the server
+# Default command is the web server. fly.toml's [processes] block overrides
+# this for the resend_sync process group.
 CMD ["node", ".output/server/index.mjs"]
