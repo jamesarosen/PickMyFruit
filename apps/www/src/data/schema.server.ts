@@ -25,9 +25,15 @@ export const user = sqliteTable(
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.notNull()
 			.default(sql`(unixepoch() * 1000)`),
+		// $onUpdate fires on every db.update(user).set(...) call regardless of
+		// whether `set()` includes this column. Better Auth's drizzle adapter
+		// and its internal updateUser path do not pass updatedAt explicitly, so
+		// the bump must happen at the Drizzle layer — otherwise the resend-sync
+		// worker's (updated_at, id) > cursor query would miss profile edits.
 		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
 			.notNull()
-			.default(sql`(unixepoch() * 1000)`),
+			.default(sql`(unixepoch() * 1000)`)
+			.$onUpdate(() => new Date()),
 	},
 	(table) => [index('user_updated_at_id_idx').on(table.updatedAt, table.id)]
 )

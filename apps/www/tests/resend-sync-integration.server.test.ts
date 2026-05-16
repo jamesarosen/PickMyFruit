@@ -175,6 +175,56 @@ describe('resend-sync integration', () => {
 		})
 	})
 
+	it('picks up profile updates: db.update bumps user.updated_at via $onUpdate', async () => {
+		// Better Auth's drizzle adapter calls db.update(user).set(values) without
+		// injecting updatedAt. The worker only sees profile edits if Drizzle's
+		// $onUpdate fires automatically — this test guards that wiring.
+		const db = await testDb.getDb()
+		const originalUpdatedAt = new Date(15_000_000)
+		await db.insert(user).values({
+			id: 'user_edit',
+			email: 'edit@example.com',
+			name: 'Original Name',
+			phone: null,
+			updatedAt: originalUpdatedAt,
+		})
+
+		// First cycle drains the initial row.
+		expect(await runCycle(db, okClient())).toBe(1)
+		const cursorAfterInsert = await readCursor(db)
+		expect(cursorAfterInsert).toEqual({
+			updatedAt: 15_000_000,
+			userId: 'user_edit',
+		})
+
+		// Simulate a profile edit via the same shape Better Auth uses: set without
+		// touching updatedAt. $onUpdate must bump it for the worker to notice.
+		await db
+			.update(user)
+			.set({ name: 'New Name' })
+			.where(eq(user.id, 'user_edit'))
+
+		const updatedRow = await db
+			.select({ updatedAt: user.updatedAt })
+			.from(user)
+			.where(eq(user.id, 'user_edit'))
+		expect(updatedRow[0].updatedAt.getTime()).toBeGreaterThan(15_000_000)
+
+		const client = okClient()
+		expect(await runCycle(db, client)).toBe(1)
+		expect(client.calls).toEqual([
+			{
+				id: 'user_edit',
+				email: 'edit@example.com',
+				name: 'New Name',
+				phone: null,
+			},
+		])
+		const newCursor = await readCursor(db)
+		expect(newCursor.userId).toBe('user_edit')
+		expect(newCursor.updatedAt).toBeGreaterThan(15_000_000)
+	})
+
 	it('is idempotent: a second cycle with no new rows is a no-op', async () => {
 		const db = await testDb.getDb()
 		await db.insert(user).values({
