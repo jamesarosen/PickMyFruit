@@ -18,7 +18,6 @@ const EXPECTED_TABLES = [
 	'inquiries',
 	'listing_photos',
 	'listings',
-	'resend_sync_state',
 	'session',
 	'user',
 	'verification',
@@ -79,21 +78,6 @@ describe('database migrations', () => {
 		// migration run.
 		const tables = queryTables(GOLDEN_DB_PATH)
 		expect(tables).toEqual(EXPECTED_TABLES)
-	})
-
-	it('seeds the resend_sync_state cursor row with the default value', () => {
-		// resend-sync writeCursor uses UPDATE (not UPSERT) so the seed row must
-		// exist post-migration or every cursor advance silently no-ops.
-		const rows = querySql(
-			GOLDEN_DB_PATH,
-			"SELECT key, value FROM resend_sync_state WHERE key = 'cursor'"
-		)
-		expect(rows).toHaveLength(1)
-		expect(rows[0].key).toBe('cursor')
-		expect(JSON.parse(String(rows[0].value))).toEqual({
-			updatedAt: 0,
-			userId: '',
-		})
 	})
 
 	it('creates the user_updated_at_id_idx index for the resend-sync cursor query', () => {

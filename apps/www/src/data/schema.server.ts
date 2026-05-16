@@ -212,14 +212,3 @@ export const listingPhotos = sqliteTable(
 
 export type ListingPhoto = typeof listingPhotos.$inferSelect
 export type NewListingPhoto = typeof listingPhotos.$inferInsert
-
-// ============================================================================
-// Resend Sync State Table
-// ============================================================================
-
-/** Key/value store for the resend-sync worker cursor and settings. */
-export const resendSyncState = sqliteTable('resend_sync_state', {
-	key: text('key').primaryKey(),
-	value: text('value').notNull(),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
-})
