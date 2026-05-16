@@ -92,8 +92,8 @@ describe("createTokenBucket", () => {
 		expect(clock.getWaits()).toEqual([2_000, 500]);
 	});
 
-	it("throws when asked to take more than capacity (would deadlock)", () => {
+	it("throws when asked to take more than capacity (would deadlock)", async () => {
 		const bucket = createTokenBucket({ ratePerSec: 4, capacity: 4 });
-		expect(() => bucket.take(5)).rejects.toThrow(/exceeds bucket capacity/);
+		await expect(bucket.take(5)).rejects.toThrow(/exceeds bucket capacity/);
 	});
 });

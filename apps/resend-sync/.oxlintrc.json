@@ -8,6 +8,7 @@
 	},
 	"plugins": ["import", "vitest"],
 	"rules": {
+		"import/no-nodejs-modules": "off",
 		"eslint/init-declarations": "off",
 		"eslint/no-unassigned-vars": "off",
 		"eslint/eqeqeq": ["error", "always", { "null": "ignore" }],
