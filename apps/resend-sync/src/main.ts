@@ -17,9 +17,11 @@ import {
 	createResendUpsert,
 	findNewsletterTopicId,
 	type ResendUpsert,
-	type ResendContact,
 } from "./resend-client.js";
 import { createTokenBucket } from "./token-bucket.js";
+
+/** EX_CONFIG (sysexits.h 78): configuration error — distinct from shell 1/2. */
+const EXIT_CONFIG_ERROR = 78;
 import { runCycle } from "./run-cycle.js";
 
 const envResult = parseWorkerEnv(process.env);
@@ -67,46 +69,42 @@ const internal = createInternalApiClient({
 	dispatcher,
 });
 
-/**
- * Stub Resend client used when `RESEND_SYNC_PROVIDER=disabled`. Lets the worker
- * run end-to-end in dev without real API credentials — every upsert is logged
- * and treated as a success so the cursor advances normally.
- */
-function createDisabledResendClient(): ResendUpsert {
-	return async (contact: ResendContact) => {
-		logger.info(
-			{ userId: contact.id, provider: "disabled" },
-			"resend-sync: skipping Resend upsert (provider=disabled)",
-		);
-		return { kind: "ok" };
-	};
+if (env.provider.RESEND_SYNC_PROVIDER === "disabled") {
+	// `disabled` means RESEND_API_KEY was not provided. Silently advancing the
+	// cursor without syncing would corrupt the state — contacts skipped here are
+	// never retried. Fail fast so misconfiguration is visible immediately.
+	const err = new Error(
+		"resend-sync: RESEND_SYNC_PROVIDER=disabled — set RESEND_SYNC_PROVIDER=resend and supply RESEND_API_KEY",
+	);
+	logger.fatal({ provider: "disabled" }, err.message);
+	Sentry.captureException(err, {
+		fingerprint: ["resend-sync", "missing-api-key"],
+	});
+	await Sentry.close(2_000).catch(() => undefined);
+	process.exit(EXIT_CONFIG_ERROR);
 }
 
-let resend: ResendUpsert;
-if (env.provider.RESEND_SYNC_PROVIDER === "resend") {
-	const topicId = await findNewsletterTopicId({
-		apiKey: env.provider.RESEND_API_KEY,
-		dispatcher,
+const topicId = await findNewsletterTopicId({
+	apiKey: env.provider.RESEND_API_KEY,
+	dispatcher,
+});
+if (!topicId) {
+	logger.fatal(
+		{ apiUrl: env.INTERNAL_API_URL },
+		'resend-sync: "Newsletter" topic not found in Resend; exiting',
+	);
+	Sentry.captureException(new Error('Resend "Newsletter" topic not found'), {
+		fingerprint: ["resend-sync", "newsletter-topic-not-found"],
 	});
-	if (!topicId) {
-		logger.fatal(
-			{ apiUrl: env.INTERNAL_API_URL },
-			'resend-sync: "Newsletter" topic not found in Resend; exiting',
-		);
-		Sentry.captureException(new Error('Resend "Newsletter" topic not found'), {
-			fingerprint: ["resend-sync", "newsletter-topic-not-found"],
-		});
-		await Sentry.close(2_000).catch(() => undefined);
-		process.exit(1);
-	}
-	resend = createResendUpsert({
-		apiKey: env.provider.RESEND_API_KEY,
-		topicId,
-		dispatcher,
-	});
-} else {
-	resend = createDisabledResendClient();
+	await Sentry.close(2_000).catch(() => undefined);
+	process.exit(EXIT_CONFIG_ERROR);
 }
+
+const resend: ResendUpsert = createResendUpsert({
+	apiKey: env.provider.RESEND_API_KEY,
+	topicId,
+	dispatcher,
+});
 
 const bucket = createTokenBucket({
 	ratePerSec: env.RESEND_API_RATE_PER_SEC,
