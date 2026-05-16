@@ -8,7 +8,7 @@
 	"scripts": {
 		"build": "tsc -p tsconfig.json",
 		"clean": "rm -rf dist",
-		"dev": "tsx watch src/main.ts",
+		"dev": "tsx watch --env-file=.env.development src/main.ts",
 		"start": "node dist/main.js",
 		"format": "pnpm run format:write",
 		"format:check": "prettier --check .",
