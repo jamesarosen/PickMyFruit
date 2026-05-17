@@ -1,103 +1,101 @@
 import { describe, it, expect } from "vitest";
 import { parseWorkerEnv } from "../src/env";
 
-const minimalResend = {
+const minimal = {
 	INTERNAL_API_URL: "http://pickmyfruit.flycast",
 	INTERNAL_API_SECRET: "long-enough-internal-api-secret-aaa",
-	RESEND_SYNC_PROVIDER: "resend",
 	RESEND_API_KEY: "rk_test",
 };
 
-const minimalDisabled = {
-	INTERNAL_API_URL: "http://pickmyfruit.flycast",
-	INTERNAL_API_SECRET: "long-enough-internal-api-secret-aaa",
-	RESEND_SYNC_PROVIDER: "disabled",
-	NODE_ENV: "development",
-};
+/**
+ * @see https://github.com/vitest-dev/vitest/discussions/10369
+ */
+function assertFalse(val: boolean): asserts val is false {
+	expect(val).toBeFalsy();
+}
 
-describe("parseWorkerEnv", () => {
-	it("parses a minimal valid `resend` environment with defaults", () => {
-		const result = parseWorkerEnv(minimalResend as NodeJS.ProcessEnv);
-		if (!result.ok) throw new Error(result.error.message);
-		const env = result.env;
+/**
+ * @see https://github.com/vitest-dev/vitest/discussions/10369
+ */
+function assertTrue(val: boolean): asserts val is true {
+	expect(val).toBeTruthy();
+}
+
+describe(parseWorkerEnv, () => {
+	it("parses a minimal valid environment and applies defaults", () => {
+		const result = parseWorkerEnv(minimal);
+		assertTrue(result.ok);
+		const { env } = result;
 		expect(env.RESEND_SYNC_POLL_MS).toBe(60_000);
 		expect(env.RESEND_API_RATE_PER_SEC).toBe(4);
 		expect(env.RESEND_API_BUCKET_CAPACITY).toBe(4);
 		expect(env.RESEND_SYNC_CURSOR_PATH).toBe(
 			"/app/data/resend-sync/cursor.json",
 		);
-		expect(env.SENTRY_ENVIRONMENT).toBe("resend-sync");
-		expect(env.NODE_ENV).toBe("production");
-		expect(env.provider).toEqual({
-			RESEND_SYNC_PROVIDER: "resend",
-			RESEND_API_KEY: "rk_test",
-		});
+		expect(env.RESEND_API_KEY).toBe("rk_test");
+		expect(env.NODE_ENV).toBe("development");
 	});
 
-	it("parses a `disabled` environment without requiring Resend credentials", () => {
-		const result = parseWorkerEnv(minimalDisabled as NodeJS.ProcessEnv);
-		if (!result.ok) throw new Error(result.error.message);
-		expect(result.env.provider).toEqual({ RESEND_SYNC_PROVIDER: "disabled" });
+	it("fails when RESEND_API_KEY is missing", () => {
+		const { RESEND_API_KEY: _omit, ...rest } = minimal;
+		const result = parseWorkerEnv(rest);
+		assertFalse(result.ok);
+		expect(
+			result.error.issues.some((i) => i.path.includes("RESEND_API_KEY")),
+		).toBeTruthy();
 	});
 
-	it("coerces numeric env vars", () => {
+	it("coerces numeric env vars from strings", () => {
 		const result = parseWorkerEnv({
-			...minimalResend,
+			...minimal,
 			RESEND_SYNC_POLL_MS: "5000",
 			RESEND_API_RATE_PER_SEC: "2.5",
-		} as NodeJS.ProcessEnv);
+		});
 		if (!result.ok) throw new Error(result.error.message);
 		expect(result.env.RESEND_SYNC_POLL_MS).toBe(5000);
 		expect(result.env.RESEND_API_RATE_PER_SEC).toBe(2.5);
 	});
 
 	it("requires INTERNAL_API_SECRET to be 32+ chars", () => {
-		const result = parseWorkerEnv({
-			...minimalResend,
-			INTERNAL_API_SECRET: "short",
-		} as NodeJS.ProcessEnv);
-		expect(result.ok).toBe(false);
-		if (result.ok) return;
+		const result = parseWorkerEnv({ ...minimal, INTERNAL_API_SECRET: "short" });
+		assertFalse(result.ok);
 		expect(
 			result.error.issues.some((i) => i.path.includes("INTERNAL_API_SECRET")),
-		).toBe(true);
+		).toBeTruthy();
 	});
 
 	it("requires INTERNAL_API_URL to be a URL", () => {
 		const result = parseWorkerEnv({
-			...minimalResend,
+			...minimal,
 			INTERNAL_API_URL: "not a url",
-		} as NodeJS.ProcessEnv);
-		expect(result.ok).toBe(false);
+		});
+		expect(result.ok).toBeFalsy();
 	});
 
-	it("rejects `resend` provider without RESEND_API_KEY", () => {
-		const { RESEND_API_KEY: _omit, ...rest } = minimalResend;
-		const result = parseWorkerEnv(rest as NodeJS.ProcessEnv);
-		expect(result.ok).toBe(false);
-		if (result.ok) return;
+	it("requires SENTRY_DSN to be a URL when provided", () => {
 		expect(
-			result.error.issues.some((i) => i.path.includes("RESEND_API_KEY")),
-		).toBe(true);
+			parseWorkerEnv({
+				...minimal,
+				SENTRY_DSN: "https://key@o123.ingest.sentry.io/456",
+			}).ok,
+		).toBeTruthy();
+		expect(
+			parseWorkerEnv({ ...minimal, SENTRY_DSN: "not-a-url" }).ok,
+		).toBeFalsy();
 	});
 
-	it("rejects `disabled` provider in production", () => {
-		const result = parseWorkerEnv({
-			...minimalDisabled,
-			NODE_ENV: "production",
-		} as NodeJS.ProcessEnv);
-		expect(result.ok).toBe(false);
-		if (result.ok) return;
-		expect(
-			result.error.issues.some((i) => i.path.includes("RESEND_SYNC_PROVIDER")),
-		).toBe(true);
+	it("coerces SENTRY_ENABLED to boolean", () => {
+		const on = parseWorkerEnv({ ...minimal, SENTRY_ENABLED: "true" });
+		if (!on.ok) throw new Error(on.error.message);
+		expect(on.env.SENTRY_ENABLED).toBeTruthy();
+
+		const off = parseWorkerEnv({ ...minimal, SENTRY_ENABLED: "false" });
+		if (!off.ok) throw new Error(off.error.message);
+		expect(off.env.SENTRY_ENABLED).toBeFalsy();
 	});
 
 	it("returns a discriminated result instead of throwing", () => {
-		expect(() =>
-			parseWorkerEnv({ NODE_ENV: "production" } as NodeJS.ProcessEnv),
-		).not.toThrow();
-		const result = parseWorkerEnv({} as NodeJS.ProcessEnv);
-		expect(result.ok).toBe(false);
+		expect(() => parseWorkerEnv({ NODE_ENV: "production" })).not.toThrow();
+		expect(parseWorkerEnv({}).ok).toBeFalsy();
 	});
 });

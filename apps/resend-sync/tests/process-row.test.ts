@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { mkdtemp, rm, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,25 +8,24 @@ import type { InternalApiClient } from "../src/internal-api-client";
 import type { ResendUpsert } from "../src/resend-client";
 import type { TokenBucket } from "../src/token-bucket";
 
-vi.mock("../src/sentry", () => ({
+vi.mock(import("../src/sentry"), () => ({
 	Sentry: { captureException: vi.fn() },
 }));
 
-vi.mock("../src/logger", () => ({
+vi.mock(import("../src/logger"), () => ({
 	logger: { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-let dir: string;
-let cursorPath: string;
-
-beforeEach(async () => {
-	dir = await mkdtemp(join(tmpdir(), "resend-sync-process-"));
-	cursorPath = join(dir, "cursor.json");
-});
-
-afterEach(async () => {
-	await rm(dir, { recursive: true, force: true });
-});
+async function withTempCursor(
+	fn: (cursorPath: string) => Promise<void>,
+): Promise<void> {
+	const dir = await mkdtemp(join(tmpdir(), "resend-sync-process-"));
+	try {
+		await fn(join(dir, "cursor.json"));
+	} finally {
+		await rm(dir, { recursive: true, force: true });
+	}
+}
 
 function fakeBucket(): TokenBucket & {
 	taken: number[];
@@ -58,166 +57,168 @@ function fakeInternal(
 	return Object.assign(client, { calls });
 }
 
-describe("processOneRow", () => {
+describe(processOneRow, () => {
 	it("upserts a user, writes cursor, returns processed", async () => {
-		const internal = fakeInternal([
-			{
-				kind: "ok",
-				body: {
-					user: {
-						id: "u1",
-						email: "u@example.com",
-						name: "You Sir",
-						phone: null,
+		await withTempCursor(async (cursorPath) => {
+			const internal = fakeInternal([
+				{
+					kind: "ok",
+					body: {
+						user: {
+							id: "u1",
+							email: "u@example.com",
+							name: "You Sir",
+							phone: null,
+						},
+						nextCursor: "cursor-after-u1",
 					},
-					nextCursor: "cursor-after-u1",
 				},
-			},
-		]);
-		const resend: ResendUpsert = vi.fn(async () => ({ kind: "ok" }));
-		const bucket = fakeBucket();
+			]);
+			const resend: ResendUpsert = vi.fn(async () => ({ kind: "ok" }));
+			const bucket = fakeBucket();
 
-		const out = await processOneRow({
-			internal,
-			resend,
-			bucket,
-			cursorPath,
+			const out = await processOneRow({ internal, resend, bucket, cursorPath });
+			expect(out).toBe("processed");
+			expect(bucket.taken).toStrictEqual([4]);
+			expect((await readCursorFile(cursorPath)).cursor).toBe("cursor-after-u1");
+			expect(resend).toHaveBeenCalledWith({
+				id: "u1",
+				email: "u@example.com",
+				name: "You Sir",
+				phone: null,
+			});
 		});
-		expect(out).toBe("processed");
-		expect(bucket.taken).toEqual([4]);
-		expect((await readCursorFile(cursorPath)).cursor).toBe("cursor-after-u1");
-		expect(resend).toHaveBeenCalledWith({
-			id: "u1",
-			email: "u@example.com",
-			name: "You Sir",
-			phone: null,
-		});
+		expect.hasAssertions();
 	});
 
 	it("returns drained when API user is null and persists the echoed cursor", async () => {
-		await writeCursorFile(cursorPath, "previous-cursor");
-		const internal = fakeInternal([
-			{
-				kind: "ok",
-				body: { user: null, nextCursor: "previous-cursor" },
-			},
-		]);
-		const resend: ResendUpsert = vi.fn();
+		await withTempCursor(async (cursorPath) => {
+			await writeCursorFile(cursorPath, "previous-cursor");
+			const internal = fakeInternal([
+				{ kind: "ok", body: { user: null, nextCursor: "previous-cursor" } },
+			]);
+			const resend: ResendUpsert = vi.fn();
 
-		const out = await processOneRow({
-			internal,
-			resend,
-			bucket: fakeBucket(),
-			cursorPath,
+			const out = await processOneRow({
+				internal,
+				resend,
+				bucket: fakeBucket(),
+				cursorPath,
+			});
+			expect(out).toBe("drained");
+			expect(resend).not.toHaveBeenCalled();
+			expect((await readCursorFile(cursorPath)).cursor).toBe("previous-cursor");
 		});
-		expect(out).toBe("drained");
-		expect(resend).not.toHaveBeenCalled();
-		expect((await readCursorFile(cursorPath)).cursor).toBe("previous-cursor");
+		expect.hasAssertions();
 	});
 
 	it("advances past a Resend 4xx (permanent failure)", async () => {
-		const internal = fakeInternal([
-			{
-				kind: "ok",
-				body: {
-					user: {
-						id: "u-bad",
-						email: "bad",
-						name: "Bad Email",
-						phone: null,
+		await withTempCursor(async (cursorPath) => {
+			const internal = fakeInternal([
+				{
+					kind: "ok",
+					body: {
+						user: { id: "u-bad", email: "bad", name: "Bad Email", phone: null },
+						nextCursor: "cursor-after-bad",
 					},
-					nextCursor: "cursor-after-bad",
 				},
-			},
-		]);
-		const resend: ResendUpsert = vi.fn(async () => ({
-			kind: "client-error",
-			status: 422,
-			message: "invalid email",
-		}));
+			]);
+			const resend: ResendUpsert = vi.fn(async () => ({
+				kind: "client-error",
+				status: 422,
+				message: "invalid email",
+			}));
 
-		const out = await processOneRow({
-			internal,
-			resend,
-			bucket: fakeBucket(),
-			cursorPath,
+			const out = await processOneRow({
+				internal,
+				resend,
+				bucket: fakeBucket(),
+				cursorPath,
+			});
+			expect(out).toBe("processed");
+			expect((await readCursorFile(cursorPath)).cursor).toBe(
+				"cursor-after-bad",
+			);
 		});
-		expect(out).toBe("processed");
-		expect((await readCursorFile(cursorPath)).cursor).toBe("cursor-after-bad");
+		expect.hasAssertions();
 	});
 
 	it("stalls on Resend 5xx and honors Retry-After", async () => {
-		const internal = fakeInternal([
-			{
-				kind: "ok",
-				body: {
-					user: {
-						id: "u-flaky",
-						email: "flaky@example.com",
-						name: "Flaky",
-						phone: null,
+		await withTempCursor(async (cursorPath) => {
+			const internal = fakeInternal([
+				{
+					kind: "ok",
+					body: {
+						user: {
+							id: "u-flaky",
+							email: "flaky@example.com",
+							name: "Flaky",
+							phone: null,
+						},
+						nextCursor: "cursor-after-flaky",
 					},
-					nextCursor: "cursor-after-flaky",
 				},
-			},
-		]);
-		const resend: ResendUpsert = vi.fn(async () => ({
-			kind: "server-error",
-			status: 503,
-			message: "down",
-			retryAfterMs: 1_500,
-		}));
-		const bucket = fakeBucket();
+			]);
+			const resend: ResendUpsert = vi.fn(async () => ({
+				kind: "server-error",
+				status: 503,
+				message: "down",
+				retryAfterMs: 1_500,
+			}));
+			const bucket = fakeBucket();
 
-		const out = await processOneRow({
-			internal,
-			resend,
-			bucket,
-			cursorPath,
+			const out = await processOneRow({ internal, resend, bucket, cursorPath });
+			expect(out).toBe("stalled");
+			expect(bucket.retryAfterCalls).toStrictEqual([1_500]);
+			// Cursor file must remain absent (no write yet).
+			const cursor = await readFile(cursorPath, "utf8").catch(() => null);
+			expect(cursor).toBeNull();
 		});
-		expect(out).toBe("stalled");
-		expect(bucket.retryAfterCalls).toEqual([1_500]);
-		// Cursor file must remain at its old value (no file written yet).
-		const cursor = await readFile(cursorPath, "utf8").catch(() => null);
-		expect(cursor).toBeNull();
+		expect.hasAssertions();
 	});
 
 	it("stalls on upstream (internal API) 5xx without advancing cursor", async () => {
-		await writeCursorFile(cursorPath, "before");
-		const internal = fakeInternal([
-			{
-				kind: "server-error",
-				status: 503,
-				message: "db down",
-				retryAfterMs: null,
-			},
-		]);
-		const resend: ResendUpsert = vi.fn();
+		await withTempCursor(async (cursorPath) => {
+			await writeCursorFile(cursorPath, "before");
+			const internal = fakeInternal([
+				{
+					kind: "server-error",
+					status: 503,
+					message: "db down",
+					retryAfterMs: null,
+				},
+			]);
+			const resend: ResendUpsert = vi.fn();
 
-		const out = await processOneRow({
-			internal,
-			resend,
-			bucket: fakeBucket(),
-			cursorPath,
+			const out = await processOneRow({
+				internal,
+				resend,
+				bucket: fakeBucket(),
+				cursorPath,
+			});
+			expect(out).toBe("stalled");
+			expect(resend).not.toHaveBeenCalled();
+			expect((await readCursorFile(cursorPath)).cursor).toBe("before");
 		});
-		expect(out).toBe("stalled");
-		expect(resend).not.toHaveBeenCalled();
-		expect((await readCursorFile(cursorPath)).cursor).toBe("before");
+		expect.hasAssertions();
 	});
 
 	it("stalls on upstream network error", async () => {
-		const internal: InternalApiClient = async () => ({
-			kind: "network-error",
-			error: new Error("ECONNREFUSED"),
-		});
-		const resend: ResendUpsert = vi.fn();
+		await withTempCursor(async (cursorPath) => {
+			const internal: InternalApiClient = async () => ({
+				kind: "network-error",
+				error: new Error("ECONNREFUSED"),
+			});
+			const resend: ResendUpsert = vi.fn();
 
-		const out = await processOneRow({
-			internal,
-			resend,
-			bucket: fakeBucket(),
-			cursorPath,
+			const out = await processOneRow({
+				internal,
+				resend,
+				bucket: fakeBucket(),
+				cursorPath,
+			});
+			expect(out).toBe("stalled");
 		});
-		expect(out).toBe("stalled");
+		expect.hasAssertions();
 	});
 });

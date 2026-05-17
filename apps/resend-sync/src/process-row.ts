@@ -52,9 +52,9 @@ export async function processOneRow(
 			fingerprint: ["resend-sync", "upstream-unavailable"],
 			extra: { source: "www", status },
 		});
-		if (apiResult.kind === "server-error" && apiResult.retryAfterMs) {
+		if (apiResult.kind === "server-error" && apiResult.retryAfterMs)
 			await deps.bucket.honorRetryAfter(apiResult.retryAfterMs);
-		}
+
 		return "stalled";
 	}
 
@@ -76,17 +76,17 @@ export async function processOneRow(
 		return "stalled";
 	}
 
-	const body = apiResult.body;
+	const { body } = apiResult;
 
 	if (body.user === null) {
 		// Drained: persist the echoed cursor (no-op if unchanged) and stop.
-		if (body.nextCursor !== state.cursor) {
+		if (body.nextCursor !== state.cursor)
 			await writeCursorFile(deps.cursorPath, body.nextCursor);
-		}
+
 		return "drained";
 	}
 
-	const user = body.user;
+	const { user } = body;
 
 	// Each upsert costs up to 4 Resend API calls:
 	//   GET contact → POST|PATCH contact → GET topics → PATCH topics (if absent).
@@ -136,9 +136,9 @@ export async function processOneRow(
 	if (
 		upsertResult.kind === "server-error" &&
 		upsertResult.retryAfterMs !== null
-	) {
+	)
 		await deps.bucket.honorRetryAfter(upsertResult.retryAfterMs);
-	}
+
 	const err =
 		upsertResult.kind === "network-error"
 			? upsertResult.error

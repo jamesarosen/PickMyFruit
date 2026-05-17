@@ -31,9 +31,9 @@ export async function readCursorFile(path: string): Promise<CursorFile> {
 			typeof err === "object" &&
 			"code" in err &&
 			(err as { code?: string }).code === "ENOENT"
-		) {
+		)
 			return EMPTY_CURSOR;
-		}
+
 		throw err;
 	}
 

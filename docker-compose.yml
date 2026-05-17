@@ -98,8 +98,7 @@ services:
       RESEND_SYNC_CURSOR_PATH: /app/data/resend-sync/cursor.json
       # Poll fast in dev so an edit-cycle surfaces within seconds.
       RESEND_SYNC_POLL_MS: "2000"
-      # No real Resend credentials in the dev image. Override in
-      # .env.development.local to exercise the real Resend flow.
-      RESEND_SYNC_PROVIDER: disabled
+      # No real Resend credentials in the dev image. Set RESEND_API_KEY in
+      # .env to exercise the real Resend flow.
       SENTRY_ENVIRONMENT: resend-sync
     restart: unless-stopped

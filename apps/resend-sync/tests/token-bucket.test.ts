@@ -21,7 +21,7 @@ function mockClock(startMs = 0) {
 	};
 }
 
-describe("createTokenBucket", () => {
+describe(createTokenBucket, () => {
 	it("starts full and takes without waiting", async () => {
 		const clock = mockClock();
 		const bucket = createTokenBucket({
@@ -32,7 +32,7 @@ describe("createTokenBucket", () => {
 		});
 		await bucket.take(2);
 		await bucket.take(2);
-		expect(clock.getWaits()).toEqual([]);
+		expect(clock.getWaits()).toStrictEqual([]);
 	});
 
 	it("waits the right amount for refill when over-budget", async () => {
@@ -47,11 +47,11 @@ describe("createTokenBucket", () => {
 
 		// Drain the bucket.
 		await bucket.take(4);
-		expect(clock.getWaits()).toEqual([]);
+		expect(clock.getWaits()).toStrictEqual([]);
 
 		// The next take(2) needs 2 tokens → 500 ms wait.
 		await bucket.take(2);
-		expect(clock.getWaits()).toEqual([500]);
+		expect(clock.getWaits()).toStrictEqual([500]);
 	});
 
 	it("serves 2.5 upserts/sec at the doc-suggested 4 tokens/sec", async () => {
@@ -84,12 +84,12 @@ describe("createTokenBucket", () => {
 		});
 
 		await bucket.honorRetryAfter(2_000);
-		expect(clock.getWaits()).toEqual([2_000]);
+		expect(clock.getWaits()).toStrictEqual([2_000]);
 
 		// After Retry-After, the bucket is empty regardless of elapsed time → next
 		// take(2) must wait 500 ms more.
 		await bucket.take(2);
-		expect(clock.getWaits()).toEqual([2_000, 500]);
+		expect(clock.getWaits()).toStrictEqual([2_000, 500]);
 	});
 
 	it("throws when asked to take more than capacity (would deadlock)", async () => {

@@ -21,7 +21,7 @@ const validBody = {
 	nextCursor: "next",
 };
 
-describe("createInternalApiClient", () => {
+describe(createInternalApiClient, () => {
 	it("sends x-internal-auth and parses a valid response", async () => {
 		const { fetchImpl, calls } = makeFetch(
 			new Response(JSON.stringify(validBody), {
@@ -35,7 +35,7 @@ describe("createInternalApiClient", () => {
 			fetchImpl,
 		});
 		const result = await client("current-cursor");
-		expect(result).toEqual({ kind: "ok", body: validBody });
+		expect(result).toStrictEqual({ kind: "ok", body: validBody });
 		expect(calls[0].headers.get("x-internal-auth")).toBe(
 			"super-secret-do-not-leak-32chars+",
 		);

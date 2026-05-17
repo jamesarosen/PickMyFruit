@@ -132,10 +132,10 @@ async function readErrorMessage(response: Response): Promise<string> {
 }
 
 function classify(response: Response, message: string): ResendUpsertResult {
-	const status = response.status;
-	if (status >= 400 && status < 500 && status !== 429) {
+	const { status } = response;
+	if (status >= 400 && status < 500 && status !== 429)
 		return { kind: "client-error", status, message };
-	}
+
 	return {
 		kind: "server-error",
 		status,
@@ -147,8 +147,7 @@ function classify(response: Response, message: string): ResendUpsertResult {
 function makeInit(
 	method: string,
 	authHeader: string,
-	dispatcher: ResendDispatcher | undefined,
-	body?: unknown,
+	options: { dispatcher?: ResendDispatcher; body?: unknown } = {},
 ): RequestInit {
 	const init: RequestInit = {
 		method,
@@ -157,12 +156,12 @@ function makeInit(
 			"content-type": "application/json",
 		},
 	};
-	if (body !== undefined) init.body = JSON.stringify(body);
-	if (dispatcher) {
+	if (options.body !== undefined) init.body = JSON.stringify(options.body);
+	if (options.dispatcher) {
 		// undici's `dispatcher` is non-standard; fetch ignores it without an
 		// undici-aware loader, and Node's @types/undici-types differs from the
 		// installed undici. Stash via a cast — the runtime check is fine.
-		(init as Record<string, unknown>).dispatcher = dispatcher;
+		(init as Record<string, unknown>).dispatcher = options.dispatcher;
 	}
 	return init;
 }
@@ -186,7 +185,7 @@ export async function findNewsletterTopicId(
 	try {
 		response = await fetchImpl(
 			`${baseUrl}/topics?limit=100`,
-			makeInit("GET", authHeader, config.dispatcher),
+			makeInit("GET", authHeader, { dispatcher: config.dispatcher }),
 		);
 	} catch {
 		return null;
@@ -214,7 +213,7 @@ export function createResendUpsert(config: ResendClientConfig): ResendUpsert {
 	): Promise<Response> {
 		return fetchImpl(
 			`${baseUrl}${path}`,
-			makeInit(method, authHeader, config.dispatcher, body),
+			makeInit(method, authHeader, { dispatcher: config.dispatcher, body }),
 		);
 	}
 
@@ -246,9 +245,9 @@ export function createResendUpsert(config: ResendClientConfig): ResendUpsert {
 			} catch (err) {
 				return { kind: "network-error", error: err as Error };
 			}
-			if (!createResponse.ok) {
+			if (!createResponse.ok)
 				return classify(createResponse, await readErrorMessage(createResponse));
-			}
+
 			const createBody = (await createResponse.json()) as ResendContactBody;
 			if (!createBody.id) {
 				return {
@@ -258,9 +257,9 @@ export function createResendUpsert(config: ResendClientConfig): ResendUpsert {
 				};
 			}
 			contactId = createBody.id;
-		} else if (!getResponse.ok) {
+		} else if (!getResponse.ok)
 			return classify(getResponse, await readErrorMessage(getResponse));
-		} else {
+		else {
 			// Step 2b: existing contact — parse ID then update name fields.
 			const getBody = (await getResponse.json()) as ResendContactBody;
 			if (!getBody.id) {
@@ -283,9 +282,8 @@ export function createResendUpsert(config: ResendClientConfig): ResendUpsert {
 			} catch (err) {
 				return { kind: "network-error", error: err as Error };
 			}
-			if (!patchResponse.ok) {
+			if (!patchResponse.ok)
 				return classify(patchResponse, await readErrorMessage(patchResponse));
-			}
 		}
 
 		// Step 3: check existing topic subscriptions.
@@ -298,9 +296,9 @@ export function createResendUpsert(config: ResendClientConfig): ResendUpsert {
 		} catch (err) {
 			return { kind: "network-error", error: err as Error };
 		}
-		if (!topicsResponse.ok) {
+		if (!topicsResponse.ok)
 			return classify(topicsResponse, await readErrorMessage(topicsResponse));
-		}
+
 		const topicsBody = (await topicsResponse.json()) as ResendListBody;
 		const alreadySubscribed = topicsBody.data.some((t) => t.id === topicId);
 

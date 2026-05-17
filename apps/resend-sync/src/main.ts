@@ -18,11 +18,11 @@ import {
 	findNewsletterTopicId,
 	type ResendUpsert,
 } from "./resend-client.js";
+import { runCycle } from "./run-cycle.js";
 import { createTokenBucket } from "./token-bucket.js";
 
 /** EX_CONFIG (sysexits.h 78): configuration error — distinct from shell 1/2. */
 const EXIT_CONFIG_ERROR = 78;
-import { runCycle } from "./run-cycle.js";
 
 const envResult = parseWorkerEnv(process.env);
 if (!envResult.ok) {
@@ -31,7 +31,7 @@ if (!envResult.ok) {
 	// if it's a syntactic mess Sentry's init will simply no-op.
 	initSentry({
 		dsn: process.env.SENTRY_DSN,
-		environment: process.env.SENTRY_ENVIRONMENT ?? "resend-sync",
+		environment: process.env.SENTRY_ENVIRONMENT,
 		release: process.env.SENTRY_RELEASE,
 	});
 	logger.fatal(
@@ -45,13 +45,14 @@ if (!envResult.ok) {
 	// Give Sentry a brief window to flush before exit. close() resolves once
 	// the queue drains or its own timeout fires.
 	await Sentry.close(2_000).catch(() => undefined);
-	process.exit(1);
+	process.exit(EXIT_CONFIG_ERROR);
 }
 
-const env = envResult.env;
+const { env } = envResult;
 
 initSentry({
 	dsn: env.SENTRY_DSN,
+	enabled: env.SENTRY_ENABLED,
 	environment: env.SENTRY_ENVIRONMENT,
 	release: env.SENTRY_RELEASE,
 });
@@ -69,23 +70,8 @@ const internal = createInternalApiClient({
 	dispatcher,
 });
 
-if (env.provider.RESEND_SYNC_PROVIDER === "disabled") {
-	// `disabled` means RESEND_API_KEY was not provided. Silently advancing the
-	// cursor without syncing would corrupt the state — contacts skipped here are
-	// never retried. Fail fast so misconfiguration is visible immediately.
-	const err = new Error(
-		"resend-sync: RESEND_SYNC_PROVIDER=disabled — set RESEND_SYNC_PROVIDER=resend and supply RESEND_API_KEY",
-	);
-	logger.fatal({ provider: "disabled" }, err.message);
-	Sentry.captureException(err, {
-		fingerprint: ["resend-sync", "missing-api-key"],
-	});
-	await Sentry.close(2_000).catch(() => undefined);
-	process.exit(EXIT_CONFIG_ERROR);
-}
-
 const topicId = await findNewsletterTopicId({
-	apiKey: env.provider.RESEND_API_KEY,
+	apiKey: env.RESEND_API_KEY,
 	dispatcher,
 });
 if (!topicId) {
@@ -101,7 +87,7 @@ if (!topicId) {
 }
 
 const resend: ResendUpsert = createResendUpsert({
-	apiKey: env.provider.RESEND_API_KEY,
+	apiKey: env.RESEND_API_KEY,
 	topicId,
 	dispatcher,
 });
@@ -144,7 +130,6 @@ logger.info(
 		pollMs: env.RESEND_SYNC_POLL_MS,
 		cursorPath: env.RESEND_SYNC_CURSOR_PATH,
 		ratePerSec: env.RESEND_API_RATE_PER_SEC,
-		provider: env.provider.RESEND_SYNC_PROVIDER,
 		internalApiUrl: env.INTERNAL_API_URL,
 	},
 	"resend-sync: starting",

@@ -1,5 +1,7 @@
-import { internalUsersNextResponseSchema } from "./internal-api-schema.js";
-import type { InternalUsersNextResponse } from "./internal-api-schema.js";
+import {
+	internalUsersNextResponseSchema,
+	type InternalUsersNextResponse,
+} from "./internal-api-schema.js";
 import { parseRetryAfter } from "./resend-client.js";
 
 /**
@@ -41,15 +43,14 @@ export function createInternalApiClient(
 				accept: "application/json",
 			},
 		};
-		if (config.dispatcher) {
+		if (config.dispatcher)
 			(init as Record<string, unknown>).dispatcher = config.dispatcher;
-		}
 
 		const params = new URLSearchParams();
 		if (cursor) params.set("cursor", cursor);
-		const url =
-			`${trimmed}/internal/v1/users/next` +
-			(params.toString() ? `?${params}` : "");
+		const url = `${trimmed}/internal/v1/users/next${
+			params.toString() ? `?${params}` : ""
+		}`;
 
 		let response: Response;
 		try {
@@ -82,9 +83,9 @@ export function createInternalApiClient(
 			response.status >= 400 &&
 			response.status < 500 &&
 			response.status !== 429
-		) {
+		)
 			return { kind: "client-error", status: response.status, message };
-		}
+
 		return {
 			kind: "server-error",
 			status: response.status,

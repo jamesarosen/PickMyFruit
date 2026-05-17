@@ -44,7 +44,7 @@ function makeConfig(fetchImpl: typeof fetch) {
 	};
 }
 
-describe("findNewsletterTopicId", () => {
+describe(findNewsletterTopicId, () => {
 	it("returns the Newsletter topic ID when found", async () => {
 		const { fetchImpl, calls } = makeFetch([
 			() =>
@@ -118,7 +118,7 @@ describe("findNewsletterTopicId", () => {
 	});
 });
 
-describe("createResendUpsert", () => {
+describe(createResendUpsert, () => {
 	it("creates a new contact and subscribes to Newsletter topic", async () => {
 		const { fetchImpl, calls } = makeFetch([
 			// GET /contacts/:email → 404 (new)
@@ -138,7 +138,7 @@ describe("createResendUpsert", () => {
 		const upsert = createResendUpsert(makeConfig(fetchImpl));
 		const result = await upsert(contact);
 
-		expect(result).toEqual({ kind: "ok" });
+		expect(result).toStrictEqual({ kind: "ok" });
 		expect(calls).toHaveLength(4);
 
 		const [getReq, postReq, topicsGetReq, topicsPatchReq] = calls;
@@ -149,7 +149,7 @@ describe("createResendUpsert", () => {
 		expect(postReq.method).toBe("POST");
 		expect(postReq.url).toMatch(/\/contacts$/);
 		const postBody = (await postReq.json()) as Record<string, unknown>;
-		expect(postBody).toEqual({
+		expect(postBody).toStrictEqual({
 			email: "alice@example.com",
 			first_name: "Alice",
 			last_name: "Anderson",
@@ -164,7 +164,7 @@ describe("createResendUpsert", () => {
 		expect(topicsPatchReq.method).toBe("PATCH");
 		expect(topicsPatchReq.url).toContain(`/contacts/${CONTACT_ID}/topics`);
 		const patchBody = (await topicsPatchReq.json()) as unknown;
-		expect(patchBody).toEqual([{ id: TOPIC_ID, subscription: "opt_in" }]);
+		expect(patchBody).toStrictEqual([{ id: TOPIC_ID, subscription: "opt_in" }]);
 	});
 
 	it("updates an existing contact and subscribes to Newsletter topic if absent", async () => {
@@ -186,13 +186,16 @@ describe("createResendUpsert", () => {
 		const upsert = createResendUpsert(makeConfig(fetchImpl));
 		const result = await upsert({ ...contact, name: "Alice Updated" });
 
-		expect(result).toEqual({ kind: "ok" });
+		expect(result).toStrictEqual({ kind: "ok" });
 
 		const [, patchReq] = calls;
 		expect(patchReq.method).toBe("PATCH");
 		expect(patchReq.url).toContain(`/contacts/${CONTACT_ID}`);
 		const patchBody = (await patchReq.json()) as Record<string, unknown>;
-		expect(patchBody).toEqual({ first_name: "Alice", last_name: "Updated" });
+		expect(patchBody).toStrictEqual({
+			first_name: "Alice",
+			last_name: "Updated",
+		});
 		// Critical: must not clobber an opt-out done in Resend's dashboard.
 		expect(patchBody).not.toHaveProperty("unsubscribed");
 	});
@@ -221,7 +224,7 @@ describe("createResendUpsert", () => {
 		const upsert = createResendUpsert(makeConfig(fetchImpl));
 		const result = await upsert(contact);
 
-		expect(result).toEqual({ kind: "ok" });
+		expect(result).toStrictEqual({ kind: "ok" });
 		expect(calls).toHaveLength(3);
 	});
 
@@ -245,7 +248,7 @@ describe("createResendUpsert", () => {
 		const upsert = createResendUpsert(makeConfig(fetchImpl));
 		const result = await upsert(contact);
 
-		expect(result).toEqual({ kind: "ok" });
+		expect(result).toStrictEqual({ kind: "ok" });
 		// Only GET + PATCH contact + GET topics — no topic PATCH.
 		expect(calls).toHaveLength(3);
 	});
@@ -261,7 +264,7 @@ describe("createResendUpsert", () => {
 
 		const upsert = createResendUpsert(makeConfig(fetchImpl));
 		const result = await upsert({ ...contact, email: "not-an-email" });
-		expect(result).toEqual({
+		expect(result).toStrictEqual({
 			kind: "client-error",
 			status: 422,
 			message: "invalid email",
@@ -311,7 +314,7 @@ describe("createResendUpsert", () => {
 	});
 });
 
-describe("parseRetryAfter", () => {
+describe(parseRetryAfter, () => {
 	it("parses seconds", () => {
 		expect(parseRetryAfter("5")).toBe(5_000);
 		expect(parseRetryAfter("0")).toBe(0);
