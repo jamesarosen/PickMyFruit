@@ -98,9 +98,20 @@ The cursor is an **opaque string** to the worker. Today it encodes `(updated_at,
 - Strip `/internal/*` from sitemaps, OpenAPI, and any robots/SEO output. Do not log the `x-internal-auth` header anywhere — add a scrubber to the request logger and to Sentry's `beforeBreadcrumb`. Cover both with a test.
 - Per-IP rate limit on `/internal/*` even with a valid secret (e.g. 30 req/sec). Bounds blast radius if the secret leaks.
 
-### TLS-redirect carve-out
+### TLS-redirect carve-out (Fly-Src verified)
 
-`apps/www/src/middleware/tls.ts` currently redirects all non-HTTPS traffic to HTTPS. The `.flycast` hostname does not have a valid certificate (it's the internal 6PN address), so the worker reaches the web app over plain HTTP. The middleware must skip the redirect when the request `Host` header matches `*.flycast`. Keep the apex→www redirect; only the protocol redirect is skipped. HSTS is also skipped on `.flycast` responses (HSTS without TLS is meaningless and would poison the browser cache if anything ever hit it over `https://`).
+`apps/www/src/middleware/tls.ts` redirects all non-HTTPS traffic to HTTPS, but the `.flycast` hostname has no TLS certificate (it's the internal 6PN address), so the worker reaches the web app over plain HTTP. To skip the redirect for internal traffic **without** trusting a spoofable host header, the middleware verifies Fly's `Fly-Src` / `Fly-Src-Signature` pair using the Ed25519 public key Fly mounts at `/.fly/fly-src.pub`:
+
+1. Parse `Fly-Src` (`instance=…;app=…;org=…;ts=…`).
+2. Require `app === FLY_APP_NAME` and `ts` within the replay window (30 s).
+3. Verify the base64 Ed25519 signature in `Fly-Src-Signature` over the raw `Fly-Src` bytes.
+
+Only when all three pass does the middleware treat the request as internal and skip both the HTTPS redirect and HSTS. Public traffic never carries a verifiable `Fly-Src`, so it cannot opt out of the redirect by spoofing `x-forwarded-host: *.flycast` (the previous heuristic). The apex→www redirect still fires regardless.
+
+Implementation lives in `apps/www/src/lib/is-fly-internal-request.server.ts`; tests use injectable `readFile` + a generated Ed25519 keypair so the verification logic is exercised without depending on the real `/.fly/fly-src.pub` file.
+
+@see https://community.fly.io/t/detect-public-vs-private-connection/20971
+@see https://community.fly.io/t/fly-src-authenticating-http-requests-between-fly-apps/20566
 
 ---
 
@@ -253,7 +264,7 @@ OpenTelemetry traces are **not** in scope for v1. If we add them later, wrap one
 
 - `/internal/v1/users/next`: valid secret returns next user; invalid/missing secret returns 404 (not 401); previous-secret accepted during rotation.
 - Auth header is stripped from request logs and Sentry breadcrumbs.
-- TLS middleware: `.flycast` host skips the HTTPS redirect and HSTS header; all other hosts redirect as before.
+- TLS middleware: verified `Fly-Src` skips the HTTPS redirect and HSTS header; all other hosts redirect as before. Forged `x-forwarded-host: *.flycast` does **not** bypass the redirect.
 
 ### Contract test
 
@@ -276,19 +287,19 @@ Red-green double-loop is preferred but not mandated. The implementation surface 
 
 ## Sequence (commits)
 
-| #   | Commit focus                                                                                                                                               | Testable output                                                                                        |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| 1   | Revert PR-branch `resend_sync_state` table and seed; keep the `user(updated_at, id)` index.                                                                | Migration journal shows the table removed; index remains.                                              |
-| 2   | `apps/resend-sync` package skeleton: `package.json`, `tsconfig`, `tsc` build, vitest (node env), entry stub.                                               | `pnpm --filter @pickmyfruit/resend-sync build` produces runnable JS; `pnpm test` runs the empty suite. |
-| 3   | TLS middleware: skip HTTPS redirect + HSTS for `*.flycast` hosts; tests.                                                                                   | Unit test: `Host: pickmyfruit.flycast` request returns 200, not 307.                                   |
-| 4   | `/internal/v1/users/next` route + Zod response schema + auth (timing-safe, two-secret) + 404-on-bad-secret + log/breadcrumb scrubbing + per-IP rate limit. | Unit + contract tests pass.                                                                            |
-| 5   | Worker cursor file helper (atomic write).                                                                                                                  | Unit tests: round-trip, default, crash-mid-write recovery.                                             |
-| 6   | Worker token bucket + Retry-After honoring.                                                                                                                | Unit tests: refill math, two-tokens-per-upsert, Retry-After override.                                  |
-| 7   | Worker `processOneRow`: fetch from internal API, upsert via injected Resend client, advance cursor.                                                        | Unit tests cover success, Resend 4xx, Resend 5xx, upstream 5xx paths.                                  |
-| 8   | Worker `runCycle` loop + `SIGTERM` handling + `AbortController` sleep.                                                                                     | Subprocess test: starts, drains a seeded server, sleeps, exits 0 on `SIGTERM`.                         |
-| 9   | Resend client: real HTTP behind an interface, view + create/update mapping, opt-out guard.                                                                 | Contract test with `fetch` mock asserting URL/method/body for both calls.                              |
-| 10  | Dockerfile multi-stage build for the worker (no `import.meta.env` defines); `fly.toml` process group.                                                      | `docker build` produces an image with both binaries; `fly deploy` smoke passes.                        |
-| 11  | Local dev wiring: `pnpm dev` script that runs both, shared secret in `.env.development`.                                                                   | Manual smoke: create a user, cursor advances, Resend stub called.                                      |
+| #   | Commit focus                                                                                                                                                                  | Testable output                                                                                        |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 1   | Revert PR-branch `resend_sync_state` table and seed; keep the `user(updated_at, id)` index.                                                                                   | Migration journal shows the table removed; index remains.                                              |
+| 2   | `apps/resend-sync` package skeleton: `package.json`, `tsconfig`, `tsc` build, vitest (node env), entry stub.                                                                  | `pnpm --filter @pickmyfruit/resend-sync build` produces runnable JS; `pnpm test` runs the empty suite. |
+| 3   | TLS middleware: skip HTTPS redirect + HSTS when `Fly-Src` is present and Ed25519-verified against `/.fly/fly-src.pub`; tests cover bad sig, wrong app, stale ts, missing key. | Unit test: verified Fly-Src returns 200, unsigned/forged request returns 307.                          |
+| 4   | `/internal/v1/users/next` route + Zod response schema + auth (timing-safe, two-secret) + 404-on-bad-secret + log/breadcrumb scrubbing + per-IP rate limit.                    | Unit + contract tests pass.                                                                            |
+| 5   | Worker cursor file helper (atomic write).                                                                                                                                     | Unit tests: round-trip, default, crash-mid-write recovery.                                             |
+| 6   | Worker token bucket + Retry-After honoring.                                                                                                                                   | Unit tests: refill math, two-tokens-per-upsert, Retry-After override.                                  |
+| 7   | Worker `processOneRow`: fetch from internal API, upsert via injected Resend client, advance cursor.                                                                           | Unit tests cover success, Resend 4xx, Resend 5xx, upstream 5xx paths.                                  |
+| 8   | Worker `runCycle` loop + `SIGTERM` handling + `AbortController` sleep.                                                                                                        | Subprocess test: starts, drains a seeded server, sleeps, exits 0 on `SIGTERM`.                         |
+| 9   | Resend client: real HTTP behind an interface, view + create/update mapping, opt-out guard.                                                                                    | Contract test with `fetch` mock asserting URL/method/body for both calls.                              |
+| 10  | Dockerfile multi-stage build for the worker (no `import.meta.env` defines); `fly.toml` process group.                                                                         | `docker build` produces an image with both binaries; `fly deploy` smoke passes.                        |
+| 11  | Local dev wiring: `pnpm dev` script that runs both, shared secret in `.env.development`.                                                                                      | Manual smoke: create a user, cursor advances, Resend stub called.                                      |
 
 ---
 

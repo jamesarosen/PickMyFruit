@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { decideTls, isFlycastHost } from '../src/middleware/tls'
+import { decideTls } from '../src/middleware/tls'
 
 function headers(
 	forwardedProto: string | null,
@@ -11,27 +11,12 @@ function headers(
 	}
 }
 
-describe('isFlycastHost', () => {
-	it.each([
-		['pickmyfruit.flycast', true],
-		['pickmyfruit.flycast:8080', true],
-		['flycast', true],
-		['www.pickmyfruit.com', false],
-		['pickmyfruit.com', false],
-		['flycast.example.com', false],
-		['', false],
-		[null, false],
-		[undefined, false],
-	])('isFlycastHost(%j) → %s', (host, expected) => {
-		expect(isFlycastHost(host)).toBe(expected)
-	})
-})
-
 describe('decideTls', () => {
 	it('redirects plain HTTP to HTTPS when behind a TLS-terminating proxy', () => {
 		const decision = decideTls(
 			'http://www.pickmyfruit.com/about',
-			headers('http', 'www.pickmyfruit.com')
+			headers('http', 'www.pickmyfruit.com'),
+			false
 		)
 		expect(decision.redirect).toEqual({
 			status: 307,
@@ -43,7 +28,8 @@ describe('decideTls', () => {
 	it('redirects the apex domain to www, preserving HTTPS', () => {
 		const decision = decideTls(
 			'https://pickmyfruit.com/listings',
-			headers('https', 'pickmyfruit.com')
+			headers('https', 'pickmyfruit.com'),
+			false
 		)
 		expect(decision.redirect).toEqual({
 			status: 307,
@@ -55,35 +41,54 @@ describe('decideTls', () => {
 	it('passes through HTTPS requests with HSTS', () => {
 		const decision = decideTls(
 			'https://www.pickmyfruit.com/',
-			headers('https', 'www.pickmyfruit.com')
+			headers('https', 'www.pickmyfruit.com'),
+			false
 		)
 		expect(decision.redirect).toBeUndefined()
 		expect(decision.addHstsHeader).toBe(true)
 	})
 
-	it('does not redirect a .flycast host even when forwarded proto is http', () => {
+	it('skips the HTTPS redirect when the request is verified-internal (Fly-Src)', () => {
 		const decision = decideTls(
 			'http://pickmyfruit.flycast/internal/v1/users/next',
-			headers('http', 'pickmyfruit.flycast')
+			headers('http', 'pickmyfruit.flycast'),
+			true
 		)
 		expect(decision.redirect).toBeUndefined()
 		expect(decision.addHstsHeader).toBe(false)
 	})
 
-	it('does not add HSTS on .flycast responses even if forwarded proto says https', () => {
-		// Defense-in-depth: we don't expect Fly to terminate TLS for .flycast,
-		// but if a misconfigured proxy ever set x-forwarded-proto=https, we still
-		// suppress HSTS so a stray https://*.flycast hit can't poison clients.
+	it('suppresses HSTS on verified-internal responses even if forwarded-proto says https', () => {
 		const decision = decideTls(
 			'http://pickmyfruit.flycast/internal/v1/users/next',
-			headers('https', 'pickmyfruit.flycast')
+			headers('https', 'pickmyfruit.flycast'),
+			true
 		)
 		expect(decision.redirect).toBeUndefined()
 		expect(decision.addHstsHeader).toBe(false)
+	})
+
+	it('does NOT skip the redirect when the .flycast host is unverified (forged x-forwarded-host)', () => {
+		// Without a verified Fly-Src, even a .flycast-looking host must be treated
+		// as public traffic — otherwise an attacker who can spoof x-forwarded-host
+		// through a future proxy could disable HTTPS.
+		const decision = decideTls(
+			'http://pickmyfruit.flycast/internal/v1/users/next',
+			headers('http', 'pickmyfruit.flycast'),
+			false
+		)
+		expect(decision.redirect).toEqual({
+			status: 307,
+			location: 'https://pickmyfruit.flycast/internal/v1/users/next',
+		})
 	})
 
 	it('treats local dev (no x-forwarded-proto) as non-TLS without redirecting', () => {
-		const decision = decideTls('http://localhost:5173/', headers(null, null))
+		const decision = decideTls(
+			'http://localhost:5173/',
+			headers(null, null),
+			false
+		)
 		expect(decision.redirect).toBeUndefined()
 		expect(decision.addHstsHeader).toBe(false)
 	})
