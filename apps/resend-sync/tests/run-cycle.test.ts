@@ -48,7 +48,6 @@ function scriptedInternal(
 						id: r.id,
 						email: `${r.id}@example.com`,
 						name: r.id,
-						phone: null,
 					},
 					nextCursor: r.nextCursor,
 				},
@@ -94,7 +93,7 @@ describe(runCycle, () => {
 					return {
 						kind: "ok",
 						body: {
-							user: { id: "a", email: "a@example.com", name: "A", phone: null },
+							user: { id: "a", email: "a@example.com", name: "A" },
 							nextCursor: "c-a",
 						},
 					};
@@ -134,7 +133,6 @@ describe(runCycle, () => {
 							id: `u${call}`,
 							email: `u${call}@example.com`,
 							name: `U${call}`,
-							phone: null,
 						},
 						nextCursor: `c-${call}`,
 					},

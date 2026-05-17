@@ -39,7 +39,6 @@ export interface ResendContact {
 	id: string;
 	email: string;
 	name: string;
-	phone: string | null;
 }
 
 export type ResendUpsertResult =
@@ -170,7 +169,15 @@ function makeInit(
  * Fetches all Resend topics (up to 100) and returns the ID of the one named
  * "Newsletter", or `null` if not found.
  *
- * Called once at worker boot. The caller is expected to treat `null` as fatal.
+ * Called once at worker boot. Distinguishes config errors from transient
+ * failures so the caller can choose the right exit code:
+ *
+ * - **Returns `null`** when Resend responds and the result is a misconfiguration
+ *   we can't recover from by restarting: missing topic, 401/403 (likely the API
+ *   key lacks topic-management scope), or 404 on the topics endpoint. The
+ *   caller should exit with EX_CONFIG (78) so Fly does not restart in a loop.
+ * - **Throws** on network errors and 5xx/429 responses — these are transient,
+ *   and the caller should exit 1 so Fly's restart policy kicks in.
  *
  * @see https://resend.com/docs/api-reference/topics/list-topics
  */
@@ -181,16 +188,19 @@ export async function findNewsletterTopicId(
 	const fetchImpl = config.fetchImpl ?? fetch;
 	const authHeader = `Bearer ${config.apiKey}`;
 
-	let response: Response;
-	try {
-		response = await fetchImpl(
-			`${baseUrl}/topics?limit=100`,
-			makeInit("GET", authHeader, { dispatcher: config.dispatcher }),
-		);
-	} catch {
+	const response = await fetchImpl(
+		`${baseUrl}/topics?limit=100`,
+		makeInit("GET", authHeader, { dispatcher: config.dispatcher }),
+	);
+
+	if (
+		response.status === 401 ||
+		response.status === 403 ||
+		response.status === 404
+	)
 		return null;
-	}
-	if (!response.ok) return null;
+	if (!response.ok)
+		throw new Error(`Resend GET /topics returned ${response.status}`);
 
 	const body = (await response.json()) as ResendListBody;
 	return body.data.find((t) => t.name === "Newsletter")?.id ?? null;

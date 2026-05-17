@@ -7,7 +7,19 @@ const APEX_DOMAIN = 'pickmyfruit.com'
 /** Hostname suffix for Fly's private 6PN network (e.g. `pickmyfruit.flycast`). */
 const FLYCAST_SUFFIX = '.flycast'
 
-/** True for the internal `.flycast` host where TLS is not available. */
+/**
+ * True for the internal `.flycast` host where TLS is not available.
+ *
+ * **Security note:** `decideTls` consults both `x-forwarded-host` and `url.host`
+ * for this check. That is only safe because Fly's edge proxy sets
+ * `x-forwarded-host` itself and an external client cannot forge it through Fly.
+ * If this app is ever fronted by a different proxy/CDN — or run behind a local
+ * dev proxy that passes the header through — an attacker could send
+ * `x-forwarded-host: foo.flycast` to disable the HTTPS redirect and suppress
+ * HSTS. Re-evaluate this trust assumption before changing the ingress.
+ *
+ * @see https://fly.io/docs/networking/request-headers/
+ */
 export function isFlycastHost(host: string | null | undefined): boolean {
 	if (!host) return false
 	const bare = host.split(':')[0]

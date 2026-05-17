@@ -21,14 +21,23 @@ primary_region = 'sjc'
   [build.args]
     VITE_SENTRY_ENABLED = "true"
 
-# Process groups. Both run from the same image on the same VM so they share
-# the SQLite volume at /app/data. Scale with:
-#   fly scale count app=1 resend_sync=1
-# Keep resend_sync count at exactly 1 — the cursor file is not safe under
-# concurrent writers.
+# Process groups. The web app is the only long-running process.
+#
+# `resend_sync` runs as a Fly **scheduled machine** (hourly), not a process
+# group — `[processes]` machines stay always-on, which would burn CPU/RAM/$
+# for a job that's idle 99% of the time. Provision once with:
+#
+#   fly machine run . \
+#     --schedule hourly \
+#     --restart no \
+#     --command "node apps/resend-sync/dist/main.js" \
+#     --region sjc \
+#     --volume data:/app/data
+#
+# The machine boots on its schedule, drains the user queue, and exits 0.
+# See docs/0007-resend-sync-cron.md.
 [processes]
   app = "node .output/server/index.mjs"
-  resend_sync = "node apps/resend-sync/dist/main.js"
 
 # HTTP service configuration
 [http_service]
@@ -61,13 +70,14 @@ primary_region = 'sjc'
       # Accept JSON response
       Accept = 'application/json'
 
-# Persistent volume for SQLite database and resend-sync cursor file —
-# shared by both process groups.
+# Persistent volume for SQLite database and resend-sync cursor file. The
+# scheduled `resend_sync` machine attaches the same `data` volume via its
+# `--volume` flag at `fly machine run` time (see process-group comment above).
 [[mounts]]
   source = 'data'
   destination = '/app/data'
   initial_size = '1gb'
-  processes = ['app', 'resend_sync']
+  processes = ['app']
 
 # Environment variables
 # NODE_OPTIONS and SHARP_CONCURRENCY are mirrored in docker-compose.yml so
@@ -87,10 +97,9 @@ primary_region = 'sjc'
   # processing buys memory pressure without real throughput.
   SHARP_CONCURRENCY = '1'
   STORAGE_PROVIDER = 'tigris'
-  # resend-sync worker: reach the web process over Fly's private 6PN network.
-  # The TLS middleware skips the HTTPS redirect for *.flycast hosts.
+  # resend-sync scheduled machine: reach the web process over Fly's private 6PN
+  # network. The TLS middleware skips the HTTPS redirect for *.flycast hosts.
   INTERNAL_API_URL = 'http://pickmyfruit.flycast'
-  RESEND_SYNC_POLL_MS = '60000'
   RESEND_SYNC_CURSOR_PATH = '/app/data/resend-sync/cursor.json'
   RESEND_API_RATE_PER_SEC = '4'
   RESEND_API_BUCKET_CAPACITY = '4'

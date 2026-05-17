@@ -98,7 +98,6 @@ export async function processOneRow(
 		id: user.id,
 		email: user.email,
 		name: user.name,
-		phone: user.phone,
 	});
 
 	if (upsertResult.kind === "ok") {
@@ -111,7 +110,32 @@ export async function processOneRow(
 	}
 
 	if (upsertResult.kind === "client-error") {
-		// 4xx is permanent for this row — advance past it so we never retry.
+		// 401/403 are configuration failures, not poisoned rows — a bad/revoked
+		// RESEND_API_KEY would otherwise silently walk the cursor past every user.
+		// Stall so the next tick retries and the failure stays loud in Sentry.
+		// (429 is already routed to server-error by `classify`.)
+		if (upsertResult.status === 401 || upsertResult.status === 403) {
+			logger.warn(
+				{
+					userId: user.id,
+					status: upsertResult.status,
+					message: upsertResult.message,
+				},
+				"resend-sync: stalled — Resend auth failure (check RESEND_API_KEY)",
+			);
+			Sentry.captureException(
+				new Error(
+					`Resend ${upsertResult.status} for ${user.id}: ${upsertResult.message}`,
+				),
+				{
+					fingerprint: ["resend-sync", "resend-auth-failed"],
+					extra: { userId: user.id, status: upsertResult.status },
+				},
+			);
+			return "stalled";
+		}
+
+		// Other 4xx is permanent for this row — advance past it so we never retry.
 		// Logged at warn so dev (where Sentry is typically off) still sees it.
 		await writeCursorFile(deps.cursorPath, body.nextCursor);
 		logger.warn(
@@ -120,7 +144,7 @@ export async function processOneRow(
 				status: upsertResult.status,
 				message: upsertResult.message,
 			},
-			"resend-sync: Resend 4xx — row skipped (check RESEND_API_KEY / contact data)",
+			"resend-sync: Resend 4xx — row skipped (check contact data)",
 		);
 		Sentry.captureException(
 			new Error(`Resend 4xx for ${user.id}: ${upsertResult.message}`),

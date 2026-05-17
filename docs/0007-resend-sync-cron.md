@@ -2,7 +2,7 @@
 
 ## Summary
 
-Keep Pick My Fruit's **user lifecycle** (create, profile update) in sync with **Resend Audiences** using a **small, long-running worker process** that runs as a second Fly process group on the same machine as the web app. The worker wakes on an interval, asks the web app over an internal HTTP API for the next user changed since the last successful sync, calls Resend, and advances a cursor stored in a small file on the Fly volume. There is **no jobs table**, **no outbox**, and **no producer-side enqueue discipline** — the `user` table is itself the queue.
+Keep Pick My Fruit's **user lifecycle** (create, profile update) in sync with **Resend** (Contacts + Topics) using a **small worker** that runs as a Fly **scheduled machine**. On each scheduled run, the worker asks the web app over an internal HTTP API for the next user changed since the last successful sync, calls Resend, advances a cursor stored in a small file on the Fly volume, and exits 0. There is **no jobs table**, **no outbox**, and **no producer-side enqueue discipline** — the `user` table is itself the queue.
 
 Email **templating** (moving magic-link and inquiry bodies into Resend Templates) is **orthogonal**; this doc covers **contact / audience sync** only.
 
@@ -15,7 +15,7 @@ Email **templating** (moving magic-link and inquiry bodies into Resend Templates
 
 ## Goals
 
-1. When a **user record is created** or **updated**, eventually upsert the contact in Resend and attach them to the **Global** audience.
+1. When a **user record is created** or **updated**, eventually upsert the contact in Resend and subscribe them to the **Newsletter** topic (Resend Topics API).
 2. **At-least-once delivery** with **safe retries** (Resend upsert is idempotent by email).
 3. **Failure isolation:** a Resend outage must not block sign-up or profile saves.
 4. **Minimal surface area:** no new producer code paths; no new schema beyond the existing `user(updated_at, id)` index.
@@ -39,15 +39,17 @@ Email **templating** (moving magic-link and inquiry bodies into Resend Templates
 | Process           | Package            | Role                                                                                                                    |
 | ----------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
 | **`app`**         | `apps/www`         | Serves public HTTP; Better Auth writes `user` rows as usual. Adds a small `/internal/v1/*` API used only by the worker. |
-| **`resend_sync`** | `apps/resend-sync` | Long-running process. On a timer (`RESEND_SYNC_POLL_MS`), runs a sync cycle until the queue is drained, then sleeps.    |
+| **`resend_sync`** | `apps/resend-sync` | Fly **scheduled machine** (hourly). Each invocation drains the user queue once and exits 0. Not a `[processes]` group.  |
 
-Both process groups run from the **same Docker image on the same VM** and share the Fly volume at `/app/data`. Only `app` exposes a public service.
+The `app` process group is provisioned via `[processes]` in `fly.toml`; `resend_sync` is provisioned once with `fly machine run . --schedule hourly --command "node apps/resend-sync/dist/main.js"`. Both run from the **same Docker image** and attach the same `data` volume at `/app/data`. Only `app` exposes a public service.
+
+**Why a scheduled machine, not a process group?** Earlier revisions of this doc proposed a long-running `[processes] resend_sync` worker that wakes on `RESEND_SYNC_POLL_MS`. Fly's process groups produce always-on Machines, so that model burns CPU/RAM/$ on an idle worker 99% of the time — and "increase poll frequency" is the wrong knob to add resilience to a job that's actually idle. Fly's scheduled-machine primitive is purpose-built for finite tasks: it starts on schedule, runs the command, exits. Loss of a poll iteration is just a missed schedule (next hour catches up — the cursor is durable), and the observability story is better (one machine per run, distinct log streams).
 
 **Why a separate package, not a second entry point in `apps/www`?** The previous revision of this doc deferred extraction "until a second integration justifies the package boundary." That bet has been falsified by the first integration: keeping the worker inside `apps/www` forced a 27-line `--define:import.meta.env.VITE_*` block in the Dockerfile to fake out Vite's build-time replacement, plus a vitest project carve-out and libsql resolution workarounds for a process that wants none of those things. Each future worker would inherit and amplify that tax. Doing the extraction now sets the cheap precedent: each new worker is a plain Node package with `process.env`, `@sentry/node`, and a tsc build — no Vite, no jsdom, no `import.meta.env` shimming.
 
 **Why not import the web app's DB client directly?** Considered and rejected. Cross-app imports break the `apps depend on packages` convention, couple the worker's build to web-only tooling (TanStack Start's import-protection, Vite paths), and recreate the toolchain mixing the extraction was meant to end. The two options worth considering are a `packages/db` workspace and an internal HTTP API. We chose the **HTTP API** for forward flexibility: the next async integration may want to be a binary (Go, Rust) running on a separate Machine, and an HTTP boundary is the only choice that lets us swap implementation language and topology without rewriting both sides.
 
-**Why our own Node loop instead of Supercronic?** Supercronic shines when you have several unrelated cron entries to manage from a `crontab` file. We have exactly one job; the worker's loop is trivial (sleep → drain → sleep). A single Node entrypoint that calls `setInterval` and listens for `SIGTERM` is fewer moving parts. We get the same Fly-level shape — a `resend_sync` process group scaled to **1** alongside `app` — without the extra dependency. Revisit if a second scheduled task lands.
+**Why Fly scheduled machines instead of a cron container (Supercronic, etc.)?** Supercronic and similar in-container cron daemons assume an always-on machine — exactly the cost profile a scheduled job should avoid. Fly's scheduled-machine primitive boots a Machine on the schedule, runs the command, and stops the Machine. One job, one scheduling primitive, no extra container. Revisit if we ever need finer granularity than `hourly` or job-level retries Fly doesn't offer (Cron Manager blueprint).
 
 The web process never imports worker code; the worker never serves HTTP and never opens the user database.
 
@@ -80,7 +82,7 @@ Headers:
 
 Responses:
 
-- **200** `{ "user": { "id", "email", "name", "phone" } | null, "nextCursor": "<opaque-string>" }`. When `user` is `null`, the queue is drained; the worker still persists `nextCursor` (it equals the request cursor) and sleeps until the next tick.
+- **200** `{ "user": { "id", "email", "name" } | null, "nextCursor": "<opaque-string>" }`. When `user` is `null`, the queue is drained; the worker still persists `nextCursor` (it equals the request cursor) and exits 0 until the next scheduled run.
 - **404** for any unknown route OR a missing/invalid secret. Returning the same 404 shape as any unknown URL avoids volunteering that `/internal/*` exists. Do **not** return 401 — that distinguishes "endpoint exists" from "endpoint doesn't" to an unauthenticated probe.
 - **5xx** for upstream DB errors. Worker treats this exactly like a Resend 5xx (see [Failure semantics](#failure-semantics)).
 
@@ -106,13 +108,13 @@ The cursor is an **opaque string** to the worker. Today it encodes `(updated_at,
 
 ### Cycle
 
-Each cycle:
+Each scheduled invocation:
 
 1. Read the cursor from `/app/data/resend-sync/cursor.json` (default `""` if absent — the API treats empty as "from the beginning").
 2. `GET /internal/v1/users/next?cursor=…` over `http://pickmyfruit.flycast` with the auth header.
-3. If `user` is `null`: cycle is **drained**; persist `nextCursor` (no-op if unchanged) and sleep.
-4. Otherwise: acquire a token from the rate-limit bucket (see [Rate limiting](#rate-limiting)), then upsert into Resend. Resend upsert is **two API calls**: `GET /contacts/{email}` followed by `POST /contacts` (create) or `PATCH /contacts/{id}` (update). Take **two tokens** per upsert.
-5. On success: write `nextCursor` atomically to disk (write-temp + `rename`). **Loop** back to step 1 until drained, then sleep.
+3. If `user` is `null`: queue is **drained**; persist `nextCursor` (no-op if unchanged) and exit 0.
+4. Otherwise: acquire a token from the rate-limit bucket (see [Rate limiting](#rate-limiting)), then upsert into Resend (Contacts view → POST/PATCH; ensure subscription to the Newsletter topic). Take **four tokens** per upsert (worst case: contact view + contact write + topics view + topics write).
+5. On success: write `nextCursor` atomically to disk (write-temp + `rename`). **Loop** back to step 1 until drained, then exit 0. On stall (5xx/network/auth failure): exit 0 without advancing — the next scheduled run retries the same row.
 
 ### Why `LIMIT 1` in a tight loop instead of `LIMIT N`
 
@@ -138,12 +140,13 @@ A fixed inter-row sleep is **explicitly rejected**: it punishes backfills (10k u
 
 ### Failure semantics
 
-| Failure                                    | Action                                                                                                                                                                                                      |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Internal API **404 / 5xx / network error** | **Stall**: do not advance the cursor. Sentry capture with `fingerprint = ['resend-sync', 'upstream-unavailable']`, `extra = { source: 'www', status }`.                                                     |
-| Resend **4xx** (e.g. invalid email format) | **Advance** the cursor past the row; Sentry capture with `fingerprint = ['resend-sync', 'resend-4xx']`, `extra = { userId, status }`. Treat as "this row will never succeed without a code or data change." |
-| Resend **5xx / 429 / network / timeout**   | **Stall**: do not advance. Sentry capture with `fingerprint = ['resend-sync', 'resend-unavailable']`, `extra = { status, retryAfter }`. Next tick will retry the same row.                                  |
-| Worker process crash                       | Same as stall: the unadvanced cursor causes the row to be retried after restart.                                                                                                                            |
+| Failure                                           | Action                                                                                                                                                                                       |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Internal API **404 / 5xx / network error**        | **Stall**: do not advance the cursor. Sentry capture with `fingerprint = ['resend-sync', 'upstream-unavailable']`, `extra = { source: 'www', status }`.                                      |
+| Resend **401 / 403** (bad/missing API key, scope) | **Stall**: do not advance. Sentry fingerprint `['resend-sync', 'resend-auth-failed']`. Treated separately from other 4xx so a revoked key cannot silently walk the cursor past every user.   |
+| Resend **other 4xx** (e.g. invalid email format)  | **Advance** the cursor past the row; Sentry fingerprint `['resend-sync', 'resend-4xx']`, `extra = { userId, status }`. Treat as "this row will never succeed without a code or data change." |
+| Resend **5xx / 429 / network / timeout**          | **Stall**: do not advance. Sentry fingerprint `['resend-sync', 'resend-unavailable']`, `extra = { status, retryAfter }`. Next scheduled run will retry the same row.                         |
+| Worker process crash                              | Same as stall: the unadvanced cursor causes the row to be retried after restart.                                                                                                             |
 
 We deliberately do **not** introduce a dead-letter list or `attempt_count` yet. If 4xx triage in Sentry shows recurring permanent failures (more than a handful per week), revisit (see [Future work](#future-work)).
 
@@ -153,14 +156,13 @@ Better Auth bumps `user.updated_at` for changes that Resend does not care about 
 
 **Critical exception — newsletter opt-out:** if/when the `user` schema gains a "subscribed to newsletter" flag, the API response must include it and the worker **must not** re-subscribe an opted-out user. The Resend call must reflect the current opt-in state (e.g. `unsubscribed: !user.subscribed`), not blindly upsert with `unsubscribed: false`. Mark this with a code comment at the Resend-mapping function and cover it with a unit test ("opted-out user is upserted with `unsubscribed: true`"). See [Future work](#future-work) for the larger subscription-management story.
 
-### Polling interval
+### Schedule
 
-`RESEND_SYNC_POLL_MS`, default `60_000` (1 minute) in prod, `1_000` in dev/test. The cycle exits early when drained, so the steady-state cost is one indexed `SELECT` per minute against a small table.
+`fly machine run . --schedule hourly` — the worker runs roughly once an hour, drains the queue, and exits. There is no in-process poll loop and no `RESEND_SYNC_POLL_MS`. If the steady-state delay (≤ ~1h until a profile change reaches Resend) ever becomes a product problem, tighten with a smaller schedule or move to a different scheduling primitive; do not reintroduce always-on polling.
 
 ### Signals
 
-- **`SIGTERM` / `SIGINT`:** finish the current row (so we never have "Resend succeeded, cursor not yet committed"), then exit 0. Use an `AbortController` shared with the sleep between cycles so a signal during sleep wakes immediately.
-- No need for a `SIGUSR2`-style wake signal at this stage.
+- **`SIGTERM` / `SIGINT`:** finish the current row (so we never have "Resend succeeded, cursor not yet committed"), then exit 0. Fly sends `SIGTERM` if the scheduled machine overruns its grace window.
 
 ---
 
@@ -169,7 +171,7 @@ Better Auth bumps `user.updated_at` for changes that Resend does not care about 
 The cursor lives in **`/app/data/resend-sync/cursor.json`** on the Fly volume.
 
 ```json
-{ "cursor": "<opaque-string>", "updatedAt": 1731720000000 }
+{ "cursor": "<opaque-string>" }
 ```
 
 Why a JSON file rather than a SQLite table:
@@ -196,25 +198,23 @@ Single Docker image, multi-stage build:
 
 ### Fly
 
-- `fly.toml`:
+- `fly.toml` declares only the `app` process group + the shared `data` mount; only `app` has `[http_service]`.
+- The `resend_sync` machine is provisioned **once** with:
 
-  ```toml
-  [processes]
-    app = "node .output/server/index.mjs"
-    resend_sync = "node apps/resend-sync/dist/main.js"
-
-  [[mounts]]
-    source = "data"
-    destination = "/app/data"
-    processes = ["app", "resend_sync"]
+  ```sh
+  fly machine run . \
+    --schedule hourly \
+    --restart no \
+    --command "node apps/resend-sync/dist/main.js" \
+    --region sjc \
+    --volume data:/app/data
   ```
 
-  Only `app` has `[http_service]`.
+  Scheduled machines cannot be started manually after creation (the schedule begins on the first run). One scheduled machine is enough; the cursor file is not safe under concurrent writers.
 
-- **Scale:** `fly scale count app=1 resend_sync=1`. **Exactly one** copy of `resend_sync` — the cursor file is not safe under concurrent writers.
-- **Secrets** (worker): `RESEND_API_KEY`, `RESEND_AUDIENCE_ID`, `INTERNAL_API_SECRET` (and optional `INTERNAL_API_SECRET_PREVIOUS` during rotation), `SENTRY_DSN`.
+- **Secrets** (worker): `RESEND_API_KEY`, `INTERNAL_API_SECRET` (and optional `INTERNAL_API_SECRET_PREVIOUS` during rotation), `SENTRY_DSN`.
 - **Secrets** (web): `INTERNAL_API_SECRET` (and optional previous) — same values as worker.
-- **Env** (worker): `INTERNAL_API_URL=http://pickmyfruit.flycast`, `RESEND_SYNC_POLL_MS`, `RESEND_API_RATE_PER_SEC`.
+- **Env** (worker): `INTERNAL_API_URL=http://pickmyfruit.flycast`, `RESEND_API_RATE_PER_SEC`.
 
 ### Local dev
 
@@ -339,6 +339,24 @@ Tracked: [#123](https://github.com/jamesarosen/PickMyFruit/issues/123), [#126](h
 ### F. Multi-worker scale-out
 
 The JSON cursor file assumes one writer. If we need multiple workers (sharded by hash of user id, say), migrate the cursor to a shared store — Turso, Postgres, or a small dedicated SQLite served through the same internal API. At that point, also revisit the shared-secret auth model.
+
+### G. GDPR right-to-erasure for Resend contacts
+
+Today, nothing removes a Resend contact when a Pick My Fruit account is deleted. Account deletion isn't a user-facing feature yet, but when it lands, the deletion path must also call `DELETE /contacts/{id}` (or enqueue a "tombstone" cursor row the worker can act on). Without this, deleted users remain in Resend audiences indefinitely, which violates GDPR Article 17. Open issue and link here when filed.
+
+### H. Marketing consent at signup (**HIGH-PRIORITY — blocks enabling sync in prod**)
+
+The current upsert defaults new contacts to `unsubscribed: false`. Pick My Fruit has no signup-time newsletter checkbox; users sign up to share fruit, not to opt into marketing. Under GDPR/CAN-SPAM, an implicit opt-in is non-compliant. Before this worker is enabled against the production Resend audience:
+
+1. Add a `marketing_opt_in` column on `user` (default `false`).
+2. Add an unchecked "Send me the occasional newsletter" checkbox to the signup flow (and a corresponding toggle in the profile UI — see Future Work I).
+3. Expose `marketing_opt_in` in the `/internal/v1/users/next` response and have the worker filter on it (or pass `unsubscribed: !opt_in` to Resend).
+
+Tracked separately; do not deploy the worker to production until this lands.
+
+### I. Per-topic opt-in in the profile UI
+
+Today the worker resolves a single topic by exact name (`"Newsletter"`). Once a profile-level subscription UI exists (paired with Future Work H), the user can see all Resend topics and choose per-topic subscription, and the worker can drive subscriptions from the local state rather than relying on a hardcoded topic name. This obviates the operational risk of someone renaming the topic in the Resend dashboard.
 
 ---
 

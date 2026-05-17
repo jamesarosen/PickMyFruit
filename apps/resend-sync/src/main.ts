@@ -1,10 +1,10 @@
 /**
  * Entry point for the resend-sync worker.
  *
- * Runs as a separate Fly process group on the same machine as apps/www,
- * sharing the volume at /app/data. Wakes on RESEND_SYNC_POLL_MS, drains the
- * user queue, then sleeps. SIGTERM/SIGINT finish the in-flight row, write
- * the cursor, and exit 0.
+ * Runs as a Fly scheduled machine (`fly machine run . --schedule hourly`),
+ * sharing the volume at /app/data with the `app` process group. Each invocation
+ * drains the user queue once and exits 0. SIGTERM/SIGINT finish the in-flight
+ * row, write the cursor, and exit 0.
  *
  * See docs/0007-resend-sync-cron.md.
  */
@@ -70,18 +70,38 @@ const internal = createInternalApiClient({
 	dispatcher,
 });
 
-const topicId = await findNewsletterTopicId({
-	apiKey: env.RESEND_API_KEY,
-	dispatcher,
-});
+let topicId: string | null;
+try {
+	topicId = await findNewsletterTopicId({
+		apiKey: env.RESEND_API_KEY,
+		dispatcher,
+	});
+} catch (err) {
+	// Network blip or Resend 5xx/429 at boot — transient. Exit 1 so Fly restarts
+	// us; exit 78 here would mark the worker as permanently misconfigured.
+	logger.error(
+		{ err: { message: (err as Error).message, name: (err as Error).name } },
+		"resend-sync: transient failure resolving Newsletter topic; exiting for restart",
+	);
+	Sentry.captureException(err, {
+		fingerprint: ["resend-sync", "newsletter-topic-transient"],
+	});
+	await Sentry.close(2_000).catch(() => undefined);
+	process.exit(1);
+}
 if (!topicId) {
+	// Either the topic genuinely doesn't exist, or the API key lacks scope —
+	// both are real misconfigurations a restart won't fix.
 	logger.fatal(
 		{ apiUrl: env.INTERNAL_API_URL },
-		'resend-sync: "Newsletter" topic not found in Resend; exiting',
+		'resend-sync: "Newsletter" topic not found or inaccessible (check RESEND_API_KEY scope); exiting',
 	);
-	Sentry.captureException(new Error('Resend "Newsletter" topic not found'), {
-		fingerprint: ["resend-sync", "newsletter-topic-not-found"],
-	});
+	Sentry.captureException(
+		new Error('Resend "Newsletter" topic not found or inaccessible'),
+		{
+			fingerprint: ["resend-sync", "newsletter-topic-not-found"],
+		},
+	);
 	await Sentry.close(2_000).catch(() => undefined);
 	process.exit(EXIT_CONFIG_ERROR);
 }
@@ -107,27 +127,8 @@ function shutdown(signal: string): void {
 process.once("SIGTERM", () => shutdown("SIGTERM"));
 process.once("SIGINT", () => shutdown("SIGINT"));
 
-function sleepWithAbort(ms: number, signal: AbortSignal): Promise<void> {
-	return new Promise((resolve) => {
-		if (signal.aborted) {
-			resolve();
-			return;
-		}
-		const timer = setTimeout(resolve, ms);
-		signal.addEventListener(
-			"abort",
-			() => {
-				clearTimeout(timer);
-				resolve();
-			},
-			{ once: true },
-		);
-	});
-}
-
 logger.info(
 	{
-		pollMs: env.RESEND_SYNC_POLL_MS,
 		cursorPath: env.RESEND_SYNC_CURSOR_PATH,
 		ratePerSec: env.RESEND_API_RATE_PER_SEC,
 		internalApiUrl: env.INTERNAL_API_URL,
@@ -136,20 +137,16 @@ logger.info(
 );
 
 try {
-	while (!controller.signal.aborted) {
-		// eslint-disable-next-line no-await-in-loop -- each cycle must commit before sleeping.
-		await runCycle({
-			internal,
-			resend,
-			bucket,
-			cursorPath: env.RESEND_SYNC_CURSOR_PATH,
-			signal: controller.signal,
-		});
-		if (controller.signal.aborted) break;
-		// eslint-disable-next-line no-await-in-loop
-		await sleepWithAbort(env.RESEND_SYNC_POLL_MS, controller.signal);
-	}
-	logger.info("resend-sync: shutting down");
+	await runCycle({
+		internal,
+		resend,
+		bucket,
+		cursorPath: env.RESEND_SYNC_CURSOR_PATH,
+		signal: controller.signal,
+	});
+	logger.info("resend-sync: drained, exiting");
+	await Sentry.close(2_000).catch(() => undefined);
+	process.exit(0);
 } catch (err) {
 	Sentry.captureException(err);
 	logger.error({ err }, "resend-sync: fatal error");

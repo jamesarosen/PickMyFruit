@@ -17,7 +17,7 @@ function makeFetch(response: Response | (() => Response)) {
 }
 
 const validBody = {
-	user: { id: "u1", email: "u@example.com", name: "You", phone: null },
+	user: { id: "u1", email: "u@example.com", name: "You" },
 	nextCursor: "next",
 };
 

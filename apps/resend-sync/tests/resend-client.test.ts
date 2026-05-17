@@ -10,7 +10,6 @@ const contact: ResendContact = {
 	id: "user_1",
 	email: "alice@example.com",
 	name: "Alice Anderson",
-	phone: null,
 };
 
 const CONTACT_ID = "c1-uuid";
@@ -103,18 +102,32 @@ describe(findNewsletterTopicId, () => {
 		expect(id).toBeNull();
 	});
 
-	it("returns null on network error", async () => {
+	it("throws on network error so the caller can exit-1 for a Fly restart", async () => {
 		const fetchImpl = vi.fn(() => {
 			throw new Error("ECONNREFUSED");
 		}) as unknown as typeof fetch;
 
-		const id = await findNewsletterTopicId({
-			apiKey: "rk_test",
-			baseUrl: "https://api.example.com",
-			fetchImpl,
-		});
+		await expect(
+			findNewsletterTopicId({
+				apiKey: "rk_test",
+				baseUrl: "https://api.example.com",
+				fetchImpl,
+			}),
+		).rejects.toThrow("ECONNREFUSED");
+	});
 
-		expect(id).toBeNull();
+	it("throws on a 5xx response so the caller can exit-1 for a Fly restart", async () => {
+		const { fetchImpl } = makeFetch([
+			() => new Response("{}", { status: 503 }),
+		]);
+
+		await expect(
+			findNewsletterTopicId({
+				apiKey: "rk_test",
+				baseUrl: "https://api.example.com",
+				fetchImpl,
+			}),
+		).rejects.toThrow(/503/);
 	});
 });
 

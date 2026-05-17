@@ -26,7 +26,6 @@ describe(parseWorkerEnv, () => {
 		const result = parseWorkerEnv(minimal);
 		assertTrue(result.ok);
 		const { env } = result;
-		expect(env.RESEND_SYNC_POLL_MS).toBe(60_000);
 		expect(env.RESEND_API_RATE_PER_SEC).toBe(4);
 		expect(env.RESEND_API_BUCKET_CAPACITY).toBe(4);
 		expect(env.RESEND_SYNC_CURSOR_PATH).toBe(
@@ -48,11 +47,9 @@ describe(parseWorkerEnv, () => {
 	it("coerces numeric env vars from strings", () => {
 		const result = parseWorkerEnv({
 			...minimal,
-			RESEND_SYNC_POLL_MS: "5000",
 			RESEND_API_RATE_PER_SEC: "2.5",
 		});
 		if (!result.ok) throw new Error(result.error.message);
-		expect(result.env.RESEND_SYNC_POLL_MS).toBe(5000);
 		expect(result.env.RESEND_API_RATE_PER_SEC).toBe(2.5);
 	});
 

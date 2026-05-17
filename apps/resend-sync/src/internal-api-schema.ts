@@ -15,7 +15,6 @@ export const internalUsersNextResponseSchema = z.object({
 			id: z.string(),
 			email: z.string(),
 			name: z.string(),
-			phone: z.string().nullable(),
 		})
 		.nullable(),
 	nextCursor: z.string(),

@@ -24,7 +24,6 @@ export const internalUsersNextResponseSchema = z.object({
 			id: z.string(),
 			email: z.string(),
 			name: z.string(),
-			phone: z.string().nullable(),
 		})
 		.nullable(),
 	nextCursor: z.string(),
@@ -50,7 +49,6 @@ export async function selectNextUser(
 			id: user.id,
 			email: user.email,
 			name: user.name,
-			phone: user.phone,
 			updatedAt: user.updatedAt,
 		})
 		.from(user)
@@ -74,7 +72,7 @@ export async function selectNextUser(
 			: Number(row.updatedAt)
 	const next: DecodedCursor = { updatedAt, userId: row.id }
 	return {
-		user: { id: row.id, email: row.email, name: row.name, phone: row.phone },
+		user: { id: row.id, email: row.email, name: row.name },
 		nextCursor: encodeCursor(next),
 	}
 }

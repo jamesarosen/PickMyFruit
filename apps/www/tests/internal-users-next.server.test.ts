@@ -59,14 +59,12 @@ describe('handleInternalUsersNext (contract + auth)', () => {
 				id: 'user_a',
 				email: 'a@example.com',
 				name: 'Alice',
-				phone: null,
 				updatedAt: new Date(1_000_000),
 			},
 			{
 				id: 'user_b',
 				email: 'b@example.com',
 				name: 'Bob',
-				phone: null,
 				updatedAt: new Date(2_000_000),
 			},
 		])
@@ -111,14 +109,12 @@ describe('handleInternalUsersNext (contract + auth)', () => {
 				id: 'user_z',
 				email: 'z@example.com',
 				name: 'Zed',
-				phone: null,
 				updatedAt: sharedTime,
 			},
 			{
 				id: 'user_a',
 				email: 'a@example.com',
 				name: 'Ada',
-				phone: null,
 				updatedAt: sharedTime,
 			},
 		])
@@ -186,7 +182,6 @@ describe('handleInternalUsersNext (contract + auth)', () => {
 			id: 'u',
 			email: 'u@example.com',
 			name: 'You',
-			phone: null,
 			updatedAt: new Date(100),
 		})
 		const res = await handleInternalUsersNext(

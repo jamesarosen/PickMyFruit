@@ -68,7 +68,6 @@ describe(processOneRow, () => {
 							id: "u1",
 							email: "u@example.com",
 							name: "You Sir",
-							phone: null,
 						},
 						nextCursor: "cursor-after-u1",
 					},
@@ -85,7 +84,6 @@ describe(processOneRow, () => {
 				id: "u1",
 				email: "u@example.com",
 				name: "You Sir",
-				phone: null,
 			});
 		});
 		expect.hasAssertions();
@@ -118,7 +116,7 @@ describe(processOneRow, () => {
 				{
 					kind: "ok",
 					body: {
-						user: { id: "u-bad", email: "bad", name: "Bad Email", phone: null },
+						user: { id: "u-bad", email: "bad", name: "Bad Email" },
 						nextCursor: "cursor-after-bad",
 					},
 				},
@@ -153,7 +151,6 @@ describe(processOneRow, () => {
 							id: "u-flaky",
 							email: "flaky@example.com",
 							name: "Flaky",
-							phone: null,
 						},
 						nextCursor: "cursor-after-flaky",
 					},

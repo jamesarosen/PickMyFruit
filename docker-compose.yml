@@ -60,9 +60,10 @@ services:
       retries: 3
     restart: unless-stopped
 
-  # Mirrors fly.toml's `resend_sync` process group. Runs from the same image
-  # as `web` (built once) so the local layout matches production: two
-  # processes, one image, one shared volume at /app/data.
+  # Local stand-in for the production scheduled machine (see fly.toml). Drains
+  # the user queue once and exits. Compose's `restart: unless-stopped` will
+  # restart it after each exit, giving "poll every few seconds" behaviour for
+  # local dev without bringing the scheduled-machine pattern into Compose.
   resend_sync:
     build:
       context: .
@@ -96,8 +97,6 @@ services:
       # Override the dev default (which points at apps/www/data/ via a
       # relative path) so the worker writes inside the shared /app/data mount.
       RESEND_SYNC_CURSOR_PATH: /app/data/resend-sync/cursor.json
-      # Poll fast in dev so an edit-cycle surfaces within seconds.
-      RESEND_SYNC_POLL_MS: "2000"
       # No real Resend credentials in the dev image. Set RESEND_API_KEY in
       # .env to exercise the real Resend flow.
       SENTRY_ENVIRONMENT: resend-sync

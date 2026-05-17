@@ -5,9 +5,11 @@
 
 primary_region = 'sjc'
 
+# `resend_sync` is not provisioned for preview apps. It's a scheduled machine
+# in production (see fly.toml); previews are short-lived and would never reach
+# the schedule. Devs can run the worker manually against a preview if needed.
 [processes]
   app = "node .output/server/index.mjs"
-  resend_sync = "node apps/resend-sync/dist/main.js"
 
 [build]
   dockerfile = "apps/www/Dockerfile"
@@ -43,7 +45,7 @@ primary_region = 'sjc'
   source = 'data'
   destination = '/app/data'
   initial_size = '1gb'
-  processes = ['app', 'resend_sync']
+  processes = ['app']
 
 [env]
   DATA_DIR = '/app/data'
@@ -54,12 +56,7 @@ primary_region = 'sjc'
   NODE_ENV = 'development'
   STORAGE_PROVIDER = 'local'
   MEDIA_ORIGIN = 'https://media.pickmyfruit.com'
-  # resend-sync worker env (INTERNAL_API_URL and INTERNAL_API_SECRET are Fly secrets).
-  RESEND_SYNC_CURSOR_PATH = '/app/data/resend-sync/cursor.json'
-  RESEND_SYNC_POLL_MS = '60000'
-  RESEND_API_RATE_PER_SEC = '4'
-  RESEND_API_BUCKET_CAPACITY = '4'
-  SENTRY_ENVIRONMENT = 'resend-sync-preview'
+  SENTRY_ENVIRONMENT = 'preview'
 
 [[vm]]
   size = 'shared-cpu-1x'

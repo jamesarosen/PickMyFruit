@@ -21,16 +21,9 @@ describe("cursor-file", () => {
 	it("round-trips a cursor through write → read", async () => {
 		await withTempDir(async (dir) => {
 			const path = join(dir, "cursor.json");
-			await writeCursorFile(
-				path,
-				"opaque-base64-cursor",
-				() => 1_700_000_000_000,
-			);
+			await writeCursorFile(path, "opaque-base64-cursor");
 			const got = await readCursorFile(path);
-			expect(got).toStrictEqual({
-				cursor: "opaque-base64-cursor",
-				updatedAt: 1_700_000_000_000,
-			});
+			expect(got).toStrictEqual({ cursor: "opaque-base64-cursor" });
 		});
 		expect.hasAssertions();
 	});

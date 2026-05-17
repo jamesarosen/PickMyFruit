@@ -8,13 +8,12 @@ import { z } from "zod";
  */
 export const cursorFileSchema = z.object({
 	cursor: z.string(),
-	updatedAt: z.number().int().nonnegative(),
 });
 
 export type CursorFile = z.infer<typeof cursorFileSchema>;
 
 /** Returned when the file does not exist or is unparseable. Treated as "start over". */
-export const EMPTY_CURSOR: CursorFile = { cursor: "", updatedAt: 0 };
+export const EMPTY_CURSOR: CursorFile = { cursor: "" };
 
 /**
  * Reads the cursor file. Missing file or invalid JSON → EMPTY_CURSOR.
@@ -59,15 +58,11 @@ export async function readCursorFile(path: string): Promise<CursorFile> {
 export async function writeCursorFile(
 	path: string,
 	cursor: string,
-	now: () => number = Date.now,
 ): Promise<void> {
 	const dir = dirname(path);
 	await mkdir(dir, { recursive: true });
 	const tmp = `${path}.tmp`;
-	const payload = JSON.stringify({
-		cursor,
-		updatedAt: now(),
-	} satisfies CursorFile);
+	const payload = JSON.stringify({ cursor } satisfies CursorFile);
 	await writeFile(tmp, payload, "utf8");
 	await rename(tmp, path);
 }
