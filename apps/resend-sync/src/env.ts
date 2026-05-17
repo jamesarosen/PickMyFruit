@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const baseEnv = z.object({
-	INTERNAL_API_URL: z.string().url(),
+	INTERNAL_API_URL: z.url(),
 	INTERNAL_API_SECRET: z.string().min(32),
 	RESEND_SYNC_POLL_MS: z.coerce.number().int().positive().prefault(60_000),
 	RESEND_API_RATE_PER_SEC: z.coerce.number().positive().prefault(4),

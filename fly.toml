@@ -94,7 +94,8 @@ primary_region = 'sjc'
   RESEND_SYNC_CURSOR_PATH = '/app/data/resend-sync/cursor.json'
   RESEND_API_RATE_PER_SEC = '4'
   RESEND_API_BUCKET_CAPACITY = '4'
-  SENTRY_ENVIRONMENT = 'resend-sync'
+  SENTRY_ENABLED = 'true'
+  SENTRY_ENVIRONMENT = 'production'
   # libuv default is 4. On a 1-CPU shared VM the extra threads buy memory
   # pressure with no real parallelism. Keep 2 so I/O and TLS can overlap.
   UV_THREADPOOL_SIZE = '2'

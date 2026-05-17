@@ -5,6 +5,10 @@
 
 primary_region = 'sjc'
 
+[processes]
+  app = "node .output/server/index.mjs"
+  resend_sync = "node apps/resend-sync/dist/main.js"
+
 [build]
   dockerfile = "apps/www/Dockerfile"
   ignorefile = ".dockerignore"
@@ -33,12 +37,13 @@ primary_region = 'sjc'
     path = '/api/health'
     protocol = 'http'
 
-# Persistent volume for SQLite database and local file uploads.
+# Persistent volume for SQLite database, cursor file, and local file uploads.
 # Fly creates the volume automatically on first deploy if it does not exist.
-[mounts]
+[[mounts]]
   source = 'data'
   destination = '/app/data'
   initial_size = '1gb'
+  processes = ['app', 'resend_sync']
 
 [env]
   DATA_DIR = '/app/data'
@@ -49,6 +54,12 @@ primary_region = 'sjc'
   NODE_ENV = 'development'
   STORAGE_PROVIDER = 'local'
   MEDIA_ORIGIN = 'https://media.pickmyfruit.com'
+  # resend-sync worker env (INTERNAL_API_URL and INTERNAL_API_SECRET are Fly secrets).
+  RESEND_SYNC_CURSOR_PATH = '/app/data/resend-sync/cursor.json'
+  RESEND_SYNC_POLL_MS = '60000'
+  RESEND_API_RATE_PER_SEC = '4'
+  RESEND_API_BUCKET_CAPACITY = '4'
+  SENTRY_ENVIRONMENT = 'resend-sync-preview'
 
 [[vm]]
   size = 'shared-cpu-1x'

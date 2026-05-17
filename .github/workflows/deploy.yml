@@ -143,11 +143,14 @@ jobs:
 
       - name: Set secrets
         if: steps.pr.outputs.number != ''
+        # RESEND_API_KEY is intentionally omitted — set it manually on the preview app to enable contact syncing.
         run: |
           flyctl secrets set --app $APP_NAME \
             BETTER_AUTH_SECRET="${{ secrets.PREVIEW_BETTER_AUTH_SECRET }}" \
             BETTER_AUTH_URL="https://$APP_NAME.fly.dev" \
-            HMAC_SECRET="${{ secrets.PREVIEW_HMAC_SECRET }}"
+            HMAC_SECRET="${{ secrets.PREVIEW_HMAC_SECRET }}" \
+            INTERNAL_API_URL="http://$APP_NAME.flycast" \
+            INTERNAL_API_SECRET="${{ secrets.PREVIEW_INTERNAL_API_SECRET }}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
