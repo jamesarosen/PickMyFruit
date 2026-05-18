@@ -3,6 +3,11 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 2
 
+if [ -z "$(git status --porcelain)" ]; then
+	echo "[after-turn] No changes detected; skipping."
+	exit 0
+fi
+
 echo "[after-turn] Auto-formatting..."
 format_stderr=$(pnpm format:write 2>&1 >/dev/null)
 format_exit=$?
