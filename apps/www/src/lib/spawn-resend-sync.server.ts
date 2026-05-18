@@ -119,6 +119,5 @@ export function spawnResendSyncWorkerIfEnabled(
 	})
 
 	attachWorkerSupervision(child, deps.supervisionDeps)
-	console.warn('attached worker supervision', child)
 	return child
 }

@@ -24,11 +24,9 @@ export const startInstance = createStart(() => ({
 const bootResendSyncWorker = createIsomorphicFn()
 	.client(() => undefined)
 	.server(() => {
-		console.warn('hi')
 		void import('@/lib/spawn-resend-sync.server').then((m) => {
 			m.spawnResendSyncWorkerIfEnabled()
 		})
 	})
 
-console.error('hi?')
 bootResendSyncWorker()
