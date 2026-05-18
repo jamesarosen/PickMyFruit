@@ -75,7 +75,7 @@ export async function handleInternalUsersNext(
 	try {
 		const started = Date.now()
 		const body = await deps.loadUser(cursor)
-		logger.info(
+		logger.debug(
 			{
 				route: '/internal/v1/users/next',
 				status: 200,

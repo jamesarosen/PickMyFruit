@@ -25,7 +25,7 @@ export async function runCycle(deps: RunCycleDeps): Promise<number> {
 	}
 
 	if (processed > 0) {
-		logger.info(
+		logger.debug(
 			{ rows: processed, durationMs: Date.now() - started },
 			"resend-sync: cycle drained",
 		);
