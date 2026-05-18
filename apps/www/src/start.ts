@@ -1,4 +1,4 @@
-import { createStart } from '@tanstack/solid-start'
+import { createIsomorphicFn, createStart } from '@tanstack/solid-start'
 import { mediaPreconnectMiddleware } from '@/middleware/media-preconnect'
 import { migrationsMiddleware } from '@/middleware/migrations'
 import { securityHeadersMiddleware } from '@/middleware/security-headers'
@@ -15,12 +15,18 @@ export const startInstance = createStart(() => ({
 
 // Boot-time side effect: when RESEND_SYNC_WORKER_ENABLED=true, spawn the
 // resend-sync worker as a child of this Node process so a single Fly machine
-// hosts both. Gated off by default; in prod fly.toml sets it to 'true'. Server
-// only — the dynamic import keeps the .server module out of the client graph
-// and the `typeof window` check defends against accidental SSR re-entry on the
-// browser (which can't happen, but cheap insurance).
-if (typeof window === 'undefined') {
-	void import('@/lib/spawn-resend-sync.server').then((m) => {
-		m.spawnResendSyncWorkerIfEnabled()
+// hosts both. Gated off by default; in prod fly.toml sets it to 'true'.
+//
+// `createIsomorphicFn` keeps the dynamic `.server` import inside the
+// server-only branch, satisfying TanStack Start's import-protection plugin
+// (which forbids any client-graph file from importing `*.server.*`, even
+// dynamically). The client branch is a no-op.
+const bootResendSyncWorker = createIsomorphicFn()
+	.client(() => undefined)
+	.server(() => {
+		void import('@/lib/spawn-resend-sync.server').then((m) => {
+			m.spawnResendSyncWorkerIfEnabled()
+		})
 	})
-}
+
+bootResendSyncWorker()
