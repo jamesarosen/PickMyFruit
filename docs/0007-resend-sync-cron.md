@@ -19,7 +19,7 @@ This design evolved through five iterations on the same PR (#239). Each pivot is
 
 ### v1 — Transactional outbox (design only)
 
-A `resend_sync_outbox` table in SQLite, written by Better Auth's `databaseHooks` on user create/update; a long-lived `resend-sync` consumer on the **same Fly machine** polled the table, called Resend, and marked rows `processed_at`. An optional HTTP "best-effort wake" ping from `app` → `resend-sync` was sketched to reduce poll latency, but the outbox table remained the authoritative source. Two long-lived processes on one Fly machine sharing the SQLite file. Full design in `docs/0006-resend-sync-outbox.md` (restored for reference).
+A `resend_sync_outbox` table in SQLite, written by Better Auth's `databaseHooks` on user create/update; a long-lived `resend-sync` consumer on the **same Fly machine** polled the table, called Resend, and marked rows `processed_at`. An optional HTTP "best-effort wake" ping from `app` → `resend-sync` was sketched to reduce poll latency, but the outbox table remained the authoritative source. Two long-lived processes on one Fly machine sharing the SQLite file. Original design lived at `docs/0006-resend-sync-outbox.md` — see PR #239's history for the full text.
 
 **Why rejected:** Two long-lived processes in one Fly container is operationally awkward — "the machine should die if `www` dies, but `resend-sync` should be restartable" doesn't map cleanly to any of the off-the-shelf supervisors (foreman/goreman/node-foreman/honcho/overmind/hivemind), and they all prefix stdout/stderr by default, defeating our structured logs. We also didn't want a separate outbox table when the `user` table is already the queue ordered by `(updated_at, id)`. Per this branch's git history, v1 lived only as a design doc; any partial implementation that existed earlier was rewritten away before `6d01efb` landed.
 
@@ -61,7 +61,7 @@ When this shape outgrows itself, the options ranked by smallest disturbance:
 
 ## Goals
 
-1. When a **user record is created** or **updated**, eventually upsert the contact in Resend and subscribe them to the **Newsletter** topic (Resend Topics API).
+1. When a **user record is created** or **updated**, eventually upsert the contact in Resend. The Newsletter topic uses Resend's default opt-in on contact create, so this design does not explicitly manage topic subscription.
 2. **At-least-once delivery** with **safe retries** (Resend upsert is idempotent by email).
 3. **Failure isolation:** a Resend outage must not block sign-up or profile saves.
 4. **Minimal surface area:** no new producer code paths; no new schema beyond the existing `user(updated_at, id)` index.
@@ -174,7 +174,7 @@ The worker runs a long-lived poll loop. Each cycle:
 1. Read the cursor from `/app/data/resend-sync/cursor.json` (default `""` if absent — the API treats empty as "from the beginning").
 2. `GET /internal/v1/users/next?cursor=…` over `http://pickmyfruit.flycast` with the auth header.
 3. If `user` is `null`: queue is **drained**; persist `nextCursor` (no-op if unchanged) and sleep `RESEND_SYNC_POLL_MS` before the next cycle.
-4. Otherwise: acquire tokens from the rate-limit bucket (see [Rate limiting](#rate-limiting)), then upsert into Resend (Contacts view → POST/PATCH; ensure subscription to the Newsletter topic). Take **four tokens** per upsert (worst case: contact view + contact write + topics view + topics write).
+4. Otherwise: acquire tokens from the rate-limit bucket (see [Rate limiting](#rate-limiting)), then upsert into Resend (Contacts view → POST/PATCH). Take **two tokens** per upsert (contact view + contact write).
 5. On success: write `nextCursor` atomically to disk (write-temp + `rename`). **Loop** back to step 1 until drained, then sleep. On stall (5xx/network/auth failure): break the inner loop, sleep, and retry the same row on the next cycle.
 
 ### Why `LIMIT 1` in a tight loop instead of `LIMIT N`
@@ -411,7 +411,7 @@ Tracked separately; do not deploy the worker to production until this lands.
 
 ### I. Per-topic opt-in in the profile UI
 
-Today the worker resolves a single topic by exact name (`"Newsletter"`). Once a profile-level subscription UI exists (paired with Future Work H), the user can see all Resend topics and choose per-topic subscription, and the worker can drive subscriptions from the local state rather than relying on a hardcoded topic name. This obviates the operational risk of someone renaming the topic in the Resend dashboard.
+Today the worker relies on Resend's default opt-in on contact create — the Newsletter topic is the only topic that exists, and a fresh contact is automatically subscribed. Once a profile-level subscription UI exists (paired with Future Work H) and we have more than one topic to surface, the user should be able to see all Resend topics and choose per-topic subscription, and the worker should drive subscriptions from the local state rather than relying on Resend's create-time defaults.
 
 ---
 

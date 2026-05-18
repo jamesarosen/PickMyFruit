@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import {
 	createResendUpsert,
-	findNewsletterTopicId,
 	parseRetryAfter,
 	type ResendContact,
 } from "../src/resend-client";
@@ -13,7 +12,6 @@ const contact: ResendContact = {
 };
 
 const CONTACT_ID = "c1-uuid";
-const TOPIC_ID = "topic-newsletter-uuid";
 
 function makeFetch(handlers: Array<(req: Request) => Response>) {
 	let call = 0;
@@ -37,125 +35,27 @@ function makeFetch(handlers: Array<(req: Request) => Response>) {
 function makeConfig(fetchImpl: typeof fetch) {
 	return {
 		apiKey: "rk_test",
-		topicId: TOPIC_ID,
 		baseUrl: "https://api.example.com",
 		fetchImpl,
 	};
 }
 
-describe(findNewsletterTopicId, () => {
-	it("returns the Newsletter topic ID when found", async () => {
-		const { fetchImpl, calls } = makeFetch([
-			() =>
-				new Response(
-					JSON.stringify({
-						object: "list",
-						has_more: false,
-						data: [
-							{ id: "other-id", name: "Announcements" },
-							{ id: TOPIC_ID, name: "Newsletter" },
-						],
-					}),
-					{ status: 200 },
-				),
-		]);
-
-		const id = await findNewsletterTopicId({
-			apiKey: "rk_test",
-			baseUrl: "https://api.example.com",
-			fetchImpl,
-		});
-
-		expect(id).toBe(TOPIC_ID);
-		expect(calls[0].url).toContain("/topics?limit=100");
-	});
-
-	it("returns null when Newsletter topic is absent", async () => {
-		const { fetchImpl } = makeFetch([
-			() =>
-				new Response(
-					JSON.stringify({ object: "list", has_more: false, data: [] }),
-					{ status: 200 },
-				),
-		]);
-
-		const id = await findNewsletterTopicId({
-			apiKey: "rk_test",
-			baseUrl: "https://api.example.com",
-			fetchImpl,
-		});
-
-		expect(id).toBeNull();
-	});
-
-	it("returns null on a non-OK response", async () => {
-		const { fetchImpl } = makeFetch([
-			() => new Response("{}", { status: 401 }),
-		]);
-
-		const id = await findNewsletterTopicId({
-			apiKey: "rk_test",
-			baseUrl: "https://api.example.com",
-			fetchImpl,
-		});
-
-		expect(id).toBeNull();
-	});
-
-	it("throws on network error so the caller can exit-1 for a Fly restart", async () => {
-		const fetchImpl = vi.fn(() => {
-			throw new Error("ECONNREFUSED");
-		}) as unknown as typeof fetch;
-
-		await expect(
-			findNewsletterTopicId({
-				apiKey: "rk_test",
-				baseUrl: "https://api.example.com",
-				fetchImpl,
-			}),
-		).rejects.toThrow("ECONNREFUSED");
-	});
-
-	it("throws on a 5xx response so the caller can exit-1 for a Fly restart", async () => {
-		const { fetchImpl } = makeFetch([
-			() => new Response("{}", { status: 503 }),
-		]);
-
-		await expect(
-			findNewsletterTopicId({
-				apiKey: "rk_test",
-				baseUrl: "https://api.example.com",
-				fetchImpl,
-			}),
-		).rejects.toThrow(/503/);
-	});
-});
-
 describe(createResendUpsert, () => {
-	it("creates a new contact and subscribes to Newsletter topic", async () => {
+	it("creates a new contact when GET returns 404", async () => {
 		const { fetchImpl, calls } = makeFetch([
 			// GET /contacts/:email → 404 (new)
 			() => new Response("{}", { status: 404 }),
 			// POST /contacts → 200 with id
 			() => new Response(JSON.stringify({ id: CONTACT_ID }), { status: 200 }),
-			// GET /contacts/:id/topics → not subscribed yet
-			() =>
-				new Response(
-					JSON.stringify({ object: "list", has_more: false, data: [] }),
-					{ status: 200 },
-				),
-			// PATCH /contacts/:id/topics → 200
-			() => new Response(JSON.stringify({ id: TOPIC_ID }), { status: 200 }),
 		]);
 
 		const upsert = createResendUpsert(makeConfig(fetchImpl));
 		const result = await upsert(contact);
 
 		expect(result).toStrictEqual({ kind: "ok" });
-		expect(calls).toHaveLength(4);
+		expect(calls).toHaveLength(2);
 
-		const [getReq, postReq, topicsGetReq, topicsPatchReq] = calls;
-
+		const [getReq, postReq] = calls;
 		expect(getReq.method).toBe("GET");
 		expect(getReq.url).toContain("/contacts/alice%40example.com");
 
@@ -168,38 +68,21 @@ describe(createResendUpsert, () => {
 			last_name: "Anderson",
 			unsubscribed: false,
 		});
-
-		expect(topicsGetReq.method).toBe("GET");
-		expect(topicsGetReq.url).toContain(
-			`/contacts/${CONTACT_ID}/topics?limit=100`,
-		);
-
-		expect(topicsPatchReq.method).toBe("PATCH");
-		expect(topicsPatchReq.url).toContain(`/contacts/${CONTACT_ID}/topics`);
-		const patchBody = (await topicsPatchReq.json()) as unknown;
-		expect(patchBody).toStrictEqual([{ id: TOPIC_ID, subscription: "opt_in" }]);
 	});
 
-	it("updates an existing contact and subscribes to Newsletter topic if absent", async () => {
+	it("updates an existing contact via PATCH /contacts/:id", async () => {
 		const { fetchImpl, calls } = makeFetch([
 			// GET → 200 with existing contact id
 			() => new Response(JSON.stringify({ id: CONTACT_ID }), { status: 200 }),
 			// PATCH /contacts/:id → 200
 			() => new Response("{}", { status: 200 }),
-			// GET /contacts/:id/topics → not subscribed
-			() =>
-				new Response(
-					JSON.stringify({ object: "list", has_more: false, data: [] }),
-					{ status: 200 },
-				),
-			// PATCH /contacts/:id/topics → 200
-			() => new Response(JSON.stringify({ id: TOPIC_ID }), { status: 200 }),
 		]);
 
 		const upsert = createResendUpsert(makeConfig(fetchImpl));
 		const result = await upsert({ ...contact, name: "Alice Updated" });
 
 		expect(result).toStrictEqual({ kind: "ok" });
+		expect(calls).toHaveLength(2);
 
 		const [, patchReq] = calls;
 		expect(patchReq.method).toBe("PATCH");
@@ -211,59 +94,6 @@ describe(createResendUpsert, () => {
 		});
 		// Critical: must not clobber an opt-out done in Resend's dashboard.
 		expect(patchBody).not.toHaveProperty("unsubscribed");
-	});
-
-	it("skips topic PATCH when contact is already subscribed", async () => {
-		const { fetchImpl, calls } = makeFetch([
-			// GET → 200
-			() => new Response(JSON.stringify({ id: CONTACT_ID }), { status: 200 }),
-			// PATCH contact → 200
-			() => new Response("{}", { status: 200 }),
-			// GET topics → already subscribed
-			() =>
-				new Response(
-					JSON.stringify({
-						object: "list",
-						has_more: false,
-						data: [
-							{ id: TOPIC_ID, name: "Newsletter", subscription: "opt_in" },
-						],
-					}),
-					{ status: 200 },
-				),
-			// No 4th call expected
-		]);
-
-		const upsert = createResendUpsert(makeConfig(fetchImpl));
-		const result = await upsert(contact);
-
-		expect(result).toStrictEqual({ kind: "ok" });
-		expect(calls).toHaveLength(3);
-	});
-
-	it("preserves opt_out — skips topic PATCH when subscribed with opt_out", async () => {
-		const { fetchImpl, calls } = makeFetch([
-			() => new Response(JSON.stringify({ id: CONTACT_ID }), { status: 200 }),
-			() => new Response("{}", { status: 200 }),
-			() =>
-				new Response(
-					JSON.stringify({
-						object: "list",
-						has_more: false,
-						data: [
-							{ id: TOPIC_ID, name: "Newsletter", subscription: "opt_out" },
-						],
-					}),
-					{ status: 200 },
-				),
-		]);
-
-		const upsert = createResendUpsert(makeConfig(fetchImpl));
-		const result = await upsert(contact);
-
-		expect(result).toStrictEqual({ kind: "ok" });
-		// Only GET + PATCH contact + GET topics — no topic PATCH.
-		expect(calls).toHaveLength(3);
 	});
 
 	it("returns client-error for 4xx from GET contact", async () => {

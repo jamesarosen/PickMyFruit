@@ -88,11 +88,11 @@ export async function processOneRow(
 
 	const { user } = body;
 
-	// Each upsert costs up to 4 Resend API calls:
-	//   GET contact → POST|PATCH contact → GET topics → PATCH topics (if absent).
-	// We take the worst-case count upfront to stay within the rate limit even
-	// when the topic step fires. Sized in calls, not upserts.
-	await deps.bucket.take(4);
+	// Each upsert costs up to 2 Resend API calls:
+	//   GET contact → POST|PATCH contact.
+	// Newsletter-topic subscription is left to Resend's default-opt-in on create,
+	// so we don't manage topics here. Sized in calls, not upserts.
+	await deps.bucket.take(2);
 
 	const upsertResult = await deps.resend({
 		id: user.id,

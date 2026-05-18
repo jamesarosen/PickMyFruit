@@ -6,11 +6,11 @@
 export type ResendDispatcher = object;
 
 /**
- * Resend Contacts upsert client (Topics API).
+ * Resend Contacts upsert client.
  *
  * Resend has no native upsert. We use the existence check
  * (`GET /contacts/{email}`) to decide between create (`POST`) and update
- * (`PATCH`), then ensure the contact is subscribed to the Newsletter topic:
+ * (`PATCH`):
  *
  * 1. `GET /contacts/{email}` — 404 → create, 200 → update.
  * 2a. 404: `POST /contacts` with `unsubscribed: false`. Fresh contacts default
@@ -19,11 +19,9 @@ export type ResendDispatcher = object;
  *     intentionally omits `unsubscribed` so the user's current Resend opt-in
  *     state is preserved across syncs. **Never blindly re-subscribe a user who
  *     opted out** (CAN-SPAM / GDPR).
- * 3. `GET /contacts/{id}/topics` — check whether the Newsletter topic is
- *    already present (any subscription value).
- * 4. If absent: `PATCH /contacts/{id}/topics` with `[{id, subscription: "opt_in"}]`.
- *    If present: no-op — preserve the user's existing subscription state.
  *
+ * Topic subscription (e.g. the Newsletter topic) is handled by Resend's own
+ * default-opt-in semantics on contact create, so we don't manage it here.
  * When the `user` schema gains a subscription field, include it on both the
  * POST and the PATCH as `unsubscribed: !user.subscribed` so opt-outs made
  * in-app propagate to Resend.
@@ -31,8 +29,6 @@ export type ResendDispatcher = object;
  * @see https://resend.com/docs/api-reference/contacts/get-contact
  * @see https://resend.com/docs/api-reference/contacts/create-contact
  * @see https://resend.com/docs/api-reference/contacts/update-contact
- * @see https://resend.com/docs/api-reference/contacts/get-contact-topics
- * @see https://resend.com/docs/api-reference/contacts/update-contact-topics
  */
 
 export interface ResendContact {
@@ -71,11 +67,6 @@ export interface ResendBaseConfig {
 	fetchImpl?: typeof fetch;
 }
 
-export interface ResendClientConfig extends ResendBaseConfig {
-	/** The Resend topic ID to subscribe contacts to (Newsletter). */
-	topicId: string;
-}
-
 const DEFAULT_BASE_URL = "https://api.resend.com";
 
 interface ResendErrorBody {
@@ -85,15 +76,6 @@ interface ResendErrorBody {
 
 interface ResendContactBody {
 	id?: string;
-}
-
-interface ResendTopicEntry {
-	id: string;
-	name?: string;
-}
-
-interface ResendListBody {
-	data: ResendTopicEntry[];
 }
 
 function splitName(fullName: string): {
@@ -166,54 +148,12 @@ function makeInit(
 }
 
 /**
- * Fetches all Resend topics (up to 100) and returns the ID of the one named
- * "Newsletter", or `null` if not found.
- *
- * Called once at worker boot. Distinguishes config errors from transient
- * failures so the caller can choose the right exit code:
- *
- * - **Returns `null`** when Resend responds and the result is a misconfiguration
- *   we can't recover from by restarting: missing topic, 401/403 (likely the API
- *   key lacks topic-management scope), or 404 on the topics endpoint. The
- *   caller should exit with EX_CONFIG (78) so Fly does not restart in a loop.
- * - **Throws** on network errors and 5xx/429 responses — these are transient,
- *   and the caller should exit 1 so Fly's restart policy kicks in.
- *
- * @see https://resend.com/docs/api-reference/topics/list-topics
+ * Returns a function that upserts a single contact into Resend. The function
+ * is idempotent.
  */
-export async function findNewsletterTopicId(
-	config: ResendBaseConfig,
-): Promise<string | null> {
+export function createResendUpsert(config: ResendBaseConfig): ResendUpsert {
 	const baseUrl = config.baseUrl ?? DEFAULT_BASE_URL;
 	const fetchImpl = config.fetchImpl ?? fetch;
-	const authHeader = `Bearer ${config.apiKey}`;
-
-	const response = await fetchImpl(
-		`${baseUrl}/topics?limit=100`,
-		makeInit("GET", authHeader, { dispatcher: config.dispatcher }),
-	);
-
-	if (
-		response.status === 401 ||
-		response.status === 403 ||
-		response.status === 404
-	)
-		return null;
-	if (!response.ok)
-		throw new Error(`Resend GET /topics returned ${response.status}`);
-
-	const body = (await response.json()) as ResendListBody;
-	return body.data.find((t) => t.name === "Newsletter")?.id ?? null;
-}
-
-/**
- * Returns a function that upserts a single contact into Resend and ensures
- * they are subscribed to the Newsletter topic. The function is idempotent.
- */
-export function createResendUpsert(config: ResendClientConfig): ResendUpsert {
-	const baseUrl = config.baseUrl ?? DEFAULT_BASE_URL;
-	const fetchImpl = config.fetchImpl ?? fetch;
-	const { topicId } = config;
 	const authHeader = `Bearer ${config.apiKey}`;
 
 	async function call(
@@ -239,10 +179,9 @@ export function createResendUpsert(config: ResendClientConfig): ResendUpsert {
 			return { kind: "network-error", error: err as Error };
 		}
 
-		let contactId: string;
-
 		if (getResponse.status === 404) {
-			// Step 2a: new contact.
+			// Step 2a: new contact. Resend opts new contacts into the Newsletter
+			// topic by default, so we don't manage topics here.
 			let createResponse: Response;
 			try {
 				createResponse = await call("POST", "/contacts", {
@@ -257,79 +196,36 @@ export function createResendUpsert(config: ResendClientConfig): ResendUpsert {
 			}
 			if (!createResponse.ok)
 				return classify(createResponse, await readErrorMessage(createResponse));
-
-			const createBody = (await createResponse.json()) as ResendContactBody;
-			if (!createBody.id) {
-				return {
-					kind: "client-error",
-					status: 200,
-					message: "Resend POST /contacts response missing id",
-				};
-			}
-			contactId = createBody.id;
-		} else if (!getResponse.ok)
-			return classify(getResponse, await readErrorMessage(getResponse));
-		else {
-			// Step 2b: existing contact — parse ID then update name fields.
-			const getBody = (await getResponse.json()) as ResendContactBody;
-			if (!getBody.id) {
-				return {
-					kind: "client-error",
-					status: 200,
-					message: "Resend GET /contacts response missing id",
-				};
-			}
-			contactId = getBody.id;
-
-			let patchResponse: Response;
-			try {
-				patchResponse = await call("PATCH", `/contacts/${contactId}`, {
-					first_name: firstName,
-					last_name: lastName,
-					// Intentional: PATCH must not include `unsubscribed`. Preserve the
-					// user's Resend opt-in state across syncs.
-				});
-			} catch (err) {
-				return { kind: "network-error", error: err as Error };
-			}
-			if (!patchResponse.ok)
-				return classify(patchResponse, await readErrorMessage(patchResponse));
-		}
-
-		// Step 3: check existing topic subscriptions.
-		let topicsResponse: Response;
-		try {
-			topicsResponse = await call(
-				"GET",
-				`/contacts/${contactId}/topics?limit=100`,
-			);
-		} catch (err) {
-			return { kind: "network-error", error: err as Error };
-		}
-		if (!topicsResponse.ok)
-			return classify(topicsResponse, await readErrorMessage(topicsResponse));
-
-		const topicsBody = (await topicsResponse.json()) as ResendListBody;
-		const alreadySubscribed = topicsBody.data.some((t) => t.id === topicId);
-
-		if (alreadySubscribed) {
-			// Preserve existing subscription — do not overwrite opt_out with opt_in.
 			return { kind: "ok" };
 		}
 
-		// Step 4: subscribe to Newsletter topic with opt_in default.
-		let subscribeResponse: Response;
+		if (!getResponse.ok)
+			return classify(getResponse, await readErrorMessage(getResponse));
+
+		// Step 2b: existing contact — parse ID then update name fields.
+		const getBody = (await getResponse.json()) as ResendContactBody;
+		if (!getBody.id) {
+			return {
+				kind: "client-error",
+				status: 200,
+				message: "Resend GET /contacts response missing id",
+			};
+		}
+		const contactId = getBody.id;
+
+		let patchResponse: Response;
 		try {
-			subscribeResponse = await call("PATCH", `/contacts/${contactId}/topics`, [
-				{ id: topicId, subscription: "opt_in" },
-			]);
+			patchResponse = await call("PATCH", `/contacts/${contactId}`, {
+				first_name: firstName,
+				last_name: lastName,
+				// Intentional: PATCH must not include `unsubscribed`. Preserve the
+				// user's Resend opt-in state across syncs.
+			});
 		} catch (err) {
 			return { kind: "network-error", error: err as Error };
 		}
-		if (subscribeResponse.ok) return { kind: "ok" };
-		return classify(
-			subscribeResponse,
-			await readErrorMessage(subscribeResponse),
-		);
+		if (!patchResponse.ok)
+			return classify(patchResponse, await readErrorMessage(patchResponse));
+		return { kind: "ok" };
 	};
 }

@@ -18,11 +18,7 @@ import { parseWorkerEnv } from "./env.js";
 import { initSentry, Sentry } from "./sentry.js";
 import { logger } from "./logger.js";
 import { createInternalApiClient } from "./internal-api-client.js";
-import {
-	createResendUpsert,
-	findNewsletterTopicId,
-	type ResendUpsert,
-} from "./resend-client.js";
+import { createResendUpsert, type ResendUpsert } from "./resend-client.js";
 import { runCycle } from "./run-cycle.js";
 import { createTokenBucket } from "./token-bucket.js";
 
@@ -84,45 +80,8 @@ const internal = createInternalApiClient({
 	dispatcher,
 });
 
-let topicId: string | null;
-try {
-	topicId = await findNewsletterTopicId({
-		apiKey: env.RESEND_API_KEY,
-		dispatcher,
-	});
-} catch (err) {
-	// Network blip or Resend 5xx/429 at boot — transient. Exit 1 so Fly restarts
-	// us; exit 78 here would mark the worker as permanently misconfigured.
-	logger.error(
-		{ err: { message: (err as Error).message, name: (err as Error).name } },
-		"resend-sync: transient failure resolving Newsletter topic; exiting for restart",
-	);
-	Sentry.captureException(err, {
-		fingerprint: ["resend-sync", "newsletter-topic-transient"],
-	});
-	await Sentry.close(2_000).catch(() => undefined);
-	process.exit(1);
-}
-if (!topicId) {
-	// Either the topic genuinely doesn't exist, or the API key lacks scope —
-	// both are real misconfigurations a restart won't fix.
-	logger.fatal(
-		{ apiUrl: env.INTERNAL_API_URL },
-		'resend-sync: "Newsletter" topic not found or inaccessible (check RESEND_API_KEY scope); exiting',
-	);
-	Sentry.captureException(
-		new Error('Resend "Newsletter" topic not found or inaccessible'),
-		{
-			fingerprint: ["resend-sync", "newsletter-topic-not-found"],
-		},
-	);
-	await Sentry.close(2_000).catch(() => undefined);
-	process.exit(EXIT_CONFIG_ERROR);
-}
-
 const resend: ResendUpsert = createResendUpsert({
 	apiKey: env.RESEND_API_KEY,
-	topicId,
 	dispatcher,
 });
 
