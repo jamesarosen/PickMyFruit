@@ -58,7 +58,14 @@ primary_region = 'sjc'
   MEDIA_ORIGIN = 'https://media.pickmyfruit.com'
   SENTRY_ENVIRONMENT = 'preview'
   # Preview deploys default the worker OFF — no real Resend writes from a PR.
+  # Cursor path + poll cadence are still declared so the env passes validation
+  # if the gate is ever flipped on. INTERNAL_API_URL is deliberately NOT set
+  # here: the preview app name is dynamic, and a stale `pickmyfruit.flycast`
+  # would route to production. Anyone enabling the worker on a preview must
+  # also `fly secrets set INTERNAL_API_URL=http://<preview-app>.flycast`.
   RESEND_SYNC_WORKER_ENABLED = 'false'
+  RESEND_SYNC_CURSOR_PATH = '/app/data/resend-sync/cursor.json'
+  RESEND_SYNC_POLL_MS = '60000'
 
 [[vm]]
   size = 'shared-cpu-1x'

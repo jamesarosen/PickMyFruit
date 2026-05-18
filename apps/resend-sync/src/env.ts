@@ -10,10 +10,11 @@ const baseEnv = z.object({
 		.prefault("false"),
 	RESEND_API_RATE_PER_SEC: z.coerce.number().positive().prefault(4),
 	RESEND_API_BUCKET_CAPACITY: z.coerce.number().int().positive().prefault(4),
-	RESEND_SYNC_CURSOR_PATH: z
-		.string()
-		.min(1)
-		.prefault("/app/data/resend-sync/cursor.json"),
+	// No prefault: every environment (prod via fly.toml, preview via
+	// fly.preview.toml, dev via apps/www/.env.development) must declare this
+	// explicitly. A silent default for a filesystem path that differs per
+	// environment is the kind of thing that loses cursor data.
+	RESEND_SYNC_CURSOR_PATH: z.string().min(1),
 	RESEND_API_KEY: z.string(),
 	SENTRY_DSN: z.url().optional(),
 	SENTRY_ENABLED: z
@@ -57,7 +58,7 @@ export function parseWorkerEnv(
 		ok: false,
 		error: {
 			kind: "env-validation-failed",
-			message: `resend-sync env validation failed. Check Fly secrets or .env.development:\n${summary}`,
+			message: `resend-sync env validation failed. Check fly.toml [env] (prod) or apps/www/.env.development (local):\n${summary}`,
 			issues,
 		},
 	};

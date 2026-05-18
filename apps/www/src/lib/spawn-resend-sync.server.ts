@@ -102,7 +102,7 @@ export function spawnResendSyncWorkerIfEnabled(
 	deps: SpawnResendSyncDeps = {}
 ): ChildProcess | SupervisedChild | null {
 	if (!shouldSpawnResendSyncWorker(env)) {
-		logger.info(
+		logger.warn(
 			'resend-sync worker disabled (set RESEND_SYNC_WORKER_ENABLED=true to enable)'
 		)
 		return null
@@ -119,5 +119,6 @@ export function spawnResendSyncWorkerIfEnabled(
 	})
 
 	attachWorkerSupervision(child, deps.supervisionDeps)
+	console.warn('attached worker supervision', child)
 	return child
 }

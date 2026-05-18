@@ -5,6 +5,7 @@ const minimal = {
 	INTERNAL_API_URL: "http://pickmyfruit.flycast",
 	INTERNAL_API_SECRET: "long-enough-internal-api-secret-aaa",
 	RESEND_API_KEY: "rk_test",
+	RESEND_SYNC_CURSOR_PATH: "/app/data/resend-sync/cursor.json",
 };
 
 /**
@@ -43,6 +44,17 @@ describe(parseWorkerEnv, () => {
 		assertFalse(result.ok);
 		expect(
 			result.error.issues.some((i) => i.path.includes("RESEND_API_KEY")),
+		).toBeTruthy();
+	});
+
+	it("fails when RESEND_SYNC_CURSOR_PATH is missing (no silent default)", () => {
+		const { RESEND_SYNC_CURSOR_PATH: _omit, ...rest } = minimal;
+		const result = parseWorkerEnv(rest);
+		assertFalse(result.ok);
+		expect(
+			result.error.issues.some((i) =>
+				i.path.includes("RESEND_SYNC_CURSOR_PATH"),
+			),
 		).toBeTruthy();
 	});
 

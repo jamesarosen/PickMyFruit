@@ -93,7 +93,7 @@ A single Fly machine runs both. The web server is the foreground process; the wo
 
 **Worker crash policy: rely on container restart.** If the worker child crashes, www's supervisor (`attachWorkerSupervision`) logs and Sentry-captures the non-zero exit, but does **not** auto-restart. The next container cycle (deploy, Fly health check failure, OOM, manual restart) brings the worker back. Acceptable because (a) the cursor is durable, so missed cycles only delay sync — they don't lose data, and (b) recurring crashes will surface as a stable Sentry fingerprint (`['resend-sync', 'worker-child-crashed']`). If that signal turns noisy, graduate to a real supervisor (s6-overlay) or split the worker back out to its own machine.
 
-**Kill switch.** `RESEND_SYNC_WORKER_ENABLED` is a runtime gate in both dev and prod. Default `false` in `apps/resend-sync/.env.development`; default `true` in `fly.toml`. Disable in prod without redeploying via `fly secrets set RESEND_SYNC_WORKER_ENABLED=false`. The gate is enforced twice — once in www before the spawn call (so no zombie process exists) and once at the worker's own startup (so direct invocation also respects it).
+**Kill switch.** `RESEND_SYNC_WORKER_ENABLED` is a runtime gate. Default `false` in `apps/www/.env.development`; default `true` in `fly.toml`. Disable in prod without redeploying via `fly secrets set RESEND_SYNC_WORKER_ENABLED=false`. The gate is enforced twice — once in www's spawn helper (so no child process is even started) and once at the worker's own startup (defence-in-depth against direct invocation).
 
 **Why a separate package, not a second entry point in `apps/www`?** Keeping the worker inside `apps/www` forced a 27-line `--define:import.meta.env.VITE_*` block in the Dockerfile to fake out Vite's build-time replacement, plus a vitest project carve-out and libsql resolution workarounds for a process that wants none of those things. Each future worker would inherit and amplify that tax. The extracted package is a plain Node bundle with `process.env`, `@sentry/node`, and a tsc build — no Vite, no jsdom, no `import.meta.env` shimming. The same artefact will deploy as a separate machine the day we want to.
 
@@ -268,12 +268,14 @@ Single Docker image, multi-stage build:
 
 ### Local dev
 
-Root `pnpm dev` runs `pnpm -r --parallel dev` so both packages start side-by-side. By default `apps/resend-sync/.env.development` ships `RESEND_SYNC_WORKER_ENABLED=false`, so:
+`apps/resend-sync` has **no** dev script, no `.env.development`, and no `dotenvx` — it's a library + entrypoint that only runs as a child of www. The worker has exactly one launch path in every environment: www's spawn helper. Devs who would otherwise be tempted to "just run the worker" against localhost can't, because the env vars the worker needs live in `apps/www/.env.development`.
 
-- `apps/www`'s spawn helper logs "worker disabled" and skips the child spawn.
-- `apps/resend-sync`'s `tsx watch` runs but the worker's own gate check fires and the process exits 0 immediately.
+Root `pnpm dev` runs only `apps/www`'s vite. At boot, www's `start.ts` calls the spawn helper:
 
-A dev who wants to exercise the loop creates `.env.development.local` with `RESEND_SYNC_WORKER_ENABLED=true` (and a real `RESEND_API_KEY`). The worker hits `http://localhost:5173/internal/v1/users/next` (no `.flycast` locally — Fly-Src verification skips, falling back to public-traffic semantics, so the loopback dev path is HTTP-only). Cursor file lives at `apps/www/data/resend-sync/cursor.json`.
+- With the default `RESEND_SYNC_WORKER_ENABLED=false` in `apps/www/.env.development`, the helper logs "worker disabled" and skips the spawn. www runs alone on `:5173`.
+- A dev who wants to exercise the loop adds `RESEND_SYNC_WORKER_ENABLED=true` + `RESEND_API_KEY=…` to `apps/www/.env.development.local`. The spawn fires; the worker child inherits all needed env (including `RESEND_SYNC_CURSOR_PATH=data/resend-sync/cursor.json` which resolves relative to www's CWD = `apps/www/data/resend-sync/cursor.json`, next to `development.db`).
+
+Iterating on worker code requires restarting www to reload the child. Hot-reload is listed as Future Work; in practice this trade-off is fine because worker changes are infrequent.
 
 ---
 
@@ -412,6 +414,10 @@ Tracked separately; do not deploy the worker to production until this lands.
 ### I. Per-topic opt-in in the profile UI
 
 Today the worker relies on Resend's default opt-in on contact create — the Newsletter topic is the only topic that exists, and a fresh contact is automatically subscribed. Once a profile-level subscription UI exists (paired with Future Work H) and we have more than one topic to surface, the user should be able to see all Resend topics and choose per-topic subscription, and the worker should drive subscriptions from the local state rather than relying on Resend's create-time defaults.
+
+### J. Hot-reload of the worker child during dev
+
+Editing `apps/resend-sync` source currently requires restarting www to pick up the new worker bundle. This is acceptable because worker changes are infrequent. A nice-to-have: have `apps/resend-sync`'s `tsc --watch` write to `dist/`, and have www's spawn helper watch the bundle for changes and re-spawn the child (e.g. via a SIGHUP listener on the parent, or an fs.watch on the dist file). Strictly DX; production semantics are unchanged.
 
 ---
 
