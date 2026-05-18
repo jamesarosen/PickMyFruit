@@ -3,6 +3,11 @@ import { z } from "zod";
 const baseEnv = z.object({
 	INTERNAL_API_URL: z.url(),
 	INTERNAL_API_SECRET: z.string().min(32),
+	RESEND_SYNC_POLL_MS: z.coerce.number().int().positive().prefault(60_000),
+	RESEND_SYNC_WORKER_ENABLED: z
+		.enum(["true", "false"])
+		.transform((v) => v === "true")
+		.prefault("false"),
 	RESEND_API_RATE_PER_SEC: z.coerce.number().positive().prefault(4),
 	RESEND_API_BUCKET_CAPACITY: z.coerce.number().int().positive().prefault(4),
 	RESEND_SYNC_CURSOR_PATH: z

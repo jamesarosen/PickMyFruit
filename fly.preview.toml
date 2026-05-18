@@ -5,9 +5,9 @@
 
 primary_region = 'sjc'
 
-# `resend_sync` is not provisioned for preview apps. It's a scheduled machine
-# in production (see fly.toml); previews are short-lived and would never reach
-# the schedule. Devs can run the worker manually against a preview if needed.
+# Previews don't spawn the resend-sync worker child: RESEND_SYNC_WORKER_ENABLED
+# defaults to 'false' in the [env] block below, so www's start.ts no-ops. To
+# exercise the worker against a preview, set the secret to 'true' for that app.
 [processes]
   app = "node .output/server/index.mjs"
 
@@ -57,6 +57,8 @@ primary_region = 'sjc'
   STORAGE_PROVIDER = 'local'
   MEDIA_ORIGIN = 'https://media.pickmyfruit.com'
   SENTRY_ENVIRONMENT = 'preview'
+  # Preview deploys default the worker OFF — no real Resend writes from a PR.
+  RESEND_SYNC_WORKER_ENABLED = 'false'
 
 [[vm]]
   size = 'shared-cpu-1x'

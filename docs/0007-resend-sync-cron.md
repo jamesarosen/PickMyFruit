@@ -2,14 +2,60 @@
 
 ## Summary
 
-Keep Pick My Fruit's **user lifecycle** (create, profile update) in sync with **Resend** (Contacts + Topics) using a **small worker** that runs as a Fly **scheduled machine**. On each scheduled run, the worker asks the web app over an internal HTTP API for the next user changed since the last successful sync, calls Resend, advances a cursor stored in a small file on the Fly volume, and exits 0. There is **no jobs table**, **no outbox**, and **no producer-side enqueue discipline** — the `user` table is itself the queue.
+Keep Pick My Fruit's **user lifecycle** (create, profile update) in sync with **Resend** (Contacts + Topics) using a **small long-lived worker** that runs as a `child_process` of the `apps/www` web server inside a single Fly machine. The worker wakes on `RESEND_SYNC_POLL_MS`, asks the web app over an internal HTTP API for the next user changed since the last successful sync, calls Resend, advances a cursor stored in a small file on the Fly volume, and sleeps. There is **no jobs table**, **no outbox**, and **no producer-side enqueue discipline** — the `user` table is itself the queue.
 
 Email **templating** (moving magic-link and inquiry bodies into Resend Templates) is **orthogonal**; this doc covers **contact / audience sync** only.
 
 **Related:**
 
 - GitHub issue "Resend User Sync" (#237).
-- Supersedes the outbox proposal in PR #239 (`docs/0006-resend-sync-outbox.md` on `cursor/resend-sync-outbox-plan-1755`). That design is preserved for posterity in the PR; this doc is the version we intend to implement.
+- Supersedes the outbox proposal in PR #239 (originally `docs/0006-resend-sync-outbox.md` on `cursor/resend-sync-outbox-plan-1755`). The outbox design and a partial implementation existed on an earlier state of this branch that has since been rewritten; see [Revision history](#revision-history) for the journey.
+
+---
+
+## Revision history
+
+This design evolved through five iterations on the same PR (#239). Each pivot is documented here because the failure modes that pushed us off each version are load-bearing context for the current shape; "why we didn't" is often more useful than "why we did."
+
+### v1 — Transactional outbox (design only)
+
+A `resend_sync_outbox` table in SQLite, written by Better Auth's `databaseHooks` on user create/update; a long-lived `resend-sync` consumer on the **same Fly machine** polled the table, called Resend, and marked rows `processed_at`. An optional HTTP "best-effort wake" ping from `app` → `resend-sync` was sketched to reduce poll latency, but the outbox table remained the authoritative source. Two long-lived processes on one Fly machine sharing the SQLite file. Full design in `docs/0006-resend-sync-outbox.md` (restored for reference).
+
+**Why rejected:** Two long-lived processes in one Fly container is operationally awkward — "the machine should die if `www` dies, but `resend-sync` should be restartable" doesn't map cleanly to any of the off-the-shelf supervisors (foreman/goreman/node-foreman/honcho/overmind/hivemind), and they all prefix stdout/stderr by default, defeating our structured logs. We also didn't want a separate outbox table when the `user` table is already the queue ordered by `(updated_at, id)`. Per this branch's git history, v1 lived only as a design doc; any partial implementation that existed earlier was rewritten away before `6d01efb` landed.
+
+### v2 — In-`apps/www` worker, two always-on machines
+
+Worker code lived inside `apps/www/resend-sync.server.ts`. The two Fly processes were declared via `[processes]` and ran as separate always-on Machines (Fly's default per group), communicating over the private 6PN network. The build used `esbuild --define:import.meta.env.*` so the worker bundle didn't try to do Vite-style env replacement at build time. Reference: commits `32b7a4b` (`resend_sync_state` table) through `1df0346` (dev script).
+
+**Why rejected:** Sharing the worker's source tree with `apps/www` forced a 27-line `--define:import.meta.env.VITE_*` block in the Dockerfile, a vitest project carve-out, and libsql resolution workarounds for a process that wants none of those things. The worker's build was perpetually working against the grain of Vite.
+
+### v3 — Two packages, two always-on machines
+
+Worker extracted into its own workspace package `apps/resend-sync` with a plain `tsc` build, its own Sentry init (`@sentry/node` reading `SENTRY_DSN`), and zero DB dependencies. Communication was over `http://pickmyfruit.flycast` with `INTERNAL_API_SECRET` in `x-internal-auth`. Cursor moved off SQLite onto an atomic JSON file on the Fly volume. Reference: commits `a863204` (doc rewrite) and `a8c9cf3` through `b9aea4f`.
+
+**Why rejected:** Two always-on Fly Machines for a job that's idle 99% of the time wasted both money and observability surface area. A reviewer flagged this as the wrong parallelism model.
+
+### v4 — One always-on machine + one scheduled machine
+
+`apps/www` kept its always-on Machine; `apps/resend-sync` moved to a Fly **scheduled machine** (`fly machine run . --schedule hourly`), drain-once-and-exit. Reference: commit `babf5eb`.
+
+**Why rejected:** Fly's minimum schedule granularity is hourly, so the steady-state lag from a profile change to its Resend reflection grew to ~1h. The scheduled machine also reintroduced a per-run cold start (Node boot + `findNewsletterTopicId` round-trip) on every invocation, and split the worker's logs into a separate stream from the web app's.
+
+### v5 — One machine, one container, `www` spawns the worker as a child process (current)
+
+`apps/www`'s `start.ts` calls `spawnResendSyncWorkerIfEnabled()` at boot, which spawns `apps/resend-sync` as a Node `child_process` when `RESEND_SYNC_WORKER_ENABLED=true`. Long-lived poll loop returns; cold start happens once per machine restart instead of once per cycle; logs interleave naturally. Communication stays over `pickmyfruit.flycast` (not loopback) so the security model and the graduation path are unchanged.
+
+**Crash policy:** if the worker child crashes, www's supervisor logs and Sentry-captures the non-zero exit but does **not** auto-restart. The container restart cycle (deploy, health-check failure, OOM) brings the worker back. Acceptable because the cursor is durable and recurring crashes will surface as a stable Sentry fingerprint.
+
+### Graduation paths (if v5 stops fitting)
+
+When this shape outgrows itself, the options ranked by smallest disturbance:
+
+- **Long-lived sub-processes for additional workers** on the same machine — pattern repeats; bin/start logic stays single-threaded.
+- **A general-purpose `workers` machine** — group multiple background workers onto one shared, always-on Fly machine separate from `www`. Reverts to the v3 topology but with multiple jobs justifying the cost.
+- **[s6-overlay](https://github.com/just-containers/s6-overlay)** — real per-process supervision with auto-restart, if the "container restart catches it" policy stops being good enough.
+- **A Node process manager like [pm2](https://www.npmjs.com/package/pm2)** — same idea, different toolchain.
+- **Per-process credential scoping via a keystore** (1Password, Doppler) — the natural next step after we have multiple workers reading different subsets of the env.
 
 ---
 
@@ -34,22 +80,26 @@ Email **templating** (moving magic-link and inquiry bodies into Resend Templates
 
 ## Architecture
 
-### One machine, two processes, two packages
+### One Fly machine, one container, two Node processes, two packages
 
-| Process           | Package            | Role                                                                                                                    |
-| ----------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| **`app`**         | `apps/www`         | Serves public HTTP; Better Auth writes `user` rows as usual. Adds a small `/internal/v1/*` API used only by the worker. |
-| **`resend_sync`** | `apps/resend-sync` | Fly **scheduled machine** (hourly). Each invocation drains the user queue once and exits 0. Not a `[processes]` group.  |
+| Process       | Package            | Role                                                                                                                                                               |
+| ------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `app` (PID 1) | `apps/www`         | Serves public HTTP; Better Auth writes `user` rows as usual. Adds a small `/internal/v1/*` API used only by the worker. Hosts the only `[processes]` group on Fly. |
+| worker child  | `apps/resend-sync` | Long-lived poll loop. Spawned at boot by `apps/www/src/lib/spawn-resend-sync.server.ts` as a Node child process when `RESEND_SYNC_WORKER_ENABLED=true`.            |
 
-The `app` process group is provisioned via `[processes]` in `fly.toml`; `resend_sync` is provisioned once with `fly machine run . --schedule hourly --command "node apps/resend-sync/dist/main.js"`. Both run from the **same Docker image** and attach the same `data` volume at `/app/data`. Only `app` exposes a public service.
+A single Fly machine runs both. The web server is the foreground process; the worker is its `child_process.spawn`'d sibling. The worker hits the web server over `http://pickmyfruit.flycast` (not loopback) so the security model is identical to a future multi-machine split — Fly's edge signs `Fly-Src` for the internal call and the TLS middleware verifies it against `/.fly/fly-src.pub` (see `apps/www/src/lib/is-fly-internal-request.server.ts`).
 
-**Why a scheduled machine, not a process group?** Earlier revisions of this doc proposed a long-running `[processes] resend_sync` worker that wakes on `RESEND_SYNC_POLL_MS`. Fly's process groups produce always-on Machines, so that model burns CPU/RAM/$ on an idle worker 99% of the time — and "increase poll frequency" is the wrong knob to add resilience to a job that's actually idle. Fly's scheduled-machine primitive is purpose-built for finite tasks: it starts on schedule, runs the command, exits. Loss of a poll iteration is just a missed schedule (next hour catches up — the cursor is durable), and the observability story is better (one machine per run, distinct log streams).
+**Why one container instead of two Fly machines?** Earlier revisions of this doc tried two shapes: an always-on `[processes] resend_sync` group, and a Fly scheduled machine (`fly machine run --schedule hourly`). The always-on process group was an always-on idle VM — wrong cost profile. The scheduled machine fixed the cost but added an always-on machine of its own (per Fly's process model, each `[processes]` entry creates a machine; scheduled machines avoid that but introduce a per-run cold-start and a separate observability stream for what is one logical pipeline). Going back to a **single container with a child process** is the cheapest shape (one VM, one log stream, no scheduler) while preserving graduation: removing the spawn from `start.ts` and adding a `[processes] resend_sync` or scheduled-machine config restores the prior topology in minutes.
 
-**Why a separate package, not a second entry point in `apps/www`?** The previous revision of this doc deferred extraction "until a second integration justifies the package boundary." That bet has been falsified by the first integration: keeping the worker inside `apps/www` forced a 27-line `--define:import.meta.env.VITE_*` block in the Dockerfile to fake out Vite's build-time replacement, plus a vitest project carve-out and libsql resolution workarounds for a process that wants none of those things. Each future worker would inherit and amplify that tax. Doing the extraction now sets the cheap precedent: each new worker is a plain Node package with `process.env`, `@sentry/node`, and a tsc build — no Vite, no jsdom, no `import.meta.env` shimming.
+**Worker crash policy: rely on container restart.** If the worker child crashes, www's supervisor (`attachWorkerSupervision`) logs and Sentry-captures the non-zero exit, but does **not** auto-restart. The next container cycle (deploy, Fly health check failure, OOM, manual restart) brings the worker back. Acceptable because (a) the cursor is durable, so missed cycles only delay sync — they don't lose data, and (b) recurring crashes will surface as a stable Sentry fingerprint (`['resend-sync', 'worker-child-crashed']`). If that signal turns noisy, graduate to a real supervisor (s6-overlay) or split the worker back out to its own machine.
 
-**Why not import the web app's DB client directly?** Considered and rejected. Cross-app imports break the `apps depend on packages` convention, couple the worker's build to web-only tooling (TanStack Start's import-protection, Vite paths), and recreate the toolchain mixing the extraction was meant to end. The two options worth considering are a `packages/db` workspace and an internal HTTP API. We chose the **HTTP API** for forward flexibility: the next async integration may want to be a binary (Go, Rust) running on a separate Machine, and an HTTP boundary is the only choice that lets us swap implementation language and topology without rewriting both sides.
+**Kill switch.** `RESEND_SYNC_WORKER_ENABLED` is a runtime gate in both dev and prod. Default `false` in `apps/resend-sync/.env.development`; default `true` in `fly.toml`. Disable in prod without redeploying via `fly secrets set RESEND_SYNC_WORKER_ENABLED=false`. The gate is enforced twice — once in www before the spawn call (so no zombie process exists) and once at the worker's own startup (so direct invocation also respects it).
 
-**Why Fly scheduled machines instead of a cron container (Supercronic, etc.)?** Supercronic and similar in-container cron daemons assume an always-on machine — exactly the cost profile a scheduled job should avoid. Fly's scheduled-machine primitive boots a Machine on the schedule, runs the command, and stops the Machine. One job, one scheduling primitive, no extra container. Revisit if we ever need finer granularity than `hourly` or job-level retries Fly doesn't offer (Cron Manager blueprint).
+**Why a separate package, not a second entry point in `apps/www`?** Keeping the worker inside `apps/www` forced a 27-line `--define:import.meta.env.VITE_*` block in the Dockerfile to fake out Vite's build-time replacement, plus a vitest project carve-out and libsql resolution workarounds for a process that wants none of those things. Each future worker would inherit and amplify that tax. The extracted package is a plain Node bundle with `process.env`, `@sentry/node`, and a tsc build — no Vite, no jsdom, no `import.meta.env` shimming. The same artefact will deploy as a separate machine the day we want to.
+
+**Why not import the web app's DB client directly?** Cross-app imports break the `apps depend on packages` convention, couple the worker's build to web-only tooling (TanStack Start's import-protection, Vite paths), and recreate the toolchain mixing the extraction was meant to end. The two options worth considering are a `packages/db` workspace and an internal HTTP API. We chose the **HTTP API** for forward flexibility and for the security symmetry above (Fly-Src verification works identically whether the worker is local or remote).
+
+**Why HTTP over flycast for a same-container call?** Loopback (`http://localhost:3000`) would skip Fly's proxy hop and shave a few ms, but it would tightly couple the worker to "same container" and break the Fly-Src verification path. We pay the proxy hop to keep the security and topology contract intact.
 
 The web process never imports worker code; the worker never serves HTTP and never opens the user database.
 
@@ -82,7 +132,7 @@ Headers:
 
 Responses:
 
-- **200** `{ "user": { "id", "email", "name" } | null, "nextCursor": "<opaque-string>" }`. When `user` is `null`, the queue is drained; the worker still persists `nextCursor` (it equals the request cursor) and exits 0 until the next scheduled run.
+- **200** `{ "user": { "id", "email", "name" } | null, "nextCursor": "<opaque-string>" }`. When `user` is `null`, the queue is drained; the worker still persists `nextCursor` (it equals the request cursor) and sleeps `RESEND_SYNC_POLL_MS` before the next cycle.
 - **404** for any unknown route OR a missing/invalid secret. Returning the same 404 shape as any unknown URL avoids volunteering that `/internal/*` exists. Do **not** return 401 — that distinguishes "endpoint exists" from "endpoint doesn't" to an unauthenticated probe.
 - **5xx** for upstream DB errors. Worker treats this exactly like a Resend 5xx (see [Failure semantics](#failure-semantics)).
 
@@ -119,13 +169,13 @@ Implementation lives in `apps/www/src/lib/is-fly-internal-request.server.ts`; te
 
 ### Cycle
 
-Each scheduled invocation:
+The worker runs a long-lived poll loop. Each cycle:
 
 1. Read the cursor from `/app/data/resend-sync/cursor.json` (default `""` if absent — the API treats empty as "from the beginning").
 2. `GET /internal/v1/users/next?cursor=…` over `http://pickmyfruit.flycast` with the auth header.
-3. If `user` is `null`: queue is **drained**; persist `nextCursor` (no-op if unchanged) and exit 0.
-4. Otherwise: acquire a token from the rate-limit bucket (see [Rate limiting](#rate-limiting)), then upsert into Resend (Contacts view → POST/PATCH; ensure subscription to the Newsletter topic). Take **four tokens** per upsert (worst case: contact view + contact write + topics view + topics write).
-5. On success: write `nextCursor` atomically to disk (write-temp + `rename`). **Loop** back to step 1 until drained, then exit 0. On stall (5xx/network/auth failure): exit 0 without advancing — the next scheduled run retries the same row.
+3. If `user` is `null`: queue is **drained**; persist `nextCursor` (no-op if unchanged) and sleep `RESEND_SYNC_POLL_MS` before the next cycle.
+4. Otherwise: acquire tokens from the rate-limit bucket (see [Rate limiting](#rate-limiting)), then upsert into Resend (Contacts view → POST/PATCH; ensure subscription to the Newsletter topic). Take **four tokens** per upsert (worst case: contact view + contact write + topics view + topics write).
+5. On success: write `nextCursor` atomically to disk (write-temp + `rename`). **Loop** back to step 1 until drained, then sleep. On stall (5xx/network/auth failure): break the inner loop, sleep, and retry the same row on the next cycle.
 
 ### Why `LIMIT 1` in a tight loop instead of `LIMIT N`
 
@@ -156,7 +206,7 @@ A fixed inter-row sleep is **explicitly rejected**: it punishes backfills (10k u
 | Internal API **404 / 5xx / network error**        | **Stall**: do not advance the cursor. Sentry capture with `fingerprint = ['resend-sync', 'upstream-unavailable']`, `extra = { source: 'www', status }`.                                      |
 | Resend **401 / 403** (bad/missing API key, scope) | **Stall**: do not advance. Sentry fingerprint `['resend-sync', 'resend-auth-failed']`. Treated separately from other 4xx so a revoked key cannot silently walk the cursor past every user.   |
 | Resend **other 4xx** (e.g. invalid email format)  | **Advance** the cursor past the row; Sentry fingerprint `['resend-sync', 'resend-4xx']`, `extra = { userId, status }`. Treat as "this row will never succeed without a code or data change." |
-| Resend **5xx / 429 / network / timeout**          | **Stall**: do not advance. Sentry fingerprint `['resend-sync', 'resend-unavailable']`, `extra = { status, retryAfter }`. Next scheduled run will retry the same row.                         |
+| Resend **5xx / 429 / network / timeout**          | **Stall**: do not advance. Sentry fingerprint `['resend-sync', 'resend-unavailable']`, `extra = { status, retryAfter }`. Next poll cycle retries the same row.                               |
 | Worker process crash                              | Same as stall: the unadvanced cursor causes the row to be retried after restart.                                                                                                             |
 
 We deliberately do **not** introduce a dead-letter list or `attempt_count` yet. If 4xx triage in Sentry shows recurring permanent failures (more than a handful per week), revisit (see [Future work](#future-work)).
@@ -167,13 +217,14 @@ Better Auth bumps `user.updated_at` for changes that Resend does not care about 
 
 **Critical exception — newsletter opt-out:** if/when the `user` schema gains a "subscribed to newsletter" flag, the API response must include it and the worker **must not** re-subscribe an opted-out user. The Resend call must reflect the current opt-in state (e.g. `unsubscribed: !user.subscribed`), not blindly upsert with `unsubscribed: false`. Mark this with a code comment at the Resend-mapping function and cover it with a unit test ("opted-out user is upserted with `unsubscribed: true`"). See [Future work](#future-work) for the larger subscription-management story.
 
-### Schedule
+### Polling interval
 
-`fly machine run . --schedule hourly` — the worker runs roughly once an hour, drains the queue, and exits. There is no in-process poll loop and no `RESEND_SYNC_POLL_MS`. If the steady-state delay (≤ ~1h until a profile change reaches Resend) ever becomes a product problem, tighten with a smaller schedule or move to a different scheduling primitive; do not reintroduce always-on polling.
+`RESEND_SYNC_POLL_MS`, default `60_000` (1 minute) in prod, `2_000` in dev. The cycle exits early when drained, so the steady-state cost is one indexed `SELECT` per minute against a small table. The poll loop is long-lived inside the worker child; one Node boot per container lifetime, not per cycle.
 
 ### Signals
 
-- **`SIGTERM` / `SIGINT`:** finish the current row (so we never have "Resend succeeded, cursor not yet committed"), then exit 0. Fly sends `SIGTERM` if the scheduled machine overruns its grace window.
+- **`SIGTERM` / `SIGINT`:** finish the current row (so we never have "Resend succeeded, cursor not yet committed"), then exit 0. An `AbortController` is shared with the inter-cycle sleep so a signal during sleep wakes the loop immediately.
+- The www parent forwards its own `SIGTERM`/`SIGINT` to the worker child (see `attachWorkerSupervision`), so container shutdown propagates cleanly.
 
 ---
 
@@ -209,27 +260,20 @@ Single Docker image, multi-stage build:
 
 ### Fly
 
-- `fly.toml` declares only the `app` process group + the shared `data` mount; only `app` has `[http_service]`.
-- The `resend_sync` machine is provisioned **once** with:
-
-  ```sh
-  fly machine run . \
-    --schedule hourly \
-    --restart no \
-    --command "node apps/resend-sync/dist/main.js" \
-    --region sjc \
-    --volume data:/app/data
-  ```
-
-  Scheduled machines cannot be started manually after creation (the schedule begins on the first run). One scheduled machine is enough; the cursor file is not safe under concurrent writers.
-
-- **Secrets** (worker): `RESEND_API_KEY`, `INTERNAL_API_SECRET` (and optional `INTERNAL_API_SECRET_PREVIOUS` during rotation), `SENTRY_DSN`.
-- **Secrets** (web): `INTERNAL_API_SECRET` (and optional previous) — same values as worker.
-- **Env** (worker): `INTERNAL_API_URL=http://pickmyfruit.flycast`, `RESEND_API_RATE_PER_SEC`.
+- `fly.toml` declares a single `app` process group + the shared `data` mount; only `app` has `[http_service]`. No second process group, no scheduled machine.
+- At boot, `apps/www/src/start.ts` calls `spawnResendSyncWorkerIfEnabled()` (in `apps/www/src/lib/spawn-resend-sync.server.ts`). When `RESEND_SYNC_WORKER_ENABLED=true`, that helper `child_process.spawn`s `apps/resend-sync/dist/main.js` with stdio inherited so logs interleave naturally. The supervisor forwards `SIGTERM`/`SIGINT` and Sentry-captures non-zero child exits.
+- **Secrets** (one set, shared by both processes since they share env): `RESEND_API_KEY`, `INTERNAL_API_SECRET` (and optional `INTERNAL_API_SECRET_PREVIOUS` during rotation), `SENTRY_DSN`.
+- **Env**: `INTERNAL_API_URL=http://pickmyfruit.flycast`, `RESEND_SYNC_POLL_MS`, `RESEND_SYNC_WORKER_ENABLED=true`, `RESEND_API_RATE_PER_SEC`, `RESEND_API_BUCKET_CAPACITY`, `RESEND_SYNC_CURSOR_PATH`.
+- **Runtime kill switch**: `fly secrets set RESEND_SYNC_WORKER_ENABLED=false` disables the worker without a code change. The next container restart skips the spawn.
 
 ### Local dev
 
-Run web and worker side-by-side; both read from `.env.development`. Worker hits `http://localhost:5173/internal/v1/users/next` (no `.flycast` locally). Cursor file lives at `apps/www/data/resend-sync/cursor.json` or similar — pick one path and document it.
+Root `pnpm dev` runs `pnpm -r --parallel dev` so both packages start side-by-side. By default `apps/resend-sync/.env.development` ships `RESEND_SYNC_WORKER_ENABLED=false`, so:
+
+- `apps/www`'s spawn helper logs "worker disabled" and skips the child spawn.
+- `apps/resend-sync`'s `tsx watch` runs but the worker's own gate check fires and the process exits 0 immediately.
+
+A dev who wants to exercise the loop creates `.env.development.local` with `RESEND_SYNC_WORKER_ENABLED=true` (and a real `RESEND_API_KEY`). The worker hits `http://localhost:5173/internal/v1/users/next` (no `.flycast` locally — Fly-Src verification skips, falling back to public-traffic semantics, so the loopback dev path is HTTP-only). Cursor file lives at `apps/www/data/resend-sync/cursor.json`.
 
 ---
 

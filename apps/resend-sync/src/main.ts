@@ -1,10 +1,15 @@
 /**
  * Entry point for the resend-sync worker.
  *
- * Runs as a Fly scheduled machine (`fly machine run . --schedule hourly`),
- * sharing the volume at /app/data with the `app` process group. Each invocation
- * drains the user queue once and exits 0. SIGTERM/SIGINT finish the in-flight
- * row, write the cursor, and exit 0.
+ * Long-lived process. In production, spawned as a child of the `app` web
+ * server (see `apps/www/src/lib/spawn-resend-sync.server.ts`) on the same
+ * Fly machine, sharing the volume at /app/data. Wakes on `RESEND_SYNC_POLL_MS`,
+ * drains the user queue, sleeps. SIGTERM/SIGINT finish the in-flight row,
+ * write the cursor, and exit 0.
+ *
+ * Gated by `RESEND_SYNC_WORKER_ENABLED` (default false). When disabled, exits
+ * 0 immediately so a misconfigured spawn or a stray `pnpm dev` invocation
+ * doesn't quietly burn API calls.
  *
  * See docs/0007-resend-sync-cron.md.
  */
@@ -49,6 +54,15 @@ if (!envResult.ok) {
 }
 
 const { env } = envResult;
+
+if (!env.RESEND_SYNC_WORKER_ENABLED) {
+	// Logged before Sentry init: it's the explicit "disabled" path, not an
+	// error worth capturing. Visible in stdout so devs notice the gate.
+	logger.info(
+		"resend-sync: worker disabled (RESEND_SYNC_WORKER_ENABLED != 'true'); exiting",
+	);
+	process.exit(0);
+}
 
 initSentry({
 	dsn: env.SENTRY_DSN,
@@ -127,8 +141,28 @@ function shutdown(signal: string): void {
 process.once("SIGTERM", () => shutdown("SIGTERM"));
 process.once("SIGINT", () => shutdown("SIGINT"));
 
+/** Awaitable sleep that resolves immediately on abort, so SIGTERM during a poll-sleep wakes the loop. */
+function sleepWithAbort(ms: number, signal: AbortSignal): Promise<void> {
+	return new Promise((resolve) => {
+		if (signal.aborted) {
+			resolve();
+			return;
+		}
+		const timer = setTimeout(resolve, ms);
+		signal.addEventListener(
+			"abort",
+			() => {
+				clearTimeout(timer);
+				resolve();
+			},
+			{ once: true },
+		);
+	});
+}
+
 logger.info(
 	{
+		pollMs: env.RESEND_SYNC_POLL_MS,
 		cursorPath: env.RESEND_SYNC_CURSOR_PATH,
 		ratePerSec: env.RESEND_API_RATE_PER_SEC,
 		internalApiUrl: env.INTERNAL_API_URL,
@@ -137,14 +171,20 @@ logger.info(
 );
 
 try {
-	await runCycle({
-		internal,
-		resend,
-		bucket,
-		cursorPath: env.RESEND_SYNC_CURSOR_PATH,
-		signal: controller.signal,
-	});
-	logger.info("resend-sync: drained, exiting");
+	while (!controller.signal.aborted) {
+		// eslint-disable-next-line no-await-in-loop -- each cycle must commit before sleeping.
+		await runCycle({
+			internal,
+			resend,
+			bucket,
+			cursorPath: env.RESEND_SYNC_CURSOR_PATH,
+			signal: controller.signal,
+		});
+		if (controller.signal.aborted) break;
+		// eslint-disable-next-line no-await-in-loop -- intentional pace gate between cycles.
+		await sleepWithAbort(env.RESEND_SYNC_POLL_MS, controller.signal);
+	}
+	logger.info("resend-sync: shutting down");
 	await Sentry.close(2_000).catch(() => undefined);
 	process.exit(0);
 } catch (err) {
