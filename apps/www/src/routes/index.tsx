@@ -63,7 +63,7 @@ function HomePage() {
 								<br />
 								We connect you with neighbors who will use your produce.
 								<br />
-								Starting in Napa and available everywhere.
+								Rooted in Napa. Growing everywhere.
 							</p>
 							<Link to="/listings/new" class="button button--primary button--lg">
 								Share What I'm Growing
@@ -99,7 +99,7 @@ function HomePage() {
 
 					<section class="available-listings">
 						<div class="container">
-							<h2>Available Now in Napa</h2>
+							<h2>Available Now</h2>
 							<Show
 								when={listings().length > 0}
 								fallback={<p>No listings available right now.</p>}
