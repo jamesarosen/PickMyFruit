@@ -1,0 +1,8 @@
+name: Setup flyctl
+description: Install the flyctl CLI, pinned to a verified commit SHA. Update the SHA here when upgrading flyctl.
+
+runs:
+  using: composite
+  steps:
+    # ed8efb33... = superfly/flyctl-actions@master = superfly/flyctl-actions@v1 (2025-05-14)
+    - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1
