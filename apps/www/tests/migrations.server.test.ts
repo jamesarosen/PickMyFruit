@@ -16,6 +16,7 @@ const wwwRoot = resolve(__dirname, '..')
 const EXPECTED_TABLES = [
 	'account',
 	'inquiries',
+	'jobs',
 	'listing_photos',
 	'listings',
 	'session',

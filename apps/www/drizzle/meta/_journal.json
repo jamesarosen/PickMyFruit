@@ -57,6 +57,13 @@
 			"when": 1778862364766,
 			"tag": "0007_add_resend_sync",
 			"breakpoints": true
+		},
+		{
+			"idx": 8,
+			"version": "6",
+			"when": 1779229827936,
+			"tag": "0008_add_jobs",
+			"breakpoints": true
 		}
 	]
 }

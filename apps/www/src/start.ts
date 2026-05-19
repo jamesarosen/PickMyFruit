@@ -14,19 +14,19 @@ export const startInstance = createStart(() => ({
 }))
 
 // Boot-time side effect: when RESEND_SYNC_WORKER_ENABLED=true, spawn the
-// resend-sync worker as a child of this Node process so a single Fly machine
+// resend-worker as a child of this Node process so a single Fly machine
 // hosts both. Gated off by default; in prod fly.toml sets it to 'true'.
 //
 // `createIsomorphicFn` keeps the dynamic `.server` import inside the
 // server-only branch, satisfying TanStack Start's import-protection plugin
 // (which forbids any client-graph file from importing `*.server.*`, even
 // dynamically). The client branch is a no-op.
-const bootResendSyncWorker = createIsomorphicFn()
+const bootResendWorker = createIsomorphicFn()
 	.client(() => undefined)
 	.server(() => {
-		void import('@/lib/spawn-resend-sync.server').then((m) => {
-			m.spawnResendSyncWorkerIfEnabled()
+		void import('@/lib/spawn-resend-worker.server').then((m) => {
+			m.spawnResendWorkerIfEnabled()
 		})
 	})
 
-bootResendSyncWorker()
+bootResendWorker()

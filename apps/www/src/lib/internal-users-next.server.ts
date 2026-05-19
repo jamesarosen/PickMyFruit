@@ -14,7 +14,7 @@ type Db = LibSQLDatabase<typeof schema>
 /**
  * Zod schema for the `/internal/v1/users/next` response body.
  *
- * **Duplicated in `apps/resend-sync/src/internal-api-schema.ts`.** Keep both
+ * **Duplicated in `apps/resend-worker/src/internal-api-schema.ts`.** Keep both
  * copies in sync. At this scale, honest duplication beats a `packages/contracts`
  * workspace that no second consumer has appeared to justify.
  */

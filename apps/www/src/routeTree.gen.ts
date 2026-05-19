@@ -28,7 +28,10 @@ import { Route as _e2e_RootErrorRouteImport } from './routes/__e2e__/root-error'
 import { Route as ApiUploadsSplatRouteImport } from './routes/api/uploads/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as InternalV1UsersNextRouteImport } from './routes/internal/v1/users/next'
+import { Route as InternalV1JobsClaimRouteImport } from './routes/internal/v1/jobs/claim'
 import { Route as ApiListingsIdUnavailableRouteImport } from './routes/api/listings.$id.unavailable'
+import { Route as InternalV1JobsIdFailRouteImport } from './routes/internal/v1/jobs/$id/fail'
+import { Route as InternalV1JobsIdCompleteRouteImport } from './routes/internal/v1/jobs/$id/complete'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -125,11 +128,27 @@ const InternalV1UsersNextRoute = InternalV1UsersNextRouteImport.update({
   path: '/internal/v1/users/next',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InternalV1JobsClaimRoute = InternalV1JobsClaimRouteImport.update({
+  id: '/internal/v1/jobs/claim',
+  path: '/internal/v1/jobs/claim',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiListingsIdUnavailableRoute =
   ApiListingsIdUnavailableRouteImport.update({
     id: '/$id/unavailable',
     path: '/$id/unavailable',
     getParentRoute: () => ApiListingsRoute,
+  } as any)
+const InternalV1JobsIdFailRoute = InternalV1JobsIdFailRouteImport.update({
+  id: '/internal/v1/jobs/$id/fail',
+  path: '/internal/v1/jobs/$id/fail',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InternalV1JobsIdCompleteRoute =
+  InternalV1JobsIdCompleteRouteImport.update({
+    id: '/internal/v1/jobs/$id/complete',
+    path: '/internal/v1/jobs/$id/complete',
+    getParentRoute: () => rootRouteImport,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -152,7 +171,10 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
+  '/internal/v1/jobs/claim': typeof InternalV1JobsClaimRoute
   '/internal/v1/users/next': typeof InternalV1UsersNextRoute
+  '/internal/v1/jobs/$id/complete': typeof InternalV1JobsIdCompleteRoute
+  '/internal/v1/jobs/$id/fail': typeof InternalV1JobsIdFailRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -174,7 +196,10 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
+  '/internal/v1/jobs/claim': typeof InternalV1JobsClaimRoute
   '/internal/v1/users/next': typeof InternalV1UsersNextRoute
+  '/internal/v1/jobs/$id/complete': typeof InternalV1JobsIdCompleteRoute
+  '/internal/v1/jobs/$id/fail': typeof InternalV1JobsIdFailRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -197,7 +222,10 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/uploads/$': typeof ApiUploadsSplatRoute
   '/api/listings/$id/unavailable': typeof ApiListingsIdUnavailableRoute
+  '/internal/v1/jobs/claim': typeof InternalV1JobsClaimRoute
   '/internal/v1/users/next': typeof InternalV1UsersNextRoute
+  '/internal/v1/jobs/$id/complete': typeof InternalV1JobsIdCompleteRoute
+  '/internal/v1/jobs/$id/fail': typeof InternalV1JobsIdFailRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -221,7 +249,10 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
+    | '/internal/v1/jobs/claim'
     | '/internal/v1/users/next'
+    | '/internal/v1/jobs/$id/complete'
+    | '/internal/v1/jobs/$id/fail'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -243,7 +274,10 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
+    | '/internal/v1/jobs/claim'
     | '/internal/v1/users/next'
+    | '/internal/v1/jobs/$id/complete'
+    | '/internal/v1/jobs/$id/fail'
   id:
     | '__root__'
     | '/'
@@ -265,7 +299,10 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/uploads/$'
     | '/api/listings/$id/unavailable'
+    | '/internal/v1/jobs/claim'
     | '/internal/v1/users/next'
+    | '/internal/v1/jobs/$id/complete'
+    | '/internal/v1/jobs/$id/fail'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -286,7 +323,10 @@ export interface RootRouteChildren {
   ListingsNewRoute: typeof ListingsNewRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiUploadsSplatRoute: typeof ApiUploadsSplatRoute
+  InternalV1JobsClaimRoute: typeof InternalV1JobsClaimRoute
   InternalV1UsersNextRoute: typeof InternalV1UsersNextRoute
+  InternalV1JobsIdCompleteRoute: typeof InternalV1JobsIdCompleteRoute
+  InternalV1JobsIdFailRoute: typeof InternalV1JobsIdFailRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -424,12 +464,33 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof InternalV1UsersNextRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/internal/v1/jobs/claim': {
+      id: '/internal/v1/jobs/claim'
+      path: '/internal/v1/jobs/claim'
+      fullPath: '/internal/v1/jobs/claim'
+      preLoaderRoute: typeof InternalV1JobsClaimRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/listings/$id/unavailable': {
       id: '/api/listings/$id/unavailable'
       path: '/$id/unavailable'
       fullPath: '/api/listings/$id/unavailable'
       preLoaderRoute: typeof ApiListingsIdUnavailableRouteImport
       parentRoute: typeof ApiListingsRoute
+    }
+    '/internal/v1/jobs/$id/fail': {
+      id: '/internal/v1/jobs/$id/fail'
+      path: '/internal/v1/jobs/$id/fail'
+      fullPath: '/internal/v1/jobs/$id/fail'
+      preLoaderRoute: typeof InternalV1JobsIdFailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/internal/v1/jobs/$id/complete': {
+      id: '/internal/v1/jobs/$id/complete'
+      path: '/internal/v1/jobs/$id/complete'
+      fullPath: '/internal/v1/jobs/$id/complete'
+      preLoaderRoute: typeof InternalV1JobsIdCompleteRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -475,7 +536,10 @@ const rootRouteChildren: RootRouteChildren = {
   ListingsNewRoute: ListingsNewRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiUploadsSplatRoute: ApiUploadsSplatRoute,
+  InternalV1JobsClaimRoute: InternalV1JobsClaimRoute,
   InternalV1UsersNextRoute: InternalV1UsersNextRoute,
+  InternalV1JobsIdCompleteRoute: InternalV1JobsIdCompleteRoute,
+  InternalV1JobsIdFailRoute: InternalV1JobsIdFailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

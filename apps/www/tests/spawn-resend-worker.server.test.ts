@@ -3,10 +3,10 @@ import { EventEmitter } from 'node:events'
 import {
 	attachWorkerSupervision,
 	defaultResolveWorkerPath,
-	shouldSpawnResendSyncWorker,
-	spawnResendSyncWorkerIfEnabled,
+	shouldSpawnResendWorker,
+	spawnResendWorkerIfEnabled,
 	type SupervisedChild,
-} from '@/lib/spawn-resend-sync.server'
+} from '@/lib/spawn-resend-worker.server'
 
 /** Minimal stand-in for ChildProcess used by the supervisor. */
 class FakeChild extends EventEmitter implements SupervisedChild {
@@ -17,7 +17,7 @@ class FakeChild extends EventEmitter implements SupervisedChild {
 	}
 }
 
-describe(shouldSpawnResendSyncWorker, () => {
+describe(shouldSpawnResendWorker, () => {
 	it.each([
 		[{ RESEND_SYNC_WORKER_ENABLED: 'true' }, true],
 		[{ RESEND_SYNC_WORKER_ENABLED: 'false' }, false],
@@ -27,7 +27,7 @@ describe(shouldSpawnResendSyncWorker, () => {
 		[{}, false],
 	])('shouldSpawn(%j) → %s', (env, expected) => {
 		expect.hasAssertions()
-		expect(shouldSpawnResendSyncWorker(env)).toBe(expected)
+		expect(shouldSpawnResendWorker(env)).toBe(expected)
 	})
 })
 
@@ -45,7 +45,7 @@ describe(attachWorkerSupervision, () => {
 		const [err, ctx] = captureException.mock.calls[0]
 		expect((err as Error).message).toMatch(/code=2/)
 		expect((ctx as { fingerprint: string[] }).fingerprint).toEqual([
-			'resend-sync',
+			'resend-worker',
 			'worker-child-crashed',
 		])
 	})
@@ -107,15 +107,15 @@ describe(defaultResolveWorkerPath, () => {
 	})
 
 	// PICKMYFRUIT-1N: in the production Docker runner image the bundled file
-	// lives at /app/.output/server/_ssr/spawn-resend-sync.server-*.mjs. None
-	// of its node_modules ancestors contain @pickmyfruit/resend-sync — the
+	// lives at /app/.output/server/_ssr/spawn-resend-worker.server-*.mjs. None
+	// of its node_modules ancestors contain @pickmyfruit/resend-worker — the
 	// package is not a declared www dependency and the Dockerfile runner
 	// stage does not copy pnpm's virtual store. The fix lets the runtime
 	// supply an explicit, absolute worker path via RESEND_SYNC_WORKER_PATH
 	// so resolution does not depend on Node's node_modules walk.
 	it('honors RESEND_SYNC_WORKER_PATH when set (PICKMYFRUIT-1N)', () => {
 		expect.hasAssertions()
-		const sentinel = '/app/apps/resend-sync/dist/main.js'
+		const sentinel = '/app/apps/resend-worker/dist/main.js'
 		vi.stubEnv('RESEND_SYNC_WORKER_PATH', sentinel)
 		expect(defaultResolveWorkerPath()).toBe(sentinel)
 	})
@@ -124,10 +124,10 @@ describe(defaultResolveWorkerPath, () => {
 	// must delegate to Node's resolver (`createRequire(...).resolve(...)`).
 	// Asserting on the resolved path is environment-dependent because the
 	// resolver verifies the package's `main` file exists, which requires
-	// `apps/resend-sync/dist/main.js` to have been built. CI runs tests
+	// `apps/resend-worker/dist/main.js` to have been built. CI runs tests
 	// before any build, so we instead assert that the function attempts
 	// the package-name resolution — either it returns a path that lives
-	// under apps/resend-sync (built locally) or it throws MODULE_NOT_FOUND
+	// under apps/resend-worker (built locally) or it throws MODULE_NOT_FOUND
 	// (CI). Both prove the fallback is intact; a future refactor that
 	// short-circuits past `require.resolve` would fail this test by
 	// returning some other value or throwing a different error.
@@ -135,7 +135,7 @@ describe(defaultResolveWorkerPath, () => {
 		expect.hasAssertions()
 		vi.stubEnv('RESEND_SYNC_WORKER_PATH', '')
 		// CI (no dist built) throws MODULE_NOT_FOUND; dev (dist built) returns
-		// a path under apps/resend-sync/. Capture either outcome as a string,
+		// a path under apps/resend-worker/. Capture either outcome as a string,
 		// then assert once — both signals prove require.resolve was reached.
 		let outcome: string
 		try {
@@ -143,16 +143,16 @@ describe(defaultResolveWorkerPath, () => {
 		} catch (err) {
 			outcome = (err as NodeJS.ErrnoException).code ?? 'UNKNOWN'
 		}
-		expect(outcome).toMatch(/(?:apps[/\\]resend-sync[/\\])|^MODULE_NOT_FOUND$/)
+		expect(outcome).toMatch(/(?:apps[/\\]resend-worker[/\\])|^MODULE_NOT_FOUND$/)
 	})
 
 	// End-to-end guard: the env var must flow all the way through
-	// spawnResendSyncWorkerIfEnabled to the spawned child's argv, not just
+	// spawnResendWorkerIfEnabled to the spawned child's argv, not just
 	// through the helper. Catches regressions where the caller wires its own
 	// resolver instead of going through defaultResolveWorkerPath.
 	it('propagates RESEND_SYNC_WORKER_PATH into the spawned child argv', () => {
 		expect.hasAssertions()
-		const sentinel = '/app/apps/resend-sync/dist/main.js'
+		const sentinel = '/app/apps/resend-worker/dist/main.js'
 		vi.stubEnv('RESEND_SYNC_WORKER_PATH', sentinel)
 		const fakeChild = new FakeChild()
 		const spawn = vi.fn<
@@ -162,7 +162,7 @@ describe(defaultResolveWorkerPath, () => {
 				opts: Record<string, unknown>
 			) => SupervisedChild
 		>(() => fakeChild)
-		spawnResendSyncWorkerIfEnabled(
+		spawnResendWorkerIfEnabled(
 			{ RESEND_SYNC_WORKER_ENABLED: 'true' },
 			{
 				spawn: spawn as unknown as typeof import('node:child_process').spawn,
@@ -177,11 +177,11 @@ describe(defaultResolveWorkerPath, () => {
 	})
 })
 
-describe(spawnResendSyncWorkerIfEnabled, () => {
+describe(spawnResendWorkerIfEnabled, () => {
 	it('returns null and never spawns when the gate is off', () => {
 		expect.hasAssertions()
 		const spawn = vi.fn()
-		const result = spawnResendSyncWorkerIfEnabled(
+		const result = spawnResendWorkerIfEnabled(
 			{ RESEND_SYNC_WORKER_ENABLED: 'false' },
 			{
 				spawn: spawn as unknown as typeof import('node:child_process').spawn,
@@ -202,7 +202,7 @@ describe(spawnResendSyncWorkerIfEnabled, () => {
 				opts: Record<string, unknown>
 			) => SupervisedChild
 		>(() => fakeChild)
-		const result = spawnResendSyncWorkerIfEnabled(
+		const result = spawnResendWorkerIfEnabled(
 			{ RESEND_SYNC_WORKER_ENABLED: 'true' },
 			{
 				spawn: spawn as unknown as typeof import('node:child_process').spawn,

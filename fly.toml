@@ -23,9 +23,11 @@ primary_region = 'sjc'
 
 # Single process group. The web server (Nitro) is the foreground process.
 # When RESEND_SYNC_WORKER_ENABLED=true (default in this file), www's start.ts
-# spawns the resend-sync worker as a child via Node's child_process; the two
-# share PID-1's fate so the container exits if either crashes hard. To disable
-# the worker without redeploying: `fly secrets set RESEND_SYNC_WORKER_ENABLED=false`.
+# spawns the resend-worker as a child via Node's child_process; the two share
+# PID-1's fate so the container exits if either crashes hard. To disable the
+# worker without redeploying: `fly secrets set RESEND_SYNC_WORKER_ENABLED=false`.
+# (The gate var keeps its original name to preserve fly-secret history; the
+# package was renamed in #260 from apps/resend-sync to apps/resend-worker.)
 # See docs/0007-resend-sync-cron.md.
 [processes]
   app = "node .output/server/index.mjs"
@@ -61,7 +63,7 @@ primary_region = 'sjc'
       # Accept JSON response
       Accept = 'application/json'
 
-# Persistent volume for SQLite database and the resend-sync cursor file.
+# Persistent volume for SQLite database and the resend-worker cursor file.
 # Single machine, single mount — the worker child inherits the same FS.
 [[mounts]]
   source = 'data'
@@ -87,7 +89,7 @@ primary_region = 'sjc'
   # processing buys memory pressure without real throughput.
   SHARP_CONCURRENCY = '1'
   STORAGE_PROVIDER = 'tigris'
-  # resend-sync worker child: reach the parent web process over Fly's private
+  # resend-worker child: reach the parent web process over Fly's private
   # 6PN network. Even though the worker runs in the same container, going
   # through flycast keeps the security model identical to a future split:
   # Fly's edge signs Fly-Src so the TLS middleware can verify and skip the

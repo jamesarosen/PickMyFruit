@@ -1,9 +1,9 @@
 {
-	"name": "@pickmyfruit/resend-sync",
+	"name": "@pickmyfruit/resend-worker",
 	"type": "module",
 	"version": "0.0.1",
 	"private": true,
-	"description": "Long-running cursor worker that syncs PickMyFruit users to Resend Audiences",
+	"description": "Long-running worker. Hosts the user-sync cursor loop and a generic outbox queue talking to apps/www over the internal API.",
 	"main": "dist/main.js",
 	"scripts": {
 		"build": "tsc -p tsconfig.json",

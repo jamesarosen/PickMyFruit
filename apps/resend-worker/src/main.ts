@@ -1,25 +1,29 @@
 /**
- * Entry point for the resend-sync worker.
+ * Entry point for the resend-worker.
  *
- * Long-lived process. In production, spawned as a child of the `app` web
- * server (see `apps/www/src/lib/spawn-resend-sync.server.ts`) on the same
- * Fly machine, sharing the volume at /app/data. Wakes on `RESEND_SYNC_POLL_MS`,
- * drains the user queue, sleeps. SIGTERM/SIGINT finish the in-flight row,
- * write the cursor, and exit 0.
+ * Long-lived process. In production, spawned as a child of `apps/www` (see
+ * `apps/www/src/lib/spawn-resend-worker.server.ts`) on the same Fly machine,
+ * sharing the volume at /app/data.
  *
- * Gated by `RESEND_SYNC_WORKER_ENABLED` (default false). When disabled, exits
- * 0 immediately so a misconfigured spawn or a stray `pnpm dev` invocation
- * doesn't quietly burn API calls.
+ * Two cooperative loops share one token bucket so Resend's 5/sec ceiling is
+ * enforced globally:
+ * 1. user-sync — walks the `user.updated_at` cursor (issue #237).
+ * 2. resend-email — claims rows from the generic outbox (issue #260).
  *
- * See docs/0007-resend-sync-cron.md.
+ * SIGTERM/SIGINT finishes the in-flight row in each loop, writes the cursor,
+ * and exits 0. Gated by `RESEND_SYNC_WORKER_ENABLED` (default false).
  */
+import { randomUUID } from "node:crypto";
 import { Agent } from "undici";
 import { parseWorkerEnv } from "./env.js";
 import { initSentry, Sentry } from "./sentry.js";
 import { logger } from "./logger.js";
 import { createInternalApiClient } from "./internal-api-client.js";
+import { createJobsApiClient } from "./jobs-api-client.js";
 import { createResendUpsert, type ResendUpsert } from "./resend-client.js";
-import { runCycle } from "./run-cycle.js";
+import { runCycle as runUserSyncCycle } from "./run-cycle.js";
+import { runCycle as runScaffold } from "./cycle.js";
+import { processOneJob } from "./process-job.js";
 import { createTokenBucket } from "./token-bucket.js";
 
 /** EX_CONFIG (sysexits.h 78): configuration error — distinct from shell 1/2. */
@@ -27,9 +31,6 @@ const EXIT_CONFIG_ERROR = 78;
 
 const envResult = parseWorkerEnv(process.env);
 if (!envResult.ok) {
-	// Initialize Sentry from whatever DSN we can recover so the validation
-	// failure isn't lost. process.env.SENTRY_DSN bypasses our own parser, but
-	// if it's a syntactic mess Sentry's init will simply no-op.
 	initSentry({
 		dsn: process.env.SENTRY_DSN,
 		environment: process.env.SENTRY_ENVIRONMENT,
@@ -37,14 +38,12 @@ if (!envResult.ok) {
 	});
 	logger.fatal(
 		{ issues: envResult.error.issues },
-		"resend-sync: env validation failed; exiting",
+		"resend-worker: env validation failed; exiting",
 	);
 	Sentry.captureException(new Error(envResult.error.message), {
-		fingerprint: ["resend-sync", "env-validation-failed"],
+		fingerprint: ["resend-worker", "env-validation-failed"],
 		extra: { issues: envResult.error.issues },
 	});
-	// Give Sentry a brief window to flush before exit. close() resolves once
-	// the queue drains or its own timeout fires.
 	await Sentry.close(2_000).catch(() => undefined);
 	process.exit(EXIT_CONFIG_ERROR);
 }
@@ -52,10 +51,8 @@ if (!envResult.ok) {
 const { env } = envResult;
 
 if (!env.RESEND_SYNC_WORKER_ENABLED) {
-	// Logged before Sentry init: it's the explicit "disabled" path, not an
-	// error worth capturing. Visible in stdout so devs notice the gate.
 	logger.info(
-		"resend-sync: worker disabled (RESEND_SYNC_WORKER_ENABLED != 'true'); exiting",
+		"resend-worker: disabled (RESEND_SYNC_WORKER_ENABLED != 'true'); exiting",
 	);
 	process.exit(0);
 }
@@ -67,8 +64,6 @@ initSentry({
 	release: env.SENTRY_RELEASE,
 });
 
-// Keep-alive across upserts so a backfill reuses connections instead of opening
-// a new TCP+TLS handshake per row.
 const dispatcher = new Agent({
 	keepAliveTimeout: 30_000,
 	keepAliveMaxTimeout: 300_000,
@@ -80,27 +75,37 @@ const internal = createInternalApiClient({
 	dispatcher,
 });
 
+const jobsApi = createJobsApiClient({
+	baseUrl: env.INTERNAL_API_URL,
+	secret: env.INTERNAL_API_SECRET,
+	dispatcher,
+});
+
 const resend: ResendUpsert = createResendUpsert({
 	apiKey: env.RESEND_API_KEY,
 	dispatcher,
 });
 
+// One token bucket shared across both loops — the user-sync upserts and the
+// email-jobs sends are all Resend API calls, and Resend rate-limits per
+// account, not per endpoint.
 const bucket = createTokenBucket({
 	ratePerSec: env.RESEND_API_RATE_PER_SEC,
 	capacity: env.RESEND_API_BUCKET_CAPACITY,
 });
 
+const workerId = `resend-worker-${randomUUID()}`;
+
 const controller = new AbortController();
 
 function shutdown(signal: string): void {
-	logger.info({ signal }, "resend-sync: shutdown signal received");
+	logger.info({ signal }, "resend-worker: shutdown signal received");
 	controller.abort();
 }
 
 process.once("SIGTERM", () => shutdown("SIGTERM"));
 process.once("SIGINT", () => shutdown("SIGINT"));
 
-/** Awaitable sleep that resolves immediately on abort, so SIGTERM during a poll-sleep wakes the loop. */
 function sleepWithAbort(ms: number, signal: AbortSignal): Promise<void> {
 	return new Promise((resolve) => {
 		if (signal.aborted) {
@@ -125,14 +130,15 @@ logger.info(
 		cursorPath: env.RESEND_SYNC_CURSOR_PATH,
 		ratePerSec: env.RESEND_API_RATE_PER_SEC,
 		internalApiUrl: env.INTERNAL_API_URL,
+		workerId,
 	},
-	"resend-sync: starting",
+	"resend-worker: starting",
 );
 
-try {
+async function userSyncLoop(): Promise<void> {
 	while (!controller.signal.aborted) {
 		// eslint-disable-next-line no-await-in-loop -- each cycle must commit before sleeping.
-		await runCycle({
+		await runUserSyncCycle({
 			internal,
 			resend,
 			bucket,
@@ -140,15 +146,40 @@ try {
 			signal: controller.signal,
 		});
 		if (controller.signal.aborted) break;
-		// eslint-disable-next-line no-await-in-loop -- intentional pace gate between cycles.
+		// eslint-disable-next-line no-await-in-loop -- intentional pace gate.
 		await sleepWithAbort(env.RESEND_SYNC_POLL_MS, controller.signal);
 	}
-	logger.info("resend-sync: shutting down");
+}
+
+async function jobsLoop(): Promise<void> {
+	while (!controller.signal.aborted) {
+		// eslint-disable-next-line no-await-in-loop -- each cycle must commit before sleeping.
+		await runScaffold({
+			name: "resend-email",
+			step: () =>
+				processOneJob({
+					jobs: jobsApi,
+					bucket,
+					workerId,
+					leaseSeconds: env.RESEND_WORKER_JOB_LEASE_SECONDS,
+					queue: "resend-email",
+				}),
+			signal: controller.signal,
+		});
+		if (controller.signal.aborted) break;
+		// eslint-disable-next-line no-await-in-loop -- intentional pace gate.
+		await sleepWithAbort(env.RESEND_SYNC_POLL_MS, controller.signal);
+	}
+}
+
+try {
+	await Promise.all([userSyncLoop(), jobsLoop()]);
+	logger.info("resend-worker: shutting down");
 	await Sentry.close(2_000).catch(() => undefined);
 	process.exit(0);
 } catch (err) {
 	Sentry.captureException(err);
-	logger.error({ err }, "resend-sync: fatal error");
+	logger.error({ err }, "resend-worker: fatal error");
 	await Sentry.close(2_000).catch(() => undefined);
 	process.exit(1);
 }

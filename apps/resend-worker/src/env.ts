@@ -10,6 +10,15 @@ const baseEnv = z.object({
 		.prefault("false"),
 	RESEND_API_RATE_PER_SEC: z.coerce.number().positive().prefault(4),
 	RESEND_API_BUCKET_CAPACITY: z.coerce.number().int().positive().prefault(4),
+	// Lease for an in-flight job. Long enough to absorb a slow Resend response,
+	// short enough that a worker crash doesn't leave a row idle before the
+	// reaper unclaims it on the next claim call.
+	RESEND_WORKER_JOB_LEASE_SECONDS: z.coerce
+		.number()
+		.int()
+		.positive()
+		.max(3600)
+		.prefault(120),
 	// No prefault: every environment (prod via fly.toml, preview via
 	// fly.preview.toml, dev via apps/www/.env.development) must declare this
 	// explicitly. A silent default for a filesystem path that differs per
@@ -58,7 +67,7 @@ export function parseWorkerEnv(
 		ok: false,
 		error: {
 			kind: "env-validation-failed",
-			message: `resend-sync env validation failed. Check fly.toml [env] (prod) or apps/www/.env.development (local):\n${summary}`,
+			message: `resend-worker env validation failed. Check fly.toml [env] (prod) or apps/www/.env.development (local):\n${summary}`,
 			issues,
 		},
 	};

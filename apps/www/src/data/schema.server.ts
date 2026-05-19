@@ -212,3 +212,46 @@ export const listingPhotos = sqliteTable(
 
 export type ListingPhoto = typeof listingPhotos.$inferSelect
 export type NewListingPhoto = typeof listingPhotos.$inferInsert
+
+// ============================================================================
+// Outbox: generic background-job queue
+// ============================================================================
+
+/**
+ * Generic background-job queue. The `queue` column is the routing key — it
+ * selects which worker handler runs. Further sub-routing within a queue lives
+ * inside `data` (a JSON string validated by a Zod schema keyed by `queue` in
+ * `@/data/jobs.server`). UUIDv7 ids preserve FIFO under `(available_at, id)`
+ * ordering and double as the Resend idempotency-key.
+ */
+export const jobs = sqliteTable(
+	'jobs',
+	{
+		id: text('id').primaryKey(),
+		queue: text('queue').notNull(),
+		data: text('data').notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`),
+		availableAt: integer('available_at', { mode: 'timestamp_ms' }).notNull(),
+		claimedAt: integer('claimed_at', { mode: 'timestamp_ms' }),
+		claimedBy: text('claimed_by'),
+		leaseSeconds: integer('lease_seconds'),
+		attempts: integer('attempts').notNull().default(0),
+		lastError: text('last_error'),
+		completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
+		failedAt: integer('failed_at', { mode: 'timestamp_ms' }),
+	},
+	(table) => [
+		index('jobs_eligibility_idx').on(
+			table.queue,
+			table.completedAt,
+			table.failedAt,
+			table.availableAt,
+			table.id
+		),
+	]
+)
+
+export type Job = typeof jobs.$inferSelect
+export type NewJob = typeof jobs.$inferInsert

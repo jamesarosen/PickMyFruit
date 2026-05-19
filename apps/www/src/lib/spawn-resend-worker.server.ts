@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger.server'
  * literal string `'true'` is treated as "off" — empty/unset/typoed values
  * fail closed (no worker spawned).
  */
-export function shouldSpawnResendSyncWorker(
+export function shouldSpawnResendWorker(
 	env: Record<string, string | undefined>
 ): boolean {
 	return env.RESEND_SYNC_WORKER_ENABLED === 'true'
@@ -49,15 +49,15 @@ export function attachWorkerSupervision(
 
 	child.on('exit', (code, signal) => {
 		if (code === 0 || signal === 'SIGTERM' || signal === 'SIGINT') {
-			logger.info({ code, signal }, 'resend-sync worker child exited cleanly')
+			logger.info({ code, signal }, 'resend-worker child exited cleanly')
 			return
 		}
 		const err = new Error(
-			`resend-sync worker child exited with code=${code} signal=${signal}`
+			`resend-worker child exited with code=${code} signal=${signal}`
 		)
-		logger.error({ code, signal }, 'resend-sync worker child crashed')
+		logger.error({ code, signal }, 'resend-worker child crashed')
 		captureException(err, {
-			fingerprint: ['resend-sync', 'worker-child-crashed'],
+			fingerprint: ['resend-worker', 'worker-child-crashed'],
 			extra: { code, signal },
 		})
 	})
@@ -70,10 +70,10 @@ export function attachWorkerSupervision(
 	})
 }
 
-export interface SpawnResendSyncDeps {
+export interface SpawnResendWorkerDeps {
 	/** Injected for tests; defaults to Node's child_process.spawn. */
 	spawn?: typeof nodeSpawn
-	/** Resolves the worker entrypoint. Defaults to `@pickmyfruit/resend-sync`. */
+	/** Resolves the worker entrypoint. Defaults to `@pickmyfruit/resend-worker`. */
 	resolveWorkerPath?: () => string
 	/** Hooks for the exit + signal wiring. */
 	supervisionDeps?: AttachSupervisionDeps
@@ -94,11 +94,11 @@ export const defaultResolveWorkerPath = (): string => {
 		return explicit
 	}
 	const require = createRequire(import.meta.url)
-	return require.resolve('@pickmyfruit/resend-sync')
+	return require.resolve('@pickmyfruit/resend-worker')
 }
 
 /**
- * Production entry point: spawns the resend-sync worker as a child of the web
+ * Production entry point: spawns the resend-worker as a child of the web
  * server when `RESEND_SYNC_WORKER_ENABLED=true`. No-ops otherwise.
  *
  * Why spawn from www instead of a separate Fly machine: we collapse two Fly
@@ -110,13 +110,13 @@ export const defaultResolveWorkerPath = (): string => {
  * Returns the spawned child (or null when the gate is off) so callers in tests
  * can assert against it.
  */
-export function spawnResendSyncWorkerIfEnabled(
+export function spawnResendWorkerIfEnabled(
 	env: Record<string, string | undefined> = process.env,
-	deps: SpawnResendSyncDeps = {}
+	deps: SpawnResendWorkerDeps = {}
 ): ChildProcess | SupervisedChild | null {
-	if (!shouldSpawnResendSyncWorker(env)) {
+	if (!shouldSpawnResendWorker(env)) {
 		logger.warn(
-			'resend-sync worker disabled (set RESEND_SYNC_WORKER_ENABLED=true to enable)'
+			'resend-worker disabled (set RESEND_SYNC_WORKER_ENABLED=true to enable)'
 		)
 		return null
 	}
@@ -125,7 +125,7 @@ export function spawnResendSyncWorkerIfEnabled(
 	const resolveWorkerPath = deps.resolveWorkerPath ?? defaultResolveWorkerPath
 	const workerPath = resolveWorkerPath()
 
-	logger.info({ workerPath }, 'resend-sync worker spawning')
+	logger.info({ workerPath }, 'resend-worker spawning')
 	const child = spawn(process.execPath, [workerPath], {
 		stdio: 'inherit',
 		env: process.env,
