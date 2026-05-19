@@ -20,9 +20,11 @@ test.describe('New Listing', () => {
 		// Email field is shown for unauthenticated users
 		await page.getByLabel(/Your email/i).fill(testUser.email)
 
-		// Produce type — Kobalte Combobox (use role to avoid matching the trigger button)
-		await page.getByRole('combobox', { name: /Produce Type/i }).fill('Avocado')
-		await page.getByRole('option', { name: 'Avocado' }).click()
+		// Open the produce-type combobox and select Avocado.
+		// Kobalte opens on pointerdown (not click) for mouse; Playwright's
+		// locator.click() dispatches the full pointer sequence including pointerdown.
+		await page.locator('.combobox__trigger').click()
+		await page.locator('.combobox__item').filter({ hasText: 'Avocado' }).click()
 
 		// Other required fields (City and State default to 'Napa' / 'CA')
 		await page.getByLabel(/When to Pick/i).fill('July–September')

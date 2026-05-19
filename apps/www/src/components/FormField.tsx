@@ -10,6 +10,7 @@ import {
 import {
 	children,
 	type ComponentProps,
+	createUniqueId,
 	For,
 	type JSX,
 	Show,
@@ -21,6 +22,7 @@ type TextFieldProps = {
 	children: JSX.Element
 	errors?: string[]
 	hint?: JSX.Element
+	inputId: string
 	label: JSX.Element
 	note?: JSX.Element
 } & Pick<
@@ -33,6 +35,7 @@ const FIELD_PROPS = [
 	'defaultValue',
 	'errors',
 	'hint',
+	'inputId',
 	'label',
 	'name',
 	'note',
@@ -70,7 +73,7 @@ export function TextField(props: TextFieldProps) {
 			validationState={(props.errors?.length ?? 0) === 0 ? 'valid' : 'invalid'}
 			value={props.value}
 		>
-			<Label class="form-field__label">
+			<Label class="form-field__label" for={props.inputId}>
 				<Show when={renderedLabel()}>{renderedLabel()}</Show>
 				<Show when={props.required}>
 					&nbsp;
@@ -95,28 +98,36 @@ export function TextField(props: TextFieldProps) {
 	)
 }
 
-type InputFieldProps = Omit<TextFieldProps, 'children'> &
+type InputFieldProps = Omit<TextFieldProps, 'children' | 'inputId'> &
 	ComponentProps<typeof KInput>
 
 /** A single-line text input with label, hint, note, and error support. */
 export function Input(props: InputFieldProps) {
 	const [fieldProps, rest] = splitProps(props, FIELD_PROPS)
+	// Kobalte skips the `for`/`id` association in SSR because it registers the
+	// field ID inside a `createEffect`, which SolidJS doesn't run on the server.
+	// Generating stable IDs here and passing them explicitly to both the Label
+	// (via `inputId` → `for`) and the Input (`id`) keeps the association intact
+	// in the server-rendered HTML. https://github.com/kobaltedev/kobalte/issues/652
+	const inputId = createUniqueId()
 	return (
-		<TextField {...fieldProps}>
-			<KInput class="form-field__control" {...rest} />
+		<TextField {...fieldProps} inputId={inputId}>
+			<KInput class="form-field__control" {...rest} id={inputId} />
 		</TextField>
 	)
 }
 
-type TextareaFieldProps = Omit<TextFieldProps, 'children'> &
+type TextareaFieldProps = Omit<TextFieldProps, 'children' | 'inputId'> &
 	ComponentProps<typeof KTextArea>
 
 /** A multi-line textarea with label, hint, note, and error support. */
 export function Textarea(props: TextareaFieldProps) {
 	const [fieldProps, rest] = splitProps(props, FIELD_PROPS)
+	// Same workaround as Input above. https://github.com/kobaltedev/kobalte/issues/652
+	const inputId = createUniqueId()
 	return (
-		<TextField {...fieldProps}>
-			<KTextArea class="form-field__control" {...rest} />
+		<TextField {...fieldProps} inputId={inputId}>
+			<KTextArea class="form-field__control" {...rest} id={inputId} />
 		</TextField>
 	)
 }
