@@ -9,6 +9,7 @@
 	"scripts": {
 		"clean": "pnpm -r --if-present clean",
 		"build": "pnpm -r build",
+		"dev": "pnpm -r --parallel --stream --aggregate-output dev",
 		"format": "pnpm -r format",
 		"format:check": "pnpm -r format:check",
 		"format:write": "pnpm -r format:write",

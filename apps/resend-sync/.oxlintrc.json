@@ -1,0 +1,63 @@
+{
+	"categories": {
+		"correctness": "error",
+		"suspicious": "error",
+		"perf": "error",
+		"pedantic": "off",
+		"style": "error"
+	},
+	"plugins": ["import", "vitest"],
+	"rules": {
+		"curly": ["error", "multi-or-nest"],
+		"eslint/capitalized-comments": "off",
+		"eslint/eqeqeq": ["error", "always", { "null": "ignore" }],
+		"eslint/func-style": "off",
+		"eslint/id-length": "off",
+		"eslint/init-declarations": "off",
+		"eslint/max-lines-per-function": "off",
+		"eslint/max-statements": "off",
+		"eslint/no-inline-comments": "off",
+		"eslint/no-magic-numbers": "off",
+		"eslint/no-promise-executor-return": "off",
+		"eslint/no-shadow": "off",
+		"eslint/no-ternary": "off",
+		"eslint/no-unassigned-vars": "off",
+		"eslint/no-underscore-dangle": "off",
+		"eslint/no-warning-comments": "off",
+		"eslint/sort-imports": "off",
+		"eslint/sort-keys": "off",
+		"import/consistent-type-specifier-style": "off",
+		"import/exports-last": "off",
+		"import/group-exports": "off",
+		"import/no-named-export": "off",
+		"import/no-namespace": "off",
+		"import/no-nodejs-modules": "off",
+		"import/no-unassigned-import": "off",
+		"import/prefer-default-export": "off",
+		"jest/no-untyped-mock-factory": "off",
+		"jest/require-hook": "off"
+	},
+	"overrides": [
+		{
+			"files": ["tests/**/*.ts"],
+			"rules": {
+				"eslint-plugin-import/first": "off",
+				"eslint-plugin-import/max-dependencies": "off",
+				"eslint-plugin-jest/no-hooks": "off",
+				"jest/max-expects": "off",
+				"jest/prefer-expect-assertions": "off",
+				"jest/require-to-throw-message": "off",
+				"jest/valid-expect": "off",
+				"jest/valid-title": "off",
+				"no-untyped-mock-factory": "off",
+				"require-await": "off",
+				"vitest/valid-title": "off",
+				"vitest/max-expects": "off",
+				"vitest/no-importing-vitest-globals": "off",
+				"vitest/prefer-expect-assertions": "off",
+				"vitest/prefer-strict-boolean-matchers": "off",
+				"vitest/require-mock-type-parameters": "off"
+			}
+		}
+	]
+}

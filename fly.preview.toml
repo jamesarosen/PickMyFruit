@@ -5,6 +5,12 @@
 
 primary_region = 'sjc'
 
+# Previews don't spawn the resend-sync worker child: RESEND_SYNC_WORKER_ENABLED
+# defaults to 'false' in the [env] block below, so www's start.ts no-ops. To
+# exercise the worker against a preview, set the secret to 'true' for that app.
+[processes]
+  app = "node .output/server/index.mjs"
+
 [build]
   dockerfile = "apps/www/Dockerfile"
   ignorefile = ".dockerignore"
@@ -33,12 +39,13 @@ primary_region = 'sjc'
     path = '/api/health'
     protocol = 'http'
 
-# Persistent volume for SQLite database and local file uploads.
+# Persistent volume for SQLite database, cursor file, and local file uploads.
 # Fly creates the volume automatically on first deploy if it does not exist.
-[mounts]
+[[mounts]]
   source = 'data'
   destination = '/app/data'
   initial_size = '1gb'
+  processes = ['app']
 
 [env]
   DATA_DIR = '/app/data'
@@ -49,6 +56,16 @@ primary_region = 'sjc'
   NODE_ENV = 'development'
   STORAGE_PROVIDER = 'local'
   MEDIA_ORIGIN = 'https://media.pickmyfruit.com'
+  SENTRY_ENVIRONMENT = 'preview'
+  # Preview deploys default the worker OFF — no real Resend writes from a PR.
+  # Cursor path + poll cadence are still declared so the env passes validation
+  # if the gate is ever flipped on. INTERNAL_API_URL is deliberately NOT set
+  # here: the preview app name is dynamic, and a stale `pickmyfruit.flycast`
+  # would route to production. Anyone enabling the worker on a preview must
+  # also `fly secrets set INTERNAL_API_URL=http://<preview-app>.flycast`.
+  RESEND_SYNC_WORKER_ENABLED = 'false'
+  RESEND_SYNC_CURSOR_PATH = '/app/data/resend-sync/cursor.json'
+  RESEND_SYNC_POLL_MS = '60000'
 
 [[vm]]
   size = 'shared-cpu-1x'

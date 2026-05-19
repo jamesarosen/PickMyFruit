@@ -11,22 +11,32 @@ import { sql } from 'drizzle-orm'
 // Better Auth Tables
 // ============================================================================
 
-export const user = sqliteTable('user', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	email: text('email').notNull().unique(),
-	emailVerified: integer('email_verified', { mode: 'boolean' })
-		.notNull()
-		.default(false),
-	image: text('image'),
-	phone: text('phone'), // Custom field for Pick My Fruit
-	createdAt: integer('created_at', { mode: 'timestamp_ms' })
-		.notNull()
-		.default(sql`(unixepoch() * 1000)`),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-		.notNull()
-		.default(sql`(unixepoch() * 1000)`),
-})
+export const user = sqliteTable(
+	'user',
+	{
+		id: text('id').primaryKey(),
+		name: text('name').notNull(),
+		email: text('email').notNull().unique(),
+		emailVerified: integer('email_verified', { mode: 'boolean' })
+			.notNull()
+			.default(false),
+		image: text('image'),
+		phone: text('phone'), // Custom field for Pick My Fruit
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`),
+		// $onUpdate fires on every db.update(user).set(...) call regardless of
+		// whether `set()` includes this column. Better Auth's drizzle adapter
+		// and its internal updateUser path do not pass updatedAt explicitly, so
+		// the bump must happen at the Drizzle layer — otherwise the resend-sync
+		// worker's (updated_at, id) > cursor query would miss profile edits.
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`)
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [index('user_updated_at_id_idx').on(table.updatedAt, table.id)]
+)
 
 export type User = typeof user.$inferSelect
 export type NewUser = typeof user.$inferInsert

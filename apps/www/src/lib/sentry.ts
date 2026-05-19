@@ -73,6 +73,23 @@ if (clientEnv.sentryDsn) {
 		release: clientEnv.sentryRelease,
 		sampleRate: clientEnv.sentrySampleRate,
 		tracesSampleRate: clientEnv.sentryTracesSampleRate,
+		beforeBreadcrumb(breadcrumb) {
+			// Strip the internal shared secret from any breadcrumb that may have
+			// captured request headers (fetch, http, console). Defense-in-depth on
+			// top of the logger's redaction list.
+			const data = breadcrumb.data as Record<string, unknown> | undefined
+			if (data && typeof data === 'object') {
+				const headers = data['headers'] ?? data['requestHeaders']
+				if (headers && typeof headers === 'object') {
+					for (const key of Object.keys(headers as Record<string, unknown>)) {
+						if (key.toLowerCase() === 'x-internal-auth') {
+							;(headers as Record<string, unknown>)[key] = '[Redacted]'
+						}
+					}
+				}
+			}
+			return breadcrumb
+		},
 		beforeSend(event, hint) {
 			const err = hint.originalException
 			if (isControlFlow(err)) return null

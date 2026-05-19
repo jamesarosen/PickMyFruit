@@ -59,3 +59,9 @@ services:
       start_period: 5s
       retries: 3
     restart: unless-stopped
+
+  # The resend-sync worker is no longer a separate compose service. In prod
+  # (and in this dev image when RESEND_SYNC_WORKER_ENABLED=true), www's
+  # start.ts spawns it as a child process via Node's child_process. To exercise
+  # the worker against this stack, set RESEND_SYNC_WORKER_ENABLED=true and
+  # supply a real RESEND_API_KEY via .env / .env.development.local.

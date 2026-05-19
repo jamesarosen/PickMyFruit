@@ -21,6 +21,15 @@ primary_region = 'sjc'
   [build.args]
     VITE_SENTRY_ENABLED = "true"
 
+# Single process group. The web server (Nitro) is the foreground process.
+# When RESEND_SYNC_WORKER_ENABLED=true (default in this file), www's start.ts
+# spawns the resend-sync worker as a child via Node's child_process; the two
+# share PID-1's fate so the container exits if either crashes hard. To disable
+# the worker without redeploying: `fly secrets set RESEND_SYNC_WORKER_ENABLED=false`.
+# See docs/0007-resend-sync-cron.md.
+[processes]
+  app = "node .output/server/index.mjs"
+
 # HTTP service configuration
 [http_service]
   internal_port = 3000
@@ -52,11 +61,13 @@ primary_region = 'sjc'
       # Accept JSON response
       Accept = 'application/json'
 
-# Persistent volume for SQLite database
-[mounts]
+# Persistent volume for SQLite database and the resend-sync cursor file.
+# Single machine, single mount — the worker child inherits the same FS.
+[[mounts]]
   source = 'data'
   destination = '/app/data'
   initial_size = '1gb'
+  processes = ['app']
 
 # Environment variables
 # NODE_OPTIONS and SHARP_CONCURRENCY are mirrored in docker-compose.yml so
@@ -76,6 +87,19 @@ primary_region = 'sjc'
   # processing buys memory pressure without real throughput.
   SHARP_CONCURRENCY = '1'
   STORAGE_PROVIDER = 'tigris'
+  # resend-sync worker child: reach the parent web process over Fly's private
+  # 6PN network. Even though the worker runs in the same container, going
+  # through flycast keeps the security model identical to a future split:
+  # Fly's edge signs Fly-Src so the TLS middleware can verify and skip the
+  # HTTPS redirect for this internal call.
+  INTERNAL_API_URL = 'http://pickmyfruit.flycast'
+  RESEND_SYNC_CURSOR_PATH = '/app/data/resend-sync/cursor.json'
+  RESEND_SYNC_POLL_MS = '60000'
+  RESEND_SYNC_WORKER_ENABLED = 'true'
+  RESEND_API_RATE_PER_SEC = '4'
+  RESEND_API_BUCKET_CAPACITY = '4'
+  SENTRY_ENABLED = 'true'
+  SENTRY_ENVIRONMENT = 'production'
   # libuv default is 4. On a 1-CPU shared VM the extra threads buy memory
   # pressure with no real parallelism. Keep 2 so I/O and TLS can overlap.
   UV_THREADPOOL_SIZE = '2'

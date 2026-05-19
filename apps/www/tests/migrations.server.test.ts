@@ -47,6 +47,29 @@ function queryTables(dbPath: string): string[] {
 	return JSON.parse(output) as string[]
 }
 
+/** Runs an arbitrary SQL query in a child process — same workaround as queryTables. */
+function querySql(dbPath: string, sql: string): Array<Record<string, unknown>> {
+	const script = `
+		import { createClient } from '@libsql/client'
+		const client = createClient({ url: process.env.CHECK_DB_URL })
+		const result = await client.execute(process.env.CHECK_SQL)
+		process.stdout.write(JSON.stringify(result.rows.map(r => Object.fromEntries(Object.entries(r)))))
+		client.close()
+	`
+	const output = execSync('node --input-type=module', {
+		cwd: wwwRoot,
+		input: script,
+		env: {
+			...process.env,
+			CHECK_DB_URL: `file:${dbPath}`,
+			CHECK_SQL: sql,
+		},
+		encoding: 'utf8',
+		timeout: 15_000,
+	})
+	return JSON.parse(output) as Array<Record<string, unknown>>
+}
+
 describe('database migrations', () => {
 	it('golden database has all expected tables after migrations run', () => {
 		// The golden DB is created by vitest globalSetup (createGoldenDatabase) before
@@ -55,6 +78,14 @@ describe('database migrations', () => {
 		// migration run.
 		const tables = queryTables(GOLDEN_DB_PATH)
 		expect(tables).toEqual(EXPECTED_TABLES)
+	})
+
+	it('creates the user_updated_at_id_idx index for the resend-sync cursor query', () => {
+		const rows = querySql(
+			GOLDEN_DB_PATH,
+			"SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'user_updated_at_id_idx'"
+		)
+		expect(rows).toHaveLength(1)
 	})
 
 	it('journal when values are strictly increasing by idx', () => {
