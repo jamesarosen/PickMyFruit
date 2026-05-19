@@ -133,6 +133,56 @@ describe(processOneJob, () => {
 		expect(failMock.mock.calls[0][0].error).toBe("schema-mismatch");
 	});
 
+	it("schema-mismatch on a valid JSON with an unknown discriminator value fails permanently", async () => {
+		const jobs = makeJobsClient({
+			claim: vi.fn(async () => ({
+				kind: "ok",
+				body: {
+					job: {
+						id: "job-x",
+						queue: "resend-email",
+						data: JSON.stringify({ type: "this-type-does-not-exist" }),
+						attempts: 0,
+					},
+				},
+			})),
+		});
+		const outcome = await processOneJob({
+			jobs,
+			bucket: noopBucket,
+			workerId: "w-1",
+			leaseSeconds: 60,
+			queue: "resend-email",
+		});
+		expect(outcome).toBe("processed");
+		expect(jobs.calls.fail).toStrictEqual(["job-x"]);
+	});
+
+	it("schema-mismatch when payload is a JSON array rather than an object", async () => {
+		const jobs = makeJobsClient({
+			claim: vi.fn(async () => ({
+				kind: "ok",
+				body: {
+					job: {
+						id: "job-y",
+						queue: "resend-email",
+						data: JSON.stringify([1, 2, 3]),
+						attempts: 0,
+					},
+				},
+			})),
+		});
+		const outcome = await processOneJob({
+			jobs,
+			bucket: noopBucket,
+			workerId: "w-1",
+			leaseSeconds: 60,
+			queue: "resend-email",
+		});
+		expect(outcome).toBe("processed");
+		expect(jobs.calls.fail).toStrictEqual(["job-y"]);
+	});
+
 	it("stalls when the claim endpoint returns a server-error", async () => {
 		const jobs = makeJobsClient({
 			claim: vi.fn(async () => ({

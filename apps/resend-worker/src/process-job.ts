@@ -7,6 +7,18 @@ import { logger } from "./logger.js";
 
 export type ProcessJobResult = "processed" | "drained" | "stalled";
 
+/**
+ * Server cap on `error` strings is 2000 chars. A Zod failure on a deeply
+ * nested discriminated-union can easily exceed that, which would cause
+ * `/fail` to return 400 → lease expires → infinite re-claim loop on the
+ * same poisoned row. Truncate in the worker so the contract never breaks.
+ */
+const MAX_ERROR_LENGTH = 1800;
+function truncateError(error: string): string {
+	if (error.length <= MAX_ERROR_LENGTH) return error;
+	return `${error.slice(0, MAX_ERROR_LENGTH)}… (truncated)`;
+}
+
 export interface ProcessJobDeps {
 	jobs: JobsApiClient;
 	bucket: TokenBucket;
@@ -122,7 +134,7 @@ export async function processOneJob(
 		await deps.jobs.fail({
 			id: job.id,
 			workerId: deps.workerId,
-			error: handlerResult.error,
+			error: truncateError(handlerResult.error),
 			retryInSeconds: handlerResult.retryInSeconds,
 		});
 		return "processed";
@@ -140,7 +152,7 @@ async function failPermanent(
 	const result = await deps.jobs.fail({
 		id,
 		workerId: deps.workerId,
-		error,
+		error: truncateError(error),
 	});
 	if (result.kind !== "ok") {
 		logger.warn(

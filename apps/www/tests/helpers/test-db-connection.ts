@@ -25,6 +25,10 @@ export async function createTestDbConnection(dbPath: string) {
 	const client = createClient({ url: toLibsqlUrl(dbPath) })
 	// SQLite does not enforce foreign keys by default; opt in for every connection.
 	await client.execute('PRAGMA foreign_keys = ON')
+	// Match prod (`db.server.ts`): without busy_timeout, a second concurrent
+	// transaction on the same DB errors with SQLITE_BUSY immediately. This
+	// matters for tests that exercise concurrent transactional claims.
+	await client.execute('PRAGMA busy_timeout = 5000')
 	const db = drizzle(client, { schema })
 
 	return {

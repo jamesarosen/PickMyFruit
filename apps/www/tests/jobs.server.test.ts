@@ -128,6 +128,20 @@ describe('claim/complete round-trip', () => {
 		const row = await getJobById(db, id)
 		expect(row?.completedAt).toBeNull()
 	})
+
+	it('completeJob is idempotent on already-completed rows (lost-ack retry)', async () => {
+		const db = await testDb.getDb()
+		const id = await enqueueJob(db, 'resend-email', { type: 'noop' })
+		await claimNextJob(db, {
+			queue: 'resend-email',
+			workerId: 'w-1',
+			leaseSeconds: 60,
+		})
+		expect(await completeJob(db, { id, workerId: 'w-1' })).toBe(true)
+		// Second call from same worker mimics a retried request after the
+		// first response was lost.
+		expect(await completeJob(db, { id, workerId: 'w-1' })).toBe(true)
+	})
 })
 
 describe('failJob', () => {
@@ -176,6 +190,51 @@ describe('failJob', () => {
 		expect(row?.failedAt).not.toBeNull()
 		expect(row?.lastError).toBe('schema-mismatch')
 		expect(row?.attempts).toBe(1)
+	})
+
+	it('retry failJob is idempotent after the first call cleared claimedBy', async () => {
+		const db = await testDb.getDb()
+		const id = await enqueueJob(db, 'resend-email', { type: 'noop' })
+		await claimNextJob(db, {
+			queue: 'resend-email',
+			workerId: 'w-1',
+			leaseSeconds: 60,
+		})
+		// First call succeeds and clears claimedBy.
+		expect(
+			await failJob(db, {
+				id,
+				workerId: 'w-1',
+				error: 'Resend 503',
+				retryInSeconds: 30,
+			})
+		).toBe(true)
+		// Retried call from the same worker (mimics lost ack) reports success
+		// instead of producing Sentry noise from a 0-row mismatch.
+		expect(
+			await failJob(db, {
+				id,
+				workerId: 'w-1',
+				error: 'Resend 503',
+				retryInSeconds: 30,
+			})
+		).toBe(true)
+	})
+
+	it('permanent failJob is idempotent on already-failed rows', async () => {
+		const db = await testDb.getDb()
+		const id = await enqueueJob(db, 'resend-email', { type: 'noop' })
+		await claimNextJob(db, {
+			queue: 'resend-email',
+			workerId: 'w-1',
+			leaseSeconds: 60,
+		})
+		expect(
+			await failJob(db, { id, workerId: 'w-1', error: 'schema-mismatch' })
+		).toBe(true)
+		expect(
+			await failJob(db, { id, workerId: 'w-1', error: 'schema-mismatch' })
+		).toBe(true)
 	})
 })
 
@@ -243,30 +302,33 @@ describe('lease expiry', () => {
 	})
 })
 
-describe('concurrent claim exclusivity', () => {
+describe('claim exclusivity', () => {
 	const testDb = useTestDb()
 
-	it('returns a single row to exactly one worker when two race', async () => {
+	// True cross-process concurrency is impossible to exercise from a single
+	// libsql connection (drizzle serializes transactions per client). The
+	// guarantee we need is SQL-level: once a row's `claimed_at` is non-null,
+	// a second claim must not return it. The transactional claim in
+	// `claimNextJob` provides that under prod's WAL + busy_timeout=5000ms.
+	it('a row already claimed by one worker is not returned to a second', async () => {
 		const db = await testDb.getDb()
 		const id = await enqueueJob(db, 'resend-email', { type: 'noop' })
 
-		const [a, b] = await Promise.all([
-			claimNextJob(db, {
-				queue: 'resend-email',
-				workerId: 'w-A',
-				leaseSeconds: 60,
-			}),
-			claimNextJob(db, {
-				queue: 'resend-email',
-				workerId: 'w-B',
-				leaseSeconds: 60,
-			}),
-		])
+		const a = await claimNextJob(db, {
+			queue: 'resend-email',
+			workerId: 'w-A',
+			leaseSeconds: 60,
+		})
+		const b = await claimNextJob(db, {
+			queue: 'resend-email',
+			workerId: 'w-B',
+			leaseSeconds: 60,
+		})
 
-		const winners = [a, b].filter((r) => r?.id === id)
-		expect(winners).toHaveLength(1)
+		expect(a?.id).toBe(id)
+		expect(b).toBeNull()
 		const row = await getJobById(db, id)
-		expect(['w-A', 'w-B']).toContain(row?.claimedBy)
+		expect(row?.claimedBy).toBe('w-A')
 	})
 })
 

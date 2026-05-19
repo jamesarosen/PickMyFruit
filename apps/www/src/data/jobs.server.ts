@@ -89,9 +89,10 @@ export interface ClaimJobInput {
 /**
  * Atomically reclaims expired-lease rows then claims the next eligible row.
  *
- * The reaper UPDATE inside the same call keeps the operational story to a
- * single endpoint — no second process required. SQLite's single-writer model
- * means the reaper + claim sequence is serialized against other claim calls.
+ * Wrapped in a single SQLite transaction so the reaper UPDATE, the candidate
+ * SELECT, and the claiming UPDATE are serialized as one unit against
+ * concurrent callers. The `WHERE claimed_at IS NULL` guard on the final
+ * UPDATE remains as a belt-and-braces check.
  *
  * Returns `null` when the queue is drained.
  */
@@ -102,64 +103,61 @@ export async function claimNextJob(
 	const now = input.now?.() ?? Date.now()
 	const nowDate = new Date(now)
 
-	// Reaper: unclaim rows whose lease expired. Cheap; runs every claim.
-	await db
-		.update(jobs)
-		.set({ claimedAt: null, claimedBy: null, leaseSeconds: null })
-		.where(
-			and(
-				eq(jobs.queue, input.queue),
-				isNull(jobs.completedAt),
-				isNull(jobs.failedAt),
-				sql`${jobs.claimedAt} IS NOT NULL`,
-				sql`(${jobs.claimedAt} + ${jobs.leaseSeconds} * 1000) < ${now}`
+	return db.transaction(async (tx) => {
+		// Reaper: unclaim rows whose lease expired. Cheap; runs every claim.
+		await tx
+			.update(jobs)
+			.set({ claimedAt: null, claimedBy: null, leaseSeconds: null })
+			.where(
+				and(
+					eq(jobs.queue, input.queue),
+					isNull(jobs.completedAt),
+					isNull(jobs.failedAt),
+					sql`${jobs.claimedAt} IS NOT NULL`,
+					sql`(${jobs.claimedAt} + ${jobs.leaseSeconds} * 1000) < ${now}`
+				)
 			)
-		)
 
-	const candidates = await db
-		.select({ id: jobs.id })
-		.from(jobs)
-		.where(
-			and(
-				eq(jobs.queue, input.queue),
-				isNull(jobs.completedAt),
-				isNull(jobs.failedAt),
-				isNull(jobs.claimedAt),
-				lt(jobs.availableAt, new Date(now + 1))
+		const candidates = await tx
+			.select({ id: jobs.id })
+			.from(jobs)
+			.where(
+				and(
+					eq(jobs.queue, input.queue),
+					isNull(jobs.completedAt),
+					isNull(jobs.failedAt),
+					isNull(jobs.claimedAt),
+					lt(jobs.availableAt, new Date(now + 1))
+				)
 			)
-		)
-		.orderBy(asc(jobs.availableAt), asc(jobs.id))
-		.limit(1)
+			.orderBy(asc(jobs.availableAt), asc(jobs.id))
+			.limit(1)
 
-	if (candidates.length === 0) return null
+		if (candidates.length === 0) return null
 
-	const id = candidates[0].id
+		const [{ id }] = candidates
 
-	// Conditional UPDATE returning the row only if we won the race. SQLite has
-	// no native SKIP LOCKED, but `WHERE claimed_at IS NULL` filters out anyone
-	// who beat us between the SELECT and the UPDATE.
-	const result = await db
-		.update(jobs)
-		.set({
-			claimedAt: nowDate,
-			claimedBy: input.workerId,
-			leaseSeconds: input.leaseSeconds,
-		})
-		.where(and(eq(jobs.id, id), isNull(jobs.claimedAt)))
-		.returning({
-			id: jobs.id,
-			queue: jobs.queue,
-			data: jobs.data,
-			attempts: jobs.attempts,
-		})
+		const result = await tx
+			.update(jobs)
+			.set({
+				claimedAt: nowDate,
+				claimedBy: input.workerId,
+				leaseSeconds: input.leaseSeconds,
+			})
+			.where(and(eq(jobs.id, id), isNull(jobs.claimedAt)))
+			.returning({
+				id: jobs.id,
+				queue: jobs.queue,
+				data: jobs.data,
+				attempts: jobs.attempts,
+			})
 
-	if (result.length === 0) {
-		// Another worker won the race in this same millisecond; the caller can
-		// retry or treat as drained. Treating as drained keeps the contract
-		// "null means try again next tick" simple.
-		return null
-	}
-	return result[0]
+		// Inside a transaction, the conditional UPDATE either matches the row
+		// we just SELECTed or the transaction rolls back. A 0-row result here
+		// would indicate the row was modified between our SELECT and UPDATE
+		// in the same tx, which shouldn't happen.
+		return result.length === 0 ? null : result[0]
+	})
 }
 
 export interface CompleteJobInput {
@@ -169,15 +167,33 @@ export interface CompleteJobInput {
 }
 
 /**
- * Marks a claimed job as completed. Returns false if the worker no longer
- * holds the lease (e.g. it expired and was reaped — another worker may have
- * already done the work).
+ * Marks a claimed job as completed. Returns false only if the row exists but
+ * is owned by a different worker (its lease expired and was reaped). A
+ * retried call from the same worker after a lost network ack is reported as
+ * success so the worker doesn't loop on Sentry noise.
  */
 export async function completeJob(
 	db: Db,
 	input: CompleteJobInput
 ): Promise<boolean> {
 	const now = new Date(input.now?.() ?? Date.now())
+	const rows = await db
+		.select({
+			claimedBy: jobs.claimedBy,
+			completedAt: jobs.completedAt,
+			failedAt: jobs.failedAt,
+		})
+		.from(jobs)
+		.where(eq(jobs.id, input.id))
+		.limit(1)
+	if (rows.length === 0) return false
+	const [row] = rows
+	// Idempotency: an earlier /complete call from this worker may have
+	// succeeded server-side but the ack got lost. The row no longer has
+	// `claimedBy` (cleared on retry) OR `completedAt` is set; either way the
+	// worker's intent is already recorded.
+	if (row.completedAt !== null) return true
+	if (row.claimedBy !== input.workerId) return false
 	const result = await db
 		.update(jobs)
 		.set({ completedAt: now })
@@ -198,11 +214,36 @@ export interface FailJobInput {
  * Records a failure. With `retryInSeconds`, the row is unclaimed and
  * `available_at` advances so the worker can retry after backoff. Without it,
  * the row is marked permanently failed.
+ *
+ * Idempotent on the "lost ack" path: a retried `/fail` from the same worker
+ * whose first call already cleared `claimed_by` is reported as success rather
+ * than 0-row mismatch. This avoids the Sentry-noise loop where the worker
+ * keeps re-failing the same row after its first fail succeeded server-side
+ * but the network ack was dropped.
  */
 export async function failJob(db: Db, input: FailJobInput): Promise<boolean> {
 	const now = new Date(input.now?.() ?? Date.now())
+	const rows = await db
+		.select({
+			claimedBy: jobs.claimedBy,
+			completedAt: jobs.completedAt,
+			failedAt: jobs.failedAt,
+		})
+		.from(jobs)
+		.where(eq(jobs.id, input.id))
+		.limit(1)
+	if (rows.length === 0) return false
+	const [row] = rows
 
 	if (typeof input.retryInSeconds === 'number') {
+		// Retry path: idempotent if the prior call already unclaimed the row
+		// (claimedBy is null) — likely a network retry from the same worker.
+		if (row.completedAt !== null || row.failedAt !== null) return true
+		if (row.claimedBy !== input.workerId) {
+			// Owned by another worker (lease was reaped). Caller's failure
+			// signal is irrelevant to the current owner's lease.
+			return row.claimedBy === null
+		}
 		const availableAt = new Date(now.getTime() + input.retryInSeconds * 1000)
 		const result = await db
 			.update(jobs)
@@ -219,6 +260,10 @@ export async function failJob(db: Db, input: FailJobInput): Promise<boolean> {
 		return result.length > 0
 	}
 
+	// Permanent-fail path: idempotent on already-failed rows.
+	if (row.failedAt !== null) return true
+	if (row.completedAt !== null) return false
+	if (row.claimedBy !== input.workerId) return false
 	const result = await db
 		.update(jobs)
 		.set({

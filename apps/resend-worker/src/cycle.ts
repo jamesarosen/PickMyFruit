@@ -31,19 +31,12 @@ export async function runCycle(options: RunCycleOptions): Promise<number> {
 		if (options.signal?.aborted) break;
 	}
 
-	if (processed > 0) {
-		logger.debug(
-			{ rows: processed, durationMs: Date.now() - started, loop: options.name },
-			`[${options.name}] cycle drained`,
-		);
-	} else {
-		// Always log on each tick, even when empty — the issue's Slice-1
-		// verification looks for `[resend-email] cycle drained` on an empty queue.
-		logger.debug(
-			{ rows: 0, durationMs: Date.now() - started, loop: options.name },
-			`[${options.name}] cycle drained`,
-		);
-	}
+	// Always log per tick (including empty drains) — Slice-1 verification
+	// looks for `[resend-email] cycle drained` on an empty queue.
+	logger.debug(
+		{ rows: processed, durationMs: Date.now() - started, loop: options.name },
+		`[${options.name}] cycle drained`,
+	);
 
 	return processed;
 }
