@@ -1,4 +1,4 @@
-import { createEffect, createSignal, on, Show } from 'solid-js'
+import { createEffect, createSignal, on, onMount, Show } from 'solid-js'
 import { Link, useNavigate, useRouteContext } from '@tanstack/solid-router'
 import { z } from 'zod'
 import { Input, Textarea } from '@/components/FormField'
@@ -42,6 +42,11 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 
 	const isAuthenticated = () => Boolean(context().session?.user)
 	const isSubmitting = () => formState() === 'submitting'
+	// Kobalte's Combobox generates IDs internally; SSR and CSR counters diverge,
+	// causing silent hydration failure that strips all event handlers from the
+	// trigger. Render the selector fresh on the client only to sidestep this.
+	const [clientMounted, setClientMounted] = createSignal(false)
+	onMount(() => setClientMounted(true))
 
 	async function submitListing(data: Record<string, unknown>) {
 		setFormState('submitting')
@@ -130,13 +135,19 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 		if (isAuthenticated()) {
 			await submitListing(listingData)
 		} else {
-			// Validate email before triggering the magic-link flow
-			const emailParsed = emailSchema.safeParse(email().trim())
+			// Read the email from the native form element rather than the signal.
+			// Kobalte's controlled TextField onChange may not fire if the component
+			// fails to hydrate, leaving the signal stale while the native value is correct.
+			const emailFromForm = ((formData.get('email') as string) ?? '').trim()
+			if (emailFromForm) setEmail(emailFromForm)
+
+			const emailParsed = emailSchema.safeParse(emailFromForm)
 			if (!emailParsed.success) {
 				setEmailError(
 					z.treeifyError(emailParsed.error).errors[0] ??
 						'Please enter a valid email address'
 				)
+				setFormState('initial')
 				return
 			}
 
@@ -248,6 +259,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 						disabled={isSubmitting()}
 						errors={emailError() ? [emailError()!] : undefined}
 						label="Your email"
+						name="email"
 						onChange={(v) => {
 							setEmail(v)
 							setEmailError(null)
@@ -261,12 +273,14 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 				<fieldset>
 					<legend>What are you sharing?</legend>
 					<div class="form-row">
-						<ProduceTypeSelector
-							errorMessage={fieldErrors().properties?.type?.errors?.[0]}
-							name="type"
-							onChange={setSelectedType}
-							value={selectedType()}
-						/>
+						<Show when={clientMounted()}>
+							<ProduceTypeSelector
+								errorMessage={fieldErrors().properties?.type?.errors?.[0]}
+								name="type"
+								onChange={setSelectedType}
+								value={selectedType()}
+							/>
+						</Show>
 
 						<Input
 							errors={fieldErrors().properties?.harvestWindow?.errors}
