@@ -96,6 +96,8 @@ primary_region = 'sjc'
   RESEND_SYNC_CURSOR_PATH = '/app/data/resend-sync/cursor.json'
   RESEND_SYNC_POLL_MS = '60000'
   RESEND_SYNC_WORKER_ENABLED = 'true'
+  # RESEND_SYNC_WORKER_PATH is set in apps/www/Dockerfile next to the COPY
+  # that determines it (single source of truth, no preview-toml drift).
   RESEND_API_RATE_PER_SEC = '4'
   RESEND_API_BUCKET_CAPACITY = '4'
   SENTRY_ENABLED = 'true'

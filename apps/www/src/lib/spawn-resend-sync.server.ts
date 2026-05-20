@@ -79,7 +79,20 @@ export interface SpawnResendSyncDeps {
 	supervisionDeps?: AttachSupervisionDeps
 }
 
-const defaultResolveWorkerPath = (): string => {
+/**
+ * Resolves the absolute path to the resend-sync worker entrypoint.
+ *
+ * Production (Fly) sets `RESEND_SYNC_WORKER_PATH` because the runner image
+ * does not ship pnpm's virtual store, so `require.resolve` of the workspace
+ * package name has nothing to find. Dev and tests rely on the fallback, which
+ * works because pnpm hoists workspace packages into
+ * `node_modules/.pnpm/node_modules/`. See PICKMYFRUIT-1N.
+ */
+export const defaultResolveWorkerPath = (): string => {
+	const explicit = process.env.RESEND_SYNC_WORKER_PATH
+	if (explicit) {
+		return explicit
+	}
 	const require = createRequire(import.meta.url)
 	return require.resolve('@pickmyfruit/resend-sync')
 }
