@@ -27,6 +27,7 @@ services:
       BETTER_AUTH_URL: http://localhost:3000
       NODE_ENV: development
       DATABASE_URL: file:/app/data/development.db
+      INTERNAL_API_URL: http://localhost:3000
       # V8 heap capped at ~75% of the VM so GC fires before the OS OOM-kills,
       # leaving headroom for libvips native allocations.
       NODE_OPTIONS: --max-old-space-size=384
