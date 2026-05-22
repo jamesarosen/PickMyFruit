@@ -35,11 +35,18 @@ function h3ToPolygonRing(h3Index: string): number[][] {
 export default function ListingMap(props: Props) {
 	let map: import('maplibre-gl').Map | undefined
 
-	function setupMap({ container, maplibregl }: MapLibreGLReadyArgs) {
+	function setupMap({ container, maplibregl, onMapLoad }: MapLibreGLReadyArgs) {
 		if (props.mode === 'owner') {
-			initOwnerMap(maplibregl, container, props.lat, props.lng, props.h3Index)
+			initOwnerMap(
+				maplibregl,
+				container,
+				props.lat,
+				props.lng,
+				props.h3Index,
+				onMapLoad
+			)
 		} else {
-			initPublicMap(maplibregl, container, props.approximateH3Index)
+			initPublicMap(maplibregl, container, props.approximateH3Index, onMapLoad)
 		}
 		return () => {
 			map?.remove()
@@ -52,7 +59,8 @@ export default function ListingMap(props: Props) {
 		container: HTMLDivElement,
 		lat: number,
 		lng: number,
-		h3Index: string
+		h3Index: string,
+		onMapLoad: () => void
 	) {
 		const publicH3 = cellToParent(h3Index, H3_RESOLUTIONS.PUBLIC_DETAIL)
 
@@ -102,6 +110,8 @@ export default function ListingMap(props: Props) {
 					'line-width': 2,
 				},
 			})
+
+			onMapLoad()
 		})
 
 		new maplibregl.Marker({ color: COLOR_MARKER })
@@ -112,7 +122,8 @@ export default function ListingMap(props: Props) {
 	function initPublicMap(
 		maplibregl: typeof import('maplibre-gl'),
 		container: HTMLDivElement,
-		h3Index: string
+		h3Index: string,
+		onMapLoad: () => void
 	) {
 		const [lat, lng] = cellToLatLng(h3Index)
 		const boundary = h3ToPolygonRing(h3Index)
@@ -162,6 +173,8 @@ export default function ListingMap(props: Props) {
 					'line-width': 2,
 				},
 			})
+
+			onMapLoad()
 		})
 	}
 

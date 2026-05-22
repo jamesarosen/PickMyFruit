@@ -63,7 +63,7 @@ export default function ListingsMap(props: Props) {
 	let layersReady = false
 	let currentRes: number = H3_RESOLUTIONS.HOME_GROUPING
 
-	function setupMap({ container, maplibregl }: MapLibreGLReadyArgs) {
+	function setupMap({ container, maplibregl, onMapLoad }: MapLibreGLReadyArgs) {
 		const groups = groupByH3(props.listings)
 		const bounds = new maplibregl.LngLatBounds()
 		for (const group of groups) {
@@ -103,6 +103,8 @@ export default function ListingsMap(props: Props) {
 				updateRegion(props.selectedH3)
 				updateHighlight()
 			}
+
+			onMapLoad()
 		})
 
 		map.on('zoomend', () => {
