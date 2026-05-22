@@ -52,6 +52,9 @@ export const Route = createRootRoute({
 				property: 'og:image:alt',
 				content: 'Pick My Fruit — Stop Watching Your Fruit Rot',
 			},
+			{ property: 'og:logo', content: 'https://www.pickmyfruit.com/logo.png' },
+			{ property: 'og:logo:width', content: '200' },
+			{ property: 'og:logo:height', content: '200' },
 			// Twitter / X card (also used by some other crawlers)
 			{ name: 'twitter:card', content: 'summary_large_image' },
 			{ name: 'twitter:title', content: 'Pick My Fruit' },
