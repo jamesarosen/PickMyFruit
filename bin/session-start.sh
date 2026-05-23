@@ -36,10 +36,9 @@ pnpm install --frozen-lockfile
 echo "[session-start] Ensuring Playwright Chromium is installed…"
 pnpm --dir apps/www exec playwright install --with-deps chromium
 
-# Future consideration: `pnpm --dir apps/www db:push` to prep the dev SQLite DB
-# up front. Deliberately omitted today because (a) not every agent wants a
-# pre-seeded DB (e.g. one investigating a migration may want a clean slate),
-# and (b) `db:push` mutates a file the agent might prefer to control itself.
-# Reconsider if first-turn DB setup becomes a recurring source of friction.
+# DB: no migrate here. `pnpm dev` runs pending migrations at server boot
+# (server-boot.server.ts). Vitest and Playwright migrate their own DBs in setup.
+# Agents: `db:generate` + commit SQL on schema changes; `db:migrate` to apply locally.
+# Reset a bad dev DB with: rm -f apps/www/data/development.db*
 
 echo "[session-start] Ready."

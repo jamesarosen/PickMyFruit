@@ -141,9 +141,9 @@ To run database migrations or seed data in production:
 # SSH into the production machine
 pnpm ssh
 
-# Inside the machine:
+# Inside the machine (migrations also run automatically at server boot):
 cd /app
-DATABASE_URL=file:/app/data/production.db pnpm db:push
+DATABASE_URL=file:/app/data/production.db pnpm db:migrate
 DATABASE_URL=file:/app/data/production.db pnpm db:seed
 ```
 

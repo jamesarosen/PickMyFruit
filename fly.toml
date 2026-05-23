@@ -77,7 +77,6 @@ primary_region = 'sjc'
   # Cap glibc malloc arenas — fewer per-thread arenas means lower RSS for
   # native-binary workloads (libvips, AWS SDK threads). Free, well-known.
   MALLOC_ARENA_MAX = '2'
-  MIGRATE_ON_REQUEST = 'true'
   NODE_ENV = 'production'
   MEDIA_ORIGIN = 'https://media.pickmyfruit.com'
   # Cap V8 heap at ~75% of the 512 MB VM so GC fires before Linux OOM-kills,
