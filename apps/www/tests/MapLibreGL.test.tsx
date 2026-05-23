@@ -1,6 +1,9 @@
 import { cleanup, render } from '@solidjs/testing-library'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import MapLibreGL, { type MapLibreGLReadyArgs } from '@/components/MapLibreGL'
+import MapLibreGL, {
+	type MapLibreGLReadyArgs,
+	reportMapLoadedOnce,
+} from '@/components/MapLibreGL'
 
 // mock maplibre modules (css stub doesn't need exports)
 vi.mock('maplibre-gl', () => ({
@@ -81,6 +84,11 @@ describe('<MapLibreGL>', () => {
 		const host = container.querySelector('.maplibregl')
 		expect(host?.getAttribute('aria-busy')).toBe('true')
 		expect(host?.querySelector('.maplibregl-skeleton')).not.toBeNull()
+		const skeleton = host?.querySelector('.maplibregl-skeleton')
+		const status = host?.querySelector('.sr-only')
+		expect(skeleton).not.toBeNull()
+		expect(status).not.toBeNull()
+		expect(skeleton?.contains(status ?? null)).toBe(false)
 	})
 
 	it('removes skeleton and aria-busy after onMapLoad is invoked', async () => {
@@ -104,5 +112,39 @@ describe('<MapLibreGL>', () => {
 			expect(host?.getAttribute('aria-busy')).toBe('false')
 			expect(host?.querySelector('.maplibregl-skeleton')).toBeNull()
 		})
+	})
+
+	it('reportMapLoadedOnce invokes onMapLoad on error without load', () => {
+		const handlers: Record<string, Array<(e?: { error?: Error }) => void>> = {}
+		const map = {
+			on(event: string, handler: (e?: { error?: Error }) => void) {
+				handlers[event] ??= []
+				handlers[event].push(handler)
+			},
+		} as unknown as import('maplibre-gl').Map
+
+		const onMapLoad = vi.fn()
+		reportMapLoadedOnce(map, onMapLoad)
+
+		expect(onMapLoad).not.toHaveBeenCalled()
+		handlers.error[0]({ error: new Error('tile failed') })
+		expect(onMapLoad).toHaveBeenCalledTimes(1)
+	})
+
+	it('reportMapLoadedOnce invokes onMapLoad only once when load follows error', () => {
+		const handlers: Record<string, Array<(e?: { error?: Error }) => void>> = {}
+		const map = {
+			on(event: string, handler: (e?: { error?: Error }) => void) {
+				handlers[event] ??= []
+				handlers[event].push(handler)
+			},
+		} as unknown as import('maplibre-gl').Map
+
+		const onMapLoad = vi.fn()
+		reportMapLoadedOnce(map, onMapLoad)
+
+		handlers.error[0]({ error: new Error('tile failed') })
+		handlers.load[0]()
+		expect(onMapLoad).toHaveBeenCalledTimes(1)
 	})
 })

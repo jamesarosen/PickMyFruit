@@ -91,6 +91,30 @@ function useMapLoader({ onReady, onError, onLoaded }: MapLoaderOptions) {
 	return (el: HTMLDivElement | null) => (containerRef = el)
 }
 
+/** Invokes `onMapLoad` once after the map loads or hits a tile/style error. */
+export function reportMapLoadedOnce(
+	map: import('maplibre-gl').Map,
+	onMapLoad: () => void,
+	onLoad?: () => void
+): void {
+	let reported = false
+	const report = () => {
+		if (reported) return
+		reported = true
+		onMapLoad()
+	}
+
+	map.on('load', () => {
+		onLoad?.()
+		report()
+	})
+
+	map.on('error', (e) => {
+		Sentry.captureException(e.error ?? e)
+		report()
+	})
+}
+
 /**
  * Lightweight component that handles lazy loading of maplibre-gl and its
  * stylesheet, centralizes error handling/unmount safety, and exposes just
@@ -128,12 +152,11 @@ export default function MapLibreGL(props: MapLibreGLProps) {
 			ref={containerRef}
 			role={local.role ?? 'application'}
 			class={clsx('maplibregl', local.class)}
-			aria-busy={showSkeleton() ? 'true' : 'false'}
+			aria-busy={showSkeleton()}
 		>
 			<Show when={showSkeleton()}>
-				<div class="maplibregl-skeleton" aria-hidden="true">
-					<span class="sr-only">Loading map…</span>
-				</div>
+				<span class="sr-only">Loading map…</span>
+				<div class="maplibregl-skeleton" aria-hidden="true" />
 			</Show>
 			{loadError() && <span class="map-unavailable">Map unavailable</span>}
 		</div>

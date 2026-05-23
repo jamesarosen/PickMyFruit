@@ -3,7 +3,10 @@ import { cellToLatLng, cellToBoundary, cellToParent } from 'h3-js'
 import MapPin from 'lucide-solid/icons/map-pin'
 import Hexagon from 'lucide-solid/icons/hexagon'
 import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
-import MapLibreGL, { MapLibreGLReadyArgs } from '@/components/MapLibreGL'
+import MapLibreGL, {
+	MapLibreGLReadyArgs,
+	reportMapLoadedOnce,
+} from '@/components/MapLibreGL'
 import '@/components/ListingMap.css'
 
 interface OwnerProps {
@@ -78,7 +81,7 @@ export default function ListingMap(props: Props) {
 		)
 		map.addControl(new maplibregl.NavigationControl({ showCompass: false }))
 
-		map.on('load', () => {
+		reportMapLoadedOnce(map, onMapLoad, () => {
 			if (!map) return
 
 			const ring = h3ToPolygonRing(publicH3)
@@ -110,8 +113,6 @@ export default function ListingMap(props: Props) {
 					'line-width': 2,
 				},
 			})
-
-			onMapLoad()
 		})
 
 		new maplibregl.Marker({ color: COLOR_MARKER })
@@ -142,7 +143,7 @@ export default function ListingMap(props: Props) {
 		)
 		map.addControl(new maplibregl.NavigationControl({ showCompass: false }))
 
-		map.on('load', () => {
+		reportMapLoadedOnce(map, onMapLoad, () => {
 			if (!map) return
 
 			map.addSource('listing-area', {
@@ -173,8 +174,6 @@ export default function ListingMap(props: Props) {
 					'line-width': 2,
 				},
 			})
-
-			onMapLoad()
 		})
 	}
 
