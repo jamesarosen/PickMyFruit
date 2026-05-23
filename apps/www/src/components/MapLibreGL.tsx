@@ -5,6 +5,7 @@ import {
 	type JSX,
 	onMount,
 	onCleanup,
+	Show,
 	splitProps,
 } from 'solid-js'
 import './MapLibreGL.css'
@@ -15,6 +16,8 @@ import './MapLibreGL.css'
 export interface MapLibreGLReadyArgs {
 	container: HTMLDivElement
 	maplibregl: typeof import('maplibre-gl')
+	/** Call this once the map's initial tiles have finished rendering. */
+	onMapLoad: () => void
 }
 
 /**
@@ -41,9 +44,10 @@ export interface MapLibreGLProps extends JSX.HTMLAttributes<HTMLDivElement> {
 interface MapLoaderOptions {
 	onReady: (args: MapLibreGLReadyArgs) => () => void
 	onError?: (err: unknown) => void
+	onLoaded: () => void
 }
 
-function useMapLoader({ onReady, onError }: MapLoaderOptions) {
+function useMapLoader({ onReady, onError, onLoaded }: MapLoaderOptions) {
 	let containerRef: HTMLDivElement | undefined | null
 	let mounted = true
 	let cleanup: (() => void) | undefined
@@ -69,6 +73,7 @@ function useMapLoader({ onReady, onError }: MapLoaderOptions) {
 			cleanup = onReady({
 				container: containerRef as HTMLDivElement,
 				maplibregl,
+				onMapLoad: onLoaded,
 			})
 		} catch (err) {
 			Sentry.captureException(err)
@@ -84,6 +89,30 @@ function useMapLoader({ onReady, onError }: MapLoaderOptions) {
 	})
 
 	return (el: HTMLDivElement | null) => (containerRef = el)
+}
+
+/** Invokes `onMapLoad` once after the map loads or hits a tile/style error. */
+export function reportMapLoadedOnce(
+	map: import('maplibre-gl').Map,
+	onMapLoad: () => void,
+	onLoad?: () => void
+): void {
+	let reported = false
+	const report = () => {
+		if (reported) return
+		reported = true
+		onMapLoad()
+	}
+
+	map.on('load', () => {
+		onLoad?.()
+		report()
+	})
+
+	map.on('error', (e) => {
+		Sentry.captureException(e.error ?? e)
+		report()
+	})
 }
 
 /**
@@ -102,6 +131,7 @@ export default function MapLibreGL(props: MapLibreGLProps) {
 	])
 
 	const [loadError, setLoadError] = createSignal(false)
+	const [loaded, setLoaded] = createSignal(false)
 
 	const containerRef = useMapLoader({
 		onReady: local.onReady,
@@ -109,7 +139,12 @@ export default function MapLibreGL(props: MapLibreGLProps) {
 			setLoadError(true)
 			local.onError?.(err)
 		},
+		onLoaded() {
+			setLoaded(true)
+		},
 	})
+
+	const showSkeleton = () => !loaded() && !loadError()
 
 	return (
 		<div
@@ -117,7 +152,12 @@ export default function MapLibreGL(props: MapLibreGLProps) {
 			ref={containerRef}
 			role={local.role ?? 'application'}
 			class={clsx('maplibregl', local.class)}
+			aria-busy={showSkeleton()}
 		>
+			<Show when={showSkeleton()}>
+				<span class="sr-only">Loading map…</span>
+				<div class="maplibregl-skeleton" aria-hidden="true" />
+			</Show>
 			{loadError() && <span class="map-unavailable">Map unavailable</span>}
 		</div>
 	)

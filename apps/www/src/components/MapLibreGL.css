@@ -1,5 +1,7 @@
 @layer components {
 	.maplibregl {
+		position: relative;
+
 		.map-unavailable {
 			align-items: center;
 			color: var(--color-quiet);
@@ -7,6 +9,35 @@
 			height: 100%;
 			justify-content: center;
 			width: 100%;
+		}
+
+		.maplibregl-skeleton {
+			position: absolute;
+			inset: 0;
+			background-color: oklch(from var(--color-quiet) l calc(c * 0.15) h / 0.12);
+			z-index: 1;
+		}
+
+		@media (prefers-reduced-motion: no-preference) {
+			.maplibregl-skeleton {
+				background: linear-gradient(
+					90deg,
+					oklch(from var(--color-quiet) l calc(c * 0.15) h / 0.1) 0%,
+					oklch(from var(--color-quiet) l calc(c * 0.15) h / 0.22) 50%,
+					oklch(from var(--color-quiet) l calc(c * 0.15) h / 0.1) 100%
+				);
+				background-size: 200% 100%;
+				animation: maplibregl-shimmer 1.6s ease-in-out infinite;
+			}
+		}
+	}
+
+	@keyframes maplibregl-shimmer {
+		0% {
+			background-position: 200% 0;
+		}
+		100% {
+			background-position: -200% 0;
 		}
 	}
 }

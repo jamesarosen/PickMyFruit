@@ -3,7 +3,10 @@ import type { PublicListing } from '@/data/queries.server'
 import { cellToLatLng, cellToBoundary, cellToParent } from 'h3-js'
 import { H3_RESOLUTIONS, zoomToH3Resolution } from '@/lib/h3-resolutions'
 import { Sentry } from '@/lib/sentry'
-import MapLibreGL, { MapLibreGLReadyArgs } from '@/components/MapLibreGL'
+import MapLibreGL, {
+	MapLibreGLReadyArgs,
+	reportMapLoadedOnce,
+} from '@/components/MapLibreGL'
 import '@/components/ListingsMap.css'
 
 /** A group of listings sharing the same approximate H3 cell. */
@@ -63,7 +66,7 @@ export default function ListingsMap(props: Props) {
 	let layersReady = false
 	let currentRes: number = H3_RESOLUTIONS.HOME_GROUPING
 
-	function setupMap({ container, maplibregl }: MapLibreGLReadyArgs) {
+	function setupMap({ container, maplibregl, onMapLoad }: MapLibreGLReadyArgs) {
 		const groups = groupByH3(props.listings)
 		const bounds = new maplibregl.LngLatBounds()
 		for (const group of groups) {
@@ -86,7 +89,7 @@ export default function ListingsMap(props: Props) {
 		)
 		map.addControl(new maplibregl.NavigationControl({ showCompass: false }))
 
-		map.on('load', () => {
+		reportMapLoadedOnce(map, onMapLoad, () => {
 			addGroupLayers(groups)
 			addRegionLayers()
 			layersReady = true

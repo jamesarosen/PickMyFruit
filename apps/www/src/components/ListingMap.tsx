@@ -3,7 +3,10 @@ import { cellToLatLng, cellToBoundary, cellToParent } from 'h3-js'
 import MapPin from 'lucide-solid/icons/map-pin'
 import Hexagon from 'lucide-solid/icons/hexagon'
 import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
-import MapLibreGL, { MapLibreGLReadyArgs } from '@/components/MapLibreGL'
+import MapLibreGL, {
+	MapLibreGLReadyArgs,
+	reportMapLoadedOnce,
+} from '@/components/MapLibreGL'
 import '@/components/ListingMap.css'
 
 interface OwnerProps {
@@ -35,11 +38,18 @@ function h3ToPolygonRing(h3Index: string): number[][] {
 export default function ListingMap(props: Props) {
 	let map: import('maplibre-gl').Map | undefined
 
-	function setupMap({ container, maplibregl }: MapLibreGLReadyArgs) {
+	function setupMap({ container, maplibregl, onMapLoad }: MapLibreGLReadyArgs) {
 		if (props.mode === 'owner') {
-			initOwnerMap(maplibregl, container, props.lat, props.lng, props.h3Index)
+			initOwnerMap(
+				maplibregl,
+				container,
+				props.lat,
+				props.lng,
+				props.h3Index,
+				onMapLoad
+			)
 		} else {
-			initPublicMap(maplibregl, container, props.approximateH3Index)
+			initPublicMap(maplibregl, container, props.approximateH3Index, onMapLoad)
 		}
 		return () => {
 			map?.remove()
@@ -52,7 +62,8 @@ export default function ListingMap(props: Props) {
 		container: HTMLDivElement,
 		lat: number,
 		lng: number,
-		h3Index: string
+		h3Index: string,
+		onMapLoad: () => void
 	) {
 		const publicH3 = cellToParent(h3Index, H3_RESOLUTIONS.PUBLIC_DETAIL)
 
@@ -70,7 +81,7 @@ export default function ListingMap(props: Props) {
 		)
 		map.addControl(new maplibregl.NavigationControl({ showCompass: false }))
 
-		map.on('load', () => {
+		reportMapLoadedOnce(map, onMapLoad, () => {
 			if (!map) return
 
 			const ring = h3ToPolygonRing(publicH3)
@@ -112,7 +123,8 @@ export default function ListingMap(props: Props) {
 	function initPublicMap(
 		maplibregl: typeof import('maplibre-gl'),
 		container: HTMLDivElement,
-		h3Index: string
+		h3Index: string,
+		onMapLoad: () => void
 	) {
 		const [lat, lng] = cellToLatLng(h3Index)
 		const boundary = h3ToPolygonRing(h3Index)
@@ -131,7 +143,7 @@ export default function ListingMap(props: Props) {
 		)
 		map.addControl(new maplibregl.NavigationControl({ showCompass: false }))
 
-		map.on('load', () => {
+		reportMapLoadedOnce(map, onMapLoad, () => {
 			if (!map) return
 
 			map.addSource('listing-area', {
