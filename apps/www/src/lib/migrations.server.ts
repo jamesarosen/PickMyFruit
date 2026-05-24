@@ -23,7 +23,7 @@ export function runMigrations(): Promise<void> {
 	})().catch((err) => {
 		Sentry.captureException(err)
 		pending = undefined
-		process.exit(1)
+		process.exit(78)
 	})
 
 	return pending
