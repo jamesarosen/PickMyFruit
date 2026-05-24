@@ -4,7 +4,7 @@ import {
 	createRuntime,
 	type DurableRuntime,
 } from '@pickmyfruit/kokoto/runtime.server'
-import { db } from '@/data/db.server'
+import { libsqlClient } from '@/data/db.server'
 import { logger } from '@/lib/logger.server'
 import { Sentry } from '@/lib/sentry'
 
@@ -45,32 +45,13 @@ function buildTelemetry(): KokotoTelemetry {
 }
 
 /**
- * The Drizzle libsql adapter does not expose the underlying `Client` on its
- * public type. Reach in once, here, so the rest of the code uses the
- * high-level `db` import without leaking that detail.
- */
-function getLibsqlClient(): import('@libsql/client').Client {
-	const internal = db as unknown as {
-		$client?: import('@libsql/client').Client
-		session?: { client?: import('@libsql/client').Client }
-	}
-	const client = internal.$client ?? internal.session?.client
-	if (!client) {
-		throw new Error(
-			'Unable to resolve underlying libsql client from Drizzle instance'
-		)
-	}
-	return client
-}
-
-/**
  * Lazily-initialized runtime singleton. Workflow registration happens inside
  * `startRuntime()` so callers do not have to thread the runtime through.
  */
 export function getRuntime(): DurableRuntime {
 	if (!runtimeInstance) {
 		runtimeInstance = createRuntime({
-			client: getLibsqlClient(),
+			client: libsqlClient,
 			telemetry: buildTelemetry(),
 			pollMs: 250,
 			globalConcurrency: 16,

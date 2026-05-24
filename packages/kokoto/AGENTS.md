@@ -39,6 +39,11 @@ Guidance for AI/coding agents working inside this package.
 - **File naming.** Anything that imports `node:*`, opens a SQLite connection,
   or touches secrets must be `*.server.ts`. The public type entry (`index.ts`)
   stays client-safe.
+- **No env reads, no dotenv, no standalone dev mode.** The runtime takes a
+  pre-built `SqlClient` from the host. Do not add `process.env.DATABASE_URL`
+  lookups, a `pnpm dev` script, or a `dotenv`/`dotenvx` dependency — at
+  runtime the host (`apps/www`) owns env; under `pnpm --filter
+@pickmyfruit/kokoto test:run` tests build their own in-memory client.
 
 ## Testing
 

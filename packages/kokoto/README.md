@@ -41,10 +41,13 @@ const submitInquiry = defineWorkflow(
 	{ queue: 'email' }
 )
 
+// kokoto does not open its own DB connection — the host injects one. In
+// `apps/www` this is the same `libsqlClient` that powers Drizzle, so the
+// runtime shares the process's connection pool and pragmas.
 const client = createClient({ url: 'file:./data/app.db' })
 const runtime = createRuntime({ client })
 
-await runtime.createSchema() // dev only; production uses the migration journal
+await runtime.createSchema() // tests only; production uses the migration journal
 await runtime.start({ workflows: [submitInquiry], queues: [emailQueue] })
 
 const handle = await runtime.startWorkflow(submitInquiry, { listingId: 42, gleanerId: 'usr_abc' }, { idempotencyKey: `inquiry:42:usr_abc:2026-05-24` })
