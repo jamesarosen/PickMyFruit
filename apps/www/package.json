@@ -37,6 +37,7 @@
 		"@aws-sdk/lib-storage": "3.1042.0",
 		"@kobalte/core": "^0.13.11",
 		"@libsql/client": "0.17.3",
+		"@pickmyfruit/kokoto": "workspace:*",
 		"@sentry/solid": "^10.55.0",
 		"@sentry/solidstart": "^10.55.0",
 		"@tanstack/solid-router": "^1.170.8",
