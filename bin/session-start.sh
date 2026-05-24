@@ -19,11 +19,11 @@ if command -v pnpm >/dev/null 2>&1; then
 elif command -v corepack >/dev/null 2>&1; then
 	echo "[session-start] No pnpm found; activating via corepack…"
 	corepack enable
-	corepack prepare pnpm@10.22.0 --activate
+	corepack prepare pnpm@11.2.2 --activate
 else
 	echo "[session-start] Need pnpm on PATH, but neither pnpm nor corepack is available." >&2
 	echo "[session-start] Install one of:" >&2
-	echo "  - Volta:    https://volta.sh, then 'volta install pnpm@10.22.0'" >&2
+	echo "  - Volta:    https://volta.sh, then 'volta install pnpm@11.2.2'" >&2
 	echo "  - Corepack: ships with Node >=16.10, then 'corepack enable'" >&2
 	exit 1
 fi

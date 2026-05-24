@@ -47,6 +47,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # pnpm version comes from package.json "packageManager" (currently pnpm@11.2.2).
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:

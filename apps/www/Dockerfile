@@ -7,7 +7,7 @@ FROM node:24-slim AS builder
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN corepack enable && corepack prepare pnpm@10.22.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.2.2 --activate
 
 # Install sentry-cli for the sourcemap upload step below.
 # Pin to a specific version to prevent unplanned breakage on future builds.
@@ -123,11 +123,12 @@ RUN cd apps/resend-sync && pnpm build
 # Materialize the worker as a self-contained deployable: pnpm's normal
 # install layout uses symlinks back into the workspace-root virtual store
 # (apps/resend-sync/node_modules/undici → ../../../node_modules/.pnpm/...),
-# which would dangle in the runner image. `pnpm deploy` dereferences those
+# which would dangle in the runner image. `pnpm pm deploy` dereferences those
 # into a flat node_modules under /tmp/resend-sync-deploy, including dist/
-# from the build above. --legacy because the workspace does not opt into
-# inject-workspace-packages (pnpm 10 default).
-RUN pnpm --filter @pickmyfruit/resend-sync deploy \
+# from the build above. Use `pm deploy` (not bare `deploy`) because pnpm 11
+# routes `pnpm deploy` to the root package's Fly deploy script. --legacy
+# because the workspace does not opt into inject-workspace-packages.
+RUN pnpm pm deploy --filter @pickmyfruit/resend-sync \
     --prod --legacy /tmp/resend-sync-deploy
 
 # Production stage
