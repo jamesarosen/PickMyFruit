@@ -57,6 +57,13 @@
 			"when": 1778862364766,
 			"tag": "0007_add_resend_sync",
 			"breakpoints": true
+		},
+		{
+			"idx": 8,
+			"version": "6",
+			"when": 1779596643981,
+			"tag": "0008_add_kokoto",
+			"breakpoints": true
 		}
 	]
 }
