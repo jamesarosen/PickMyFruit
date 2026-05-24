@@ -4,7 +4,7 @@ import { Sentry } from '@/lib/sentry'
 import * as schema from './schema.server'
 import { serverEnv } from '@/lib/env.server'
 
-const client = createClient({
+export const client = createClient({
 	url: serverEnv.DATABASE_URL,
 	authToken: serverEnv.DATABASE_AUTH_TOKEN,
 })

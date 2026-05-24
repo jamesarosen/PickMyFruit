@@ -1,0 +1,36 @@
+{
+	"name": "@pickmyfruit/kokoto",
+	"type": "module",
+	"version": "0.0.1",
+	"private": true,
+	"description": "SQLite-backed durable workflow runtime for Pick My Fruit",
+	"exports": {
+		".": "./src/index.server.ts",
+		"./runtime.server": "./src/runtime.server.ts",
+		"./schema.server": "./src/schema.server.ts"
+	},
+	"scripts": {
+		"build": "tsc -p tsconfig.json --noEmit",
+		"format": "pnpm run format:write",
+		"format:check": "prettier --check .",
+		"format:write": "prettier --write .",
+		"lint": "oxlint",
+		"lint:ci": "oxlint --format github",
+		"lint:fix": "oxlint --fix",
+		"test": "pnpm run test:watch",
+		"test:run": "vitest run",
+		"test:ci": "vitest run --reporter=default --reporter=github-actions",
+		"test:watch": "vitest",
+		"typecheck": "tsc -p tsconfig.json --noEmit"
+	},
+	"dependencies": {
+		"@libsql/client": "0.17.3"
+	},
+	"devDependencies": {
+		"@types/node": "25.6.0",
+		"oxlint": "^1.62.0",
+		"prettier": "3.8.3",
+		"typescript": "^6.0.3",
+		"vitest": "^4.1.5"
+	}
+}

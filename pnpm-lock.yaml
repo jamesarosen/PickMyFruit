@@ -56,6 +56,9 @@ importers:
       '@libsql/client':
         specifier: 0.17.3
         version: 0.17.3
+      '@pickmyfruit/kokoto':
+        specifier: workspace:*
+        version: link:../../packages/kokoto
       '@sentry/solid':
         specifier: ^10.51.0
         version: 10.51.0(@tanstack/solid-router@1.169.1(solid-js@1.9.12))(solid-js@1.9.12)
@@ -168,6 +171,28 @@ importers:
       vite-plugin-solid:
         specifier: 2.11.12
         version: 2.11.12(@testing-library/jest-dom@6.9.1)(solid-js@1.9.12)(vite@8.0.10(@types/node@25.6.0)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1))
+      vitest:
+        specifier: ^4.1.5
+        version: 4.1.5(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@8.0.10(@types/node@25.6.0)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1))
+
+  packages/kokoto:
+    dependencies:
+      '@libsql/client':
+        specifier: 0.17.3
+        version: 0.17.3
+    devDependencies:
+      '@types/node':
+        specifier: 25.6.0
+        version: 25.6.0
+      oxlint:
+        specifier: ^1.62.0
+        version: 1.62.0
+      prettier:
+        specifier: 3.8.3
+        version: 3.8.3
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
       vitest:
         specifier: ^4.1.5
         version: 4.1.5(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@8.0.10(@types/node@25.6.0)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.1))
