@@ -1,5 +1,20 @@
 minimumReleaseAge: 4320 # 3 days
+blockExoticSubdeps: true
+
+supportedArchitectures:
+  os:
+    - linux
+    - darwin
+  cpu:
+    - x64
+    - arm64
 
 packages:
   - "apps/*"
   - "packages/*"
+
+allowBuilds:
+  '@parcel/watcher': true
+  '@sentry/cli': true
+  esbuild: true
+  sharp: true

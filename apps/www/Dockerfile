@@ -7,7 +7,7 @@ FROM node:24-slim AS builder
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN corepack enable && corepack prepare pnpm@10.22.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.2.2 --activate
 
 # Install sentry-cli for the sourcemap upload step below.
 # Pin to a specific version to prevent unplanned breakage on future builds.

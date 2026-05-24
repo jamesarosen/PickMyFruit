@@ -162,6 +162,7 @@ The only service is the **Solid JS web application** in `apps/www`. It uses an e
 ### Gotchas
 
 - **Node version**: `.npmrc` sets `use-node-version=24.9.0` — pnpm scripts automatically use Node 24.9.0 regardless of the system Node version. Ensure Node 24 is installed via nvm.
+- **pnpm version**: pinned in root `package.json` `packageManager` (currently `pnpm@11.2.2`). CI and Docker read it via `pnpm/action-setup` and Corepack; `bin/session-start.sh` activates the same version when pnpm is missing from PATH. Workspace policy lives in `pnpm-workspace.yaml` (`minimumReleaseAge`, `blockExoticSubdeps`, `allowBuilds`, `supportedArchitectures`).
 - **DB migrate vs push**: Prefer `db:migrate` everywhere. `db:push` is an optional local shortcut only. A DB touched by both must be reset (delete the `.db` file, then `db:migrate`). Boot migration is gated by `RUN_MIGRATIONS_ON_BOOT` (on in dev/prod Fly config, off in test).
 - **Magic link auth in dev**: `EMAIL_PROVIDER=console` (default) logs the magic link token to the Vite dev server stdout. Look for the Pino log line with `token:` to extract it for manual testing.
 - **E2E test server**: Playwright starts its own Vite dev server on port 5174 with test-specific env vars (`reuseExistingServer: false`). The port-5173 dev server does not interfere.

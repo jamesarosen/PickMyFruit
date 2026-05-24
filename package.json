@@ -2,7 +2,7 @@
 	"name": "@pickmyfruit/workspace",
 	"type": "module",
 	"version": "0.0.1",
-	"packageManager": "pnpm@10.22.0",
+	"packageManager": "pnpm@11.2.2",
 	"private": true,
 	"description": "Pick My Fruit - Workspace",
 	"author": "James A Rosen, Pick My Fruit",
@@ -29,17 +29,5 @@
 		"docker:down": "docker compose down",
 		"docker:logs": "docker compose logs -f",
 		"postinstall": "bash bin/install-git-hooks.sh"
-	},
-	"pnpm": {
-		"supportedArchitectures": {
-			"os": [
-				"linux",
-				"darwin"
-			],
-			"cpu": [
-				"x64",
-				"arm64"
-			]
-		}
 	}
 }
