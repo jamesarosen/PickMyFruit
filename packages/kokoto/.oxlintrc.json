@@ -1,0 +1,68 @@
+{
+	"categories": {
+		"correctness": "error",
+		"suspicious": "error",
+		"perf": "error",
+		"pedantic": "warn",
+		"style": "warn"
+	},
+	"plugins": ["import", "vitest"],
+	"rules": {
+		"eslint/eqeqeq": ["error", "always", { "null": "ignore" }],
+		"eslint/sort-imports": "off",
+		"eslint/sort-keys": "off",
+		"eslint/func-style": "off",
+		"eslint/new-cap": "off",
+		"eslint/no-magic-numbers": "off",
+		"eslint/max-lines-per-function": "off",
+		"eslint/max-statements": "off",
+		"eslint/max-classes-per-file": ["error", 8],
+		"eslint/no-ternary": "off",
+		"eslint/no-promise-executor-return": "off",
+		"eslint/no-shadow": "off",
+		"eslint/no-underscore-dangle": "off",
+		"eslint/no-await-in-loop": "off",
+		"eslint/init-declarations": "off",
+		"eslint/no-unassigned-vars": "off",
+		"eslint/id-length": "off",
+		"eslint/capitalized-comments": "off",
+		"eslint/no-inline-comments": "off",
+		"eslint/no-warning-comments": "off",
+		"eslint/no-empty-function": "off",
+		"eslint/no-empty-pattern": "off",
+		"import/no-nodejs-modules": "off",
+		"import/no-named-export": "off",
+		"import/prefer-default-export": "off",
+		"import/exports-last": "off",
+		"import/group-exports": "off",
+		"import/consistent-type-specifier-style": "off",
+		"import/no-namespace": "off",
+		"vitest/prefer-called-once": "off",
+		"vitest/no-importing-vitest-globals": "off",
+		"vitest/require-mock-type-parameters": "off"
+	},
+	"overrides": [
+		{
+			"files": ["test/**/*.ts"],
+			"rules": {
+				"import/max-dependencies": "off",
+				"eslint/require-await": "off",
+				"jest/require-hook": "off",
+				"jest/require-to-throw-message": "off",
+				"jest/no-untyped-mock-factory": "off",
+				"jest/prefer-expect-assertions": "off",
+				"jest/no-hooks": "off",
+				"jest/no-conditional-in-test": "off",
+				"jest/valid-title": "off",
+				"jest/valid-expect": "off",
+				"no-untyped-mock-factory": "off",
+				"vitest/prefer-expect-assertions": "off",
+				"vitest/no-conditional-in-test": "off",
+				"vitest/no-hooks": "off",
+				"vitest/valid-title": "off",
+				"vitest/prefer-to-be-truthy": "off",
+				"vitest/prefer-comparison-matcher": "off"
+			}
+		}
+	]
+}
