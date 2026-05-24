@@ -26,3 +26,6 @@ try {
 }
 
 export const db = drizzle(client, { schema })
+
+/** LibSQL client for kokoto and other prepared-statement callers. */
+export const libsqlClient = client

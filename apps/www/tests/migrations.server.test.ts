@@ -14,6 +14,10 @@ const wwwRoot = resolve(__dirname, '..')
  * this list must also be sorted alphabetically for the equality check.
  */
 const EXPECTED_TABLES = [
+	'_dc_executor',
+	'_dc_meta',
+	'_dc_step',
+	'_dc_workflow',
 	'account',
 	'inquiries',
 	'listing_photos',
