@@ -105,7 +105,8 @@ export function buildInquiryEmailHtml(data: InquiryEmailData): string {
 
 /** Sends an inquiry notification email. Throws on failure. */
 export async function sendInquiryEmail(
-	input: Omit<InquiryEmailData, 'unavailableUrl'>
+	input: Omit<InquiryEmailData, 'unavailableUrl'>,
+	options: { idempotencyKey?: string } = {}
 ): Promise<void> {
 	const data: InquiryEmailData = {
 		...input,
@@ -130,13 +131,18 @@ export async function sendInquiryEmail(
 		const { Resend } = await import('resend')
 		const resend = new Resend(serverEnv.email.RESEND_API_KEY)
 
-		const { error } = await resend.emails.send({
-			from: serverEnv.EMAIL_FROM,
-			to: data.owner.email,
-			replyTo: data.gleaner.email,
-			subject: buildInquiryEmailSubject(data),
-			html: buildInquiryEmailHtml(data),
-		})
+		const { error } = await resend.emails.send(
+			{
+				from: serverEnv.EMAIL_FROM,
+				to: data.owner.email,
+				replyTo: data.gleaner.email,
+				subject: buildInquiryEmailSubject(data),
+				html: buildInquiryEmailHtml(data),
+			},
+			options.idempotencyKey
+				? { idempotencyKey: options.idempotencyKey }
+				: undefined
+		)
 
 		if (error) {
 			throw new Error(`Email send failed: ${error.name} — ${error.message}`)
