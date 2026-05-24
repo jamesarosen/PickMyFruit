@@ -36,6 +36,7 @@ export default defineConfig({
 		// Must stay in sync with baseSchema in env.server.ts and test.env in
 		// vitest.config.ts
 		env: {
+			RUN_MIGRATIONS_ON_BOOT: 'false',
 			BETTER_AUTH_SECRET: 'test-secret-for-e2e-minimum-32-characters',
 			BETTER_AUTH_URL: 'http://localhost:5174',
 			DATABASE_URL: `file:${testDbPath}`,

@@ -5,21 +5,14 @@ import { serverEnv } from '@/lib/env.server'
 
 let pending: Promise<void> | undefined
 
-/** Whether the running server should apply journal migrations at boot. */
-export function shouldRunBootMigrations(): boolean {
-	return (
-		serverEnv.NODE_ENV === 'development' || serverEnv.NODE_ENV === 'production'
-	)
-}
-
 /**
- * Applies pending journal migrations once per process (dev and production boot).
+ * Applies pending journal migrations once per process when
+ * {@link serverEnv.RUN_MIGRATIONS_ON_BOOT} is enabled.
  *
- * Test environments migrate via Vitest globalSetup and Playwright setup instead.
  * Failures are reported to Sentry and terminate the process so deploys fail closed.
  */
 export function runMigrations(): Promise<void> {
-	if (!shouldRunBootMigrations()) return Promise.resolve()
+	if (!serverEnv.RUN_MIGRATIONS_ON_BOOT) return Promise.resolve()
 
 	pending ??= (async () => {
 		const start = Date.now()

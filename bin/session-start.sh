@@ -36,8 +36,8 @@ pnpm install --frozen-lockfile
 echo "[session-start] Ensuring Playwright Chromium is installed…"
 pnpm --dir apps/www exec playwright install --with-deps chromium
 
-# DB: no migrate here. `pnpm dev` runs pending migrations at server boot
-# (server-boot.server.ts). Vitest and Playwright migrate their own DBs in setup.
+# DB: no migrate here. `pnpm dev` runs pending migrations at boot when
+# RUN_MIGRATIONS_ON_BOOT=true (.env.development). Vitest/Playwright migrate in setup.
 # Agents: `db:generate` + commit SQL on schema changes; `db:migrate` to apply locally.
 # Reset a bad dev DB with: rm -f apps/www/data/development.db*
 

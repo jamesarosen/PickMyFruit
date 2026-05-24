@@ -42,6 +42,7 @@ export default defineConfig({
 					// Must stay in sync with baseSchema in env.server.ts and webserver.env in
 					// playwright.config.ts
 					env: {
+						RUN_MIGRATIONS_ON_BOOT: 'false',
 						BETTER_AUTH_SECRET: 'test-secret-do-not-use-in-production-min32chars',
 						BETTER_AUTH_URL: 'http://localhost:5174',
 						DATA_DIR: '/tmp/pmf-test',

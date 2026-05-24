@@ -109,7 +109,7 @@ We use a monorepo structure
 - `db:generate` when `schema.ts` changes — writes committed SQL under `drizzle/`
 - `db:migrate` applies the journal (agents: run after schema changes; also used by Vitest/E2E setup)
 - `db:push` is for local-only schema experiments — do not use on branches you intend to merge; it skips journal SQL (including data migrations) and must not be mixed with `db:migrate` on the same file (delete the `.db` and `db:migrate` to recover)
-- Dev and production servers run pending migrations at boot (`server-boot.server.ts`); test DBs migrate in Vitest/Playwright setup
+- Set `RUN_MIGRATIONS_ON_BOOT=true` (`.env.development`, `fly.toml`) to apply pending migrations at server boot; leave it off in test so Vitest/Playwright setup owns the test DBs
 - When writing a migration by hand, set `when` in `drizzle/meta/_journal.json` to `Date.now()` at the time of writing (milliseconds since epoch). Values must be strictly increasing; entries with a `when` below the current `MAX(created_at)` in `__drizzle_migrations` are silently skipped by the migrator.
 - Use Solid JS for reactive UI components
 - Routes are defined using TanStack Router's file-based routing
@@ -162,7 +162,7 @@ The only service is the **Solid JS web application** in `apps/www`. It uses an e
 ### Gotchas
 
 - **Node version**: `.npmrc` sets `use-node-version=24.9.0` — pnpm scripts automatically use Node 24.9.0 regardless of the system Node version. Ensure Node 24 is installed via nvm.
-- **DB migrate vs push**: Prefer `db:migrate` everywhere. `db:push` is an optional local shortcut only. A DB touched by both must be reset (delete the `.db` file, then `db:migrate`). Dev/prod apply migrations at server boot; tests migrate in Vitest/Playwright setup.
+- **DB migrate vs push**: Prefer `db:migrate` everywhere. `db:push` is an optional local shortcut only. A DB touched by both must be reset (delete the `.db` file, then `db:migrate`). Boot migration is gated by `RUN_MIGRATIONS_ON_BOOT` (on in dev/prod Fly config, off in test).
 - **Magic link auth in dev**: `EMAIL_PROVIDER=console` (default) logs the magic link token to the Vite dev server stdout. Look for the Pino log line with `token:` to extract it for manual testing.
 - **E2E test server**: Playwright starts its own Vite dev server on port 5174 with test-specific env vars (`reuseExistingServer: false`). The port-5173 dev server does not interfere.
 - **pnpm build script warnings**: `pnpm install` may show "Ignored build scripts" for `esbuild`, `sharp`, `@parcel/watcher`, `@sentry/cli`. The platform-specific binaries are still installed correctly via optional dependencies; these warnings are safe to ignore.
