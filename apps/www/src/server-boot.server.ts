@@ -1,6 +1,5 @@
 import { startRuntime, stopRuntime } from '@/lib/kokoto.server'
 import { runMigrations } from '@/lib/migrations.server'
-import { spawnResendSyncWorkerIfEnabled } from '@/lib/spawn-resend-sync.server'
 import { Sentry } from '@/lib/sentry'
 
 let shutdownRegistered = false
@@ -26,9 +25,9 @@ function registerShutdown(): void {
 
 /**
  * Runs once when the server bundle loads. Order is fixed:
- *   migrations → kokoto runtime.start() → legacy resend-sync child.
+ *   migrations → kokoto runtime.start().
  * Migrations run only when `RUN_MIGRATIONS_ON_BOOT` is set; test servers
- * leave it off. Kokoto and the resend-sync spawn are always attempted.
+ * leave it off.
  */
 export const migrationsReady = runMigrations().then(async () => {
 	try {
@@ -37,5 +36,4 @@ export const migrationsReady = runMigrations().then(async () => {
 	} catch (err) {
 		Sentry.captureException(err)
 	}
-	spawnResendSyncWorkerIfEnabled()
 })

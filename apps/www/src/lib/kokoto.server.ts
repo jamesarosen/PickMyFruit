@@ -8,6 +8,7 @@ import { libsqlClient } from '@/data/db.server'
 import { logger } from '@/lib/logger.server'
 import { Sentry } from '@/lib/sentry'
 import { submitInquiryWorkflow } from '@/workflows/submit-inquiry.workflow.server'
+import { syncUserToResendWorkflow } from '@/workflows/sync-user-to-resend.workflow.server'
 
 /**
  * Default queues — kept in sync with what workflows register against via
@@ -72,7 +73,7 @@ export function startRuntime(): Promise<DurableRuntime> {
 	startPromise ??= (async () => {
 		const runtime = getRuntime()
 		await runtime.start({
-			workflows: [submitInquiryWorkflow],
+			workflows: [submitInquiryWorkflow, syncUserToResendWorkflow],
 			queues: [emailQueue, mediaQueue, resendQueue],
 		})
 		return runtime

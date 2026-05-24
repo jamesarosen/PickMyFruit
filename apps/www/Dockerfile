@@ -115,22 +115,6 @@ RUN set -e && \
 RUN find apps/www/.output/server/node_modules/@img -name '*.node' | grep -q . || \
   (echo "ERROR: no @img/sharp .node binaries found in .output" && exit 1)
 
-# Build the resend-sync worker with plain tsc — no Vite, no esbuild, no
-# import.meta.env shimming. The worker is a Node binary and reads SENTRY_DSN
-# (not VITE_SENTRY_DSN) at runtime.
-RUN cd apps/resend-sync && pnpm build
-
-# Materialize the worker as a self-contained deployable: pnpm's normal
-# install layout uses symlinks back into the workspace-root virtual store
-# (apps/resend-sync/node_modules/undici → ../../../node_modules/.pnpm/...),
-# which would dangle in the runner image. `pnpm pm deploy` dereferences those
-# into a flat node_modules under /tmp/resend-sync-deploy, including dist/
-# from the build above. Use `pm deploy` (not bare `deploy`) because pnpm 11
-# routes `pnpm deploy` to the root package's Fly deploy script. --legacy
-# because the workspace does not opt into inject-workspace-packages.
-RUN pnpm pm deploy --filter @pickmyfruit/resend-sync \
-    --prod --legacy /tmp/resend-sync-deploy
-
 # Production stage
 FROM node:24-slim AS runner
 
@@ -140,56 +124,19 @@ WORKDIR /app
 COPY --from=builder /app/apps/www/.output ./.output
 COPY --from=builder /app/apps/www/package.json ./package.json
 
-# resend-sync worker: self-contained deploy layout produced above. Brings
-# dist/, package.json, and a flat node_modules (no dangling symlinks into
-# the workspace virtual store, which the runner image does not carry).
-COPY --from=builder /tmp/resend-sync-deploy ./apps/resend-sync
-# Worker entrypoint path is pinned alongside the COPY above so it cannot drift.
-# The runner image does not carry pnpm's virtual store, so spawn-resend-sync
-# cannot fall back to `require.resolve('@pickmyfruit/resend-sync')` and reads
-# this env instead. See PICKMYFRUIT-1N.
-ENV RESEND_SYNC_WORKER_PATH=/app/apps/resend-sync/dist/main.js
-
-# Build-time smoke test: with the kill switch off, apps/resend-sync/src/main.ts
-# short-circuits at the gate check before opening the poll loop or any HTTP
-# connection — but all imports (undici, pino, pino-pretty, @sentry/node, zod)
-# run first, and the logger initializes its transport. So any module-resolution
-# failure (a dangling symlink, a missing dep, a moved RESEND_SYNC_WORKER_PATH
-# target) surfaces here at `docker build` time instead of at first prod deploy.
-#
-# NODE_ENV=development is intentional: it exercises the pino-pretty transport
-# branch in logger.ts, which is the path docker-compose.yml and fly.preview.toml
-# take at runtime. Without it, this smoke would not have caught pino-pretty
-# being absent from the deploy. The INTERNAL_API_*, RESEND_API_KEY, and cursor
-# path are throwaway placeholders chosen only to satisfy parseWorkerEnv's zod
-# schema; the worker exits 0 before reading any of them.
-RUN NODE_ENV=development \
-    RESEND_SYNC_WORKER_ENABLED=false \
-    INTERNAL_API_URL=http://smoke-test.invalid \
-    INTERNAL_API_SECRET=build-time-smoke-test-placeholder-1234 \
-    RESEND_SYNC_CURSOR_PATH=/tmp/smoke.json \
-    RESEND_API_KEY=smoke \
-    timeout 5 node "$RESEND_SYNC_WORKER_PATH" \
-    || (echo "ERROR: resend-sync worker failed to load at build time" >&2 && exit 1)
-
 # Migration SQL files are read from disk at runtime by drizzle-orm/libsql/migrator.
 # They must be at ./drizzle relative to the working directory (/app/drizzle).
 COPY --from=builder /app/apps/www/drizzle ./drizzle
 RUN test -f /app/drizzle/meta/_journal.json || \
   (echo "ERROR: drizzle migrations missing from image" && exit 1)
 
-# Create directory for SQLite database (shared with the worker via the Fly
-# volume) and the resend-sync cursor directory.
-RUN mkdir -p /app/data /app/data/resend-sync
+# Create directory for SQLite database.
+RUN mkdir -p /app/data
 
 # Expose port 3000
 EXPOSE 3000
 
-# Health check (applies to the web process only; the resend_sync process group
-# does not bind a TCP port, so Fly's process-level liveness suffices).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Default command is the web server. fly.toml's [processes] block overrides
-# this for the resend_sync process group.
 CMD ["node", ".output/server/index.mjs"]

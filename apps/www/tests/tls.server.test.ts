@@ -50,7 +50,7 @@ describe('decideTls', () => {
 
 	it('skips the HTTPS redirect when the request is verified-internal (Fly-Src)', () => {
 		const decision = decideTls(
-			'http://pickmyfruit.flycast/internal/v1/users/next',
+			'http://pickmyfruit.flycast/internal/example',
 			headers('http', 'pickmyfruit.flycast'),
 			true
 		)
@@ -60,7 +60,7 @@ describe('decideTls', () => {
 
 	it('suppresses HSTS on verified-internal responses even if forwarded-proto says https', () => {
 		const decision = decideTls(
-			'http://pickmyfruit.flycast/internal/v1/users/next',
+			'http://pickmyfruit.flycast/internal/example',
 			headers('https', 'pickmyfruit.flycast'),
 			true
 		)
@@ -73,13 +73,13 @@ describe('decideTls', () => {
 		// as public traffic — otherwise an attacker who can spoof x-forwarded-host
 		// through a future proxy could disable HTTPS.
 		const decision = decideTls(
-			'http://pickmyfruit.flycast/internal/v1/users/next',
+			'http://pickmyfruit.flycast/internal/example',
 			headers('http', 'pickmyfruit.flycast'),
 			false
 		)
 		expect(decision.redirect).toEqual({
 			status: 307,
-			location: 'https://pickmyfruit.flycast/internal/v1/users/next',
+			location: 'https://pickmyfruit.flycast/internal/example',
 		})
 	})
 
