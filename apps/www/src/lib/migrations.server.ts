@@ -4,24 +4,15 @@ import { logger } from '@/lib/logger.server'
 import { serverEnv } from '@/lib/env.server'
 
 let pending: Promise<void> | undefined
-let failureCount = 0
-const MAX_ATTEMPTS = 3
 
 /**
- * Runs pending database migrations, retrying up to 3 times across requests.
+ * Applies pending journal migrations once per process when
+ * {@link serverEnv.RUN_MIGRATIONS_ON_BOOT} is enabled.
  *
- * No-ops outside production — dev and test use `db:push`/`db:migrate` directly.
- * Failures are captured to Sentry. After MAX_ATTEMPTS the promise permanently
- * rejects so a broken migration does not hammer the database on every request.
+ * Failures are reported to Sentry and terminate the process so deploys fail closed.
  */
 export function runMigrations(): Promise<void> {
-	if (!serverEnv.MIGRATE_ON_REQUEST) return Promise.resolve()
-
-	if (failureCount >= MAX_ATTEMPTS) {
-		return Promise.reject(
-			new Error(`Database migrations failed after ${MAX_ATTEMPTS} attempts`)
-		)
-	}
+	if (!serverEnv.RUN_MIGRATIONS_ON_BOOT) return Promise.resolve()
 
 	pending ??= (async () => {
 		const start = Date.now()
@@ -31,9 +22,8 @@ export function runMigrations(): Promise<void> {
 		logger.info({ elapsed: Date.now() - start }, 'Database migrations complete')
 	})().catch((err) => {
 		Sentry.captureException(err)
-		failureCount++
 		pending = undefined
-		throw err
+		process.exit(78)
 	})
 
 	return pending

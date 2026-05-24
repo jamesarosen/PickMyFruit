@@ -49,6 +49,19 @@ describe('env.server schema', () => {
 		expect(result.data?.SHARP_CONCURRENCY).toBe(1)
 	})
 
+	it('defaults RUN_MIGRATIONS_ON_BOOT to false', () => {
+		const result = schema.safeParse(VALID_DEV_ENV)
+		expect(result.data?.RUN_MIGRATIONS_ON_BOOT).toBe(false)
+	})
+
+	it('parses RUN_MIGRATIONS_ON_BOOT as a boolean', () => {
+		const result = schema.safeParse({
+			...VALID_DEV_ENV,
+			RUN_MIGRATIONS_ON_BOOT: 'true',
+		})
+		expect(result.data?.RUN_MIGRATIONS_ON_BOOT).toBe(true)
+	})
+
 	it('parses SHARP_CONCURRENCY as a positive integer', () => {
 		const result = schema.safeParse({
 			...VALID_DEV_ENV,

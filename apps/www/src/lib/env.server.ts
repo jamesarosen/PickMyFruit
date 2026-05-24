@@ -85,7 +85,8 @@ const outputSchema = z
 		HMAC_SECRET: z.string().min(32),
 		INTERNAL_API_SECRET: z.string().min(32).optional(),
 		INTERNAL_API_SECRET_PREVIOUS: z.string().min(32).optional(),
-		MIGRATE_ON_REQUEST: z.stringbool().prefault('false'),
+		/** When true, apply journal migrations once when the server process starts. */
+		RUN_MIGRATIONS_ON_BOOT: z.stringbool().prefault('false'),
 		NODE_ENV: z.string().prefault('development'),
 		SHARP_CONCURRENCY: z.coerce.number().int().positive().prefault(1),
 		email: emailSchema,
