@@ -49,13 +49,21 @@ function buildTelemetry(): KokotoTelemetry {
 /**
  * Lazily-initialized runtime singleton. Workflow registration happens inside
  * `startRuntime()` so callers do not have to thread the runtime through.
+ *
+ * `pollMs: 1000` is the idle-scan cadence. Enqueue paths still wake the
+ * dispatcher immediately (see `wake.emit('wake')` in
+ * `runtime.startWorkflow`), so this only affects how often the dispatcher
+ * polls for `scheduled_for` rows whose backoff has expired. A higher value
+ * trades a slightly slower retry pickup for fewer write-lock acquisitions
+ * — which matters in tests, where the fixture connection competes for the
+ * same SQLite write lock.
  */
 export function getRuntime(): DurableRuntime {
 	if (!runtimeInstance) {
 		runtimeInstance = createRuntime({
 			client: libsqlClient,
 			telemetry: buildTelemetry(),
-			pollMs: 250,
+			pollMs: 1000,
 			globalConcurrency: 16,
 		})
 	}

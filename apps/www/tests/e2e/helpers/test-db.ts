@@ -35,7 +35,12 @@ const client = createClient({ url: TEST_DB_URL })
 // busy_timeout MUST be set before journal_mode — switching journal mode
 // requires an exclusive lock, and without busy_timeout the PRAGMA fails
 // immediately with SQLITE_BUSY when the dev server is mid-write.
-await client.execute('PRAGMA busy_timeout = 5000')
+//
+// 30s (vs. the 5s app default) gives the test fixture plenty of headroom
+// to outwait kokoto's dispatcher poll: every poll briefly acquires a write
+// lock via `BEGIN IMMEDIATE`, and on slow CI hardware those polls can
+// overlap with fixture writes often enough to exhaust a 5s budget.
+await client.execute('PRAGMA busy_timeout = 30000')
 await client.execute('PRAGMA foreign_keys = ON')
 await client.execute('PRAGMA journal_mode = WAL')
 const db = drizzle(client)
