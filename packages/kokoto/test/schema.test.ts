@@ -82,4 +82,64 @@ describe('schema.server', () => {
 		)
 		expect(Number(result.rows[0]?.c)).toBe(1)
 	})
+
+	// Drift guard: the host app's migration journal must produce the same
+	// table + column shape as KOKOTO_DDL. The two paths differ in style
+	// (Drizzle generates backtick-quoted DDL with separate `CREATE UNIQUE
+	// INDEX` for inline `UNIQUE`; the constant is hand-written ANSI SQL with
+	// `IF NOT EXISTS`), so we compare *structure* — table names, column
+	// names, column types — not raw SQL text. A new column on one side that
+	// isn't mirrored on the other will fail this test.
+	it('matches the host app migration in table + column shape', async () => {
+		const ddlShape = await readSchemaShape(client)
+
+		const { newClient: fresh } = await import('./helpers.ts')
+		const migrationClient = await fresh()
+		try {
+			const { readFileSync, existsSync } = await import('node:fs')
+			const url = new URL(
+				'../../../apps/www/drizzle/0008_add_kokoto.sql',
+				import.meta.url
+			)
+			if (!existsSync(url)) {
+				// Library checked out without the host app — skip silently.
+				return
+			}
+			const sql = readFileSync(url, 'utf8')
+			for (const stmt of sql.split('--> statement-breakpoint')) {
+				const trimmed = stmt.trim()
+				if (trimmed) await migrationClient.execute(trimmed)
+			}
+			const migrationShape = await readSchemaShape(migrationClient)
+			expect(migrationShape).toEqual(ddlShape)
+		} finally {
+			migrationClient.close()
+		}
+	})
 })
+
+/**
+ * Returns `{ tableName: { columnName: columnType } }` for every `_dc_*`
+ * table on the connection. Uses `PRAGMA table_info` so it compares the
+ * post-parse SQLite shape, not the raw DDL text.
+ */
+async function readSchemaShape(
+	client: import('@libsql/client/node').Client
+): Promise<Record<string, Record<string, string>>> {
+	const tables = await client.execute(
+		`SELECT name FROM sqlite_master
+		 WHERE type = 'table' AND name LIKE '_dc_%'
+		 ORDER BY name`
+	)
+	const shape: Record<string, Record<string, string>> = {}
+	for (const row of tables.rows) {
+		const name = row.name as string
+		const cols = await client.execute(`PRAGMA table_info(${name})`)
+		const colMap: Record<string, string> = {}
+		for (const col of cols.rows) {
+			colMap[col.name as string] = (col.type as string).toLowerCase()
+		}
+		shape[name] = colMap
+	}
+	return shape
+}

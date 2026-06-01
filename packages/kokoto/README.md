@@ -177,3 +177,46 @@ See the issue plan for the full list. Notable cuts kept for follow-ups:
 - Per-key concurrency, child workflows, saga compensation helpers.
 - Automated retention (`system.gc`); manual SQL pruning is acceptable at v1
   row volumes.
+
+## Known limitations
+
+### Scale-to-zero stalls future-dated work
+
+The dispatcher lives in the host's web process. On Fly, machine idleness is
+measured by inbound HTTP traffic — not by event-loop activity — so any
+workflow with a future `scheduled_for` (a retry awaiting backoff, or a
+delayed enqueue) does **not** advance while the machine is stopped.
+Interactive work that the request itself drains is fine: the machine is
+warm for the lifetime of the request. The failure modes that hurt are
+retries during a provider outage (e.g. Resend 5xx) and any future-dated
+welcome / follow-up enqueues, which only advance when the next inbound
+request happens to wake the machine.
+
+Mitigations (out of v1 scope): a periodic wake from a tiny "tickler"
+process hitting a long-poll endpoint over Fly 6PN, or running the
+dispatcher in a non-autostop process group. Until then, keep retry
+budgets short and prefer provider-side scheduling (Resend `scheduled_at`)
+over kokoto delays.
+
+Pairing this with the current retry cadence — `250ms · 2^attempt`, capped
+at 60s, three attempts — means a multi-minute provider outage exhausts
+retries inside a single wake. When wake-aligned retries land (issue
+follow-up), the backoff floor should match the wake interval and
+`max_attempts` should raise so an outage rides across several ticks
+instead of dying in one.
+
+### Rolling deploys can duplicate-execute in-flight workflows
+
+Boot recovery resets any `running` row whose `executor_id` differs from
+the booting process to `pending`. During a rolling deploy the old machine
+and the new machine are briefly both alive: the new boot's reclaim sweep
+yanks the old machine's in-flight workflows back to `pending`, and both
+machines may then dispatch the same workflow. Side effects with
+idempotency keys (Resend `Idempotency-Key`, kokoto `ctx.txStep`) absorb
+the duplicate; bare `ctx.step` calls without a key may run twice.
+
+Mitigation (out of v1 scope): switch from identity-based reclaim to
+lease-based, with a `claim_expires_at` column and a lazy expiry sweep
+inside `claimPending`. Until then, prefer non-rolling deploys
+(`strategy = 'immediate'` on Fly) when you have workflows in flight, or
+ensure every external-effect step is naturally idempotent.

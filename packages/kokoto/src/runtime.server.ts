@@ -7,6 +7,48 @@ import {
 } from './errors.ts'
 import { WorkflowRegistry } from './registry.ts'
 import { KOKOTO_DDL } from './schema.server.ts'
+
+// Re-export the registry helpers + errors + schema constants so server-only
+// callers can stay on the `/runtime.server` subpath. Importing runtime values
+// from the bare `@pickmyfruit/kokoto` entry breaks TanStack Start's SSR
+// asset-manifest builder (no compiled output to register an `href` for).
+export { defineQueue, defineWorkflow, WorkflowRegistry } from './registry.ts'
+export {
+	BootIntegrityError,
+	DurableCancelledError,
+	DurableTimeoutError,
+	KokotoError,
+	PayloadTooLargeError,
+	ReplayedStepError,
+	UnknownWorkflowError,
+} from './errors.ts'
+export { Metrics } from './telemetry.server.ts'
+export {
+	KOKOTO_DDL,
+	KOKOTO_TABLES,
+	PAYLOAD_BYTE_CAP,
+	PROTOCOL_VERSION,
+	createSchemaSQL,
+} from './schema.server.ts'
+export type {
+	DefineQueueOptions,
+	DefineWorkflowOptions,
+	KokotoTelemetry,
+	QueueDefinition,
+	RuntimeConfig,
+	RuntimeStartConfig,
+	SqlClient,
+	SqlResult,
+	SqlStatement,
+	SqlTransaction,
+	StartWorkflowOptions,
+	StepStatus,
+	WorkflowContext,
+	WorkflowDefinition,
+	WorkflowFn,
+	WorkflowHandle,
+	WorkflowStatus,
+} from './types.ts'
 import {
 	claimPending,
 	decodePayload,

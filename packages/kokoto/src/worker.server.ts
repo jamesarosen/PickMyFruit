@@ -5,6 +5,7 @@ import {
 } from './errors.ts'
 import { Metrics, type Telemetry } from './telemetry.server.ts'
 import {
+	buildInsertStepStatement,
 	decodePayload,
 	encodePayload,
 	finalizeWorkflow,
@@ -16,7 +17,7 @@ import {
 	type StepRow,
 	type WorkflowRow,
 } from './sql.server.ts'
-import type { SqlClient, WorkflowContext } from './types.ts'
+import type { SqlClient, SqlTransaction, WorkflowContext } from './types.ts'
 import type { WorkflowRegistry } from './registry.ts'
 
 /** Stable step id for the Nth invocation of a step with `name`. */
@@ -75,82 +76,135 @@ export async function runWorkflow(
 			return `${row.id}:${name}`
 		},
 		async step<T>(name: string, fn: () => Promise<T> | T): Promise<T> {
-			const sequence = callCounts.get(name) ?? 0
-			callCounts.set(name, sequence + 1)
-			const stepId = stepIdFor(name, sequence)
+			const { stepId, cachedSuccess } = await beginStep(name)
+			if (cachedSuccess !== undefined) return cachedSuccess as T
 
-			const cached = stepCache.get(stepId)
-			if (cached) {
-				telemetry.count(Metrics.stepReplayed, {
-					'workflow.name': row.name,
-					'step.name': name,
-				})
-				if (cached.status === 'success') {
-					return decodePayload<T>(cached.output) as T
-				}
-				const parsed = decodePayload<{ message?: string }>(cached.error)
-				throw new ReplayedStepError(name, parsed?.message ?? 'Replayed step error')
-			}
-
-			const fresh = await selectWorkflowById(client, row.id)
-			if (fresh?.cancel_requested_at != null) {
-				throw new DurableCancelledError(row.id)
-			}
-
-			telemetry.count(Metrics.stepStarted, {
-				'workflow.name': row.name,
-				'step.name': name,
-			})
 			const startedAt = Date.now()
 			try {
 				const value = await fn()
 				const durationMs = Date.now() - startedAt
-				const stepRow: StepRow = {
-					workflow_id: row.id,
-					step_id: stepId,
-					name,
-					status: 'success',
-					output: encodePayload(value),
-					error: null,
-					attempts: 1,
-					duration_ms: durationMs,
-					created_at: Date.now(),
-				}
+				const stepRow = makeSuccessRow(stepId, name, value, durationMs)
 				await insertStepRow(client, stepRow)
 				stepCache.set(stepId, stepRow)
-				telemetry.count(Metrics.stepFinished, {
-					'workflow.name': row.name,
-					'step.name': name,
-				})
-				telemetry.distribution(Metrics.stepDurationMs, durationMs, {
-					'workflow.name': row.name,
-					'step.name': name,
-				})
+				recordSuccessTelemetry(name, durationMs)
 				return value
 			} catch (err) {
-				const durationMs = Date.now() - startedAt
-				const serialized = serializeError(err)
-				const stepRow: StepRow = {
-					workflow_id: row.id,
-					step_id: stepId,
-					name,
-					status: 'error',
-					output: null,
-					error: encodePayload(serialized),
-					attempts: 1,
-					duration_ms: durationMs,
-					created_at: Date.now(),
-				}
-				await insertStepRow(client, stepRow)
-				stepCache.set(stepId, stepRow)
-				telemetry.count(Metrics.stepFailed, {
-					'workflow.name': row.name,
-					'step.name': name,
-				})
-				telemetry.captureException(err, { workflow: row.name, step: name })
+				recordFailureTelemetry(name, err)
 				throw err
 			}
 		},
+		async txStep<T>(
+			name: string,
+			fn: (tx: SqlTransaction) => Promise<T> | T
+		): Promise<T> {
+			if (!client.transaction) {
+				throw new Error(
+					`ctx.txStep requires an SqlClient with transaction(); got a non-transactional client`
+				)
+			}
+			const { stepId, cachedSuccess } = await beginStep(name)
+			if (cachedSuccess !== undefined) return cachedSuccess as T
+
+			const startedAt = Date.now()
+			const tx = await client.transaction()
+			try {
+				const value = await fn(tx)
+				const durationMs = Date.now() - startedAt
+				const stepRow = makeSuccessRow(stepId, name, value, durationMs)
+				await tx.execute(buildInsertStepStatement(stepRow))
+				await tx.commit()
+				stepCache.set(stepId, stepRow)
+				recordSuccessTelemetry(name, durationMs)
+				return value
+			} catch (err) {
+				try {
+					await tx.rollback()
+				} catch {
+					// best-effort; the original error is the one that matters
+				}
+				recordFailureTelemetry(name, err)
+				throw err
+			} finally {
+				tx.close()
+			}
+		},
+	}
+
+	async function beginStep(
+		name: string
+	): Promise<{ stepId: string; cachedSuccess: unknown | undefined }> {
+		const sequence = callCounts.get(name) ?? 0
+		callCounts.set(name, sequence + 1)
+		const stepId = stepIdFor(name, sequence)
+
+		const cached = stepCache.get(stepId)
+		if (cached) {
+			telemetry.count(Metrics.stepReplayed, {
+				'workflow.name': row.name,
+				'step.name': name,
+			})
+			if (cached.status === 'success') {
+				return { stepId, cachedSuccess: decodePayload(cached.output) }
+			}
+			// Defence in depth: a legacy `error` row from a kokoto version that
+			// persisted failures. Current versions never write one — they re-run
+			// on next attempt — but if one shows up, replay it rather than risk
+			// running a side effect twice.
+			const parsed = decodePayload<{ message?: string }>(cached.error)
+			throw new ReplayedStepError(name, parsed?.message ?? 'Replayed step error')
+		}
+
+		const fresh = await selectWorkflowById(client, row.id)
+		if (fresh?.cancel_requested_at != null) {
+			throw new DurableCancelledError(row.id)
+		}
+
+		telemetry.count(Metrics.stepStarted, {
+			'workflow.name': row.name,
+			'step.name': name,
+		})
+		return { stepId, cachedSuccess: undefined }
+	}
+
+	function makeSuccessRow(
+		stepId: string,
+		name: string,
+		value: unknown,
+		durationMs: number
+	): StepRow {
+		return {
+			workflow_id: row.id,
+			step_id: stepId,
+			name,
+			status: 'success',
+			output: encodePayload(value),
+			error: null,
+			attempts: 1,
+			duration_ms: durationMs,
+			created_at: Date.now(),
+		}
+	}
+
+	function recordSuccessTelemetry(name: string, durationMs: number): void {
+		telemetry.count(Metrics.stepFinished, {
+			'workflow.name': row.name,
+			'step.name': name,
+		})
+		telemetry.distribution(Metrics.stepDurationMs, durationMs, {
+			'workflow.name': row.name,
+			'step.name': name,
+		})
+	}
+
+	function recordFailureTelemetry(name: string, err: unknown): void {
+		// Step failures are NOT persisted — only success is durable. The step
+		// re-runs on the workflow's next dispatch (after backoff). We still
+		// emit telemetry so failures stay observable in Sentry / metrics.
+		telemetry.count(Metrics.stepFailed, {
+			'workflow.name': row.name,
+			'step.name': name,
+		})
+		telemetry.captureException(err, { workflow: row.name, step: name })
 	}
 
 	const input = decodePayload(row.input)

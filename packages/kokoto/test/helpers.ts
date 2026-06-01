@@ -1,17 +1,39 @@
 import { createClient, type Client } from '@libsql/client/node'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { createRuntime, DurableRuntime } from '../src/runtime.server.ts'
 import type { KokotoTelemetry } from '../src/types.ts'
 
+const tempDbs = new Set<string>()
+
 /**
- * Create a fresh in-memory libsql client with kokoto's schema applied. The
- * caller owns the connection — close it in `afterEach`.
+ * Create a fresh libsql client backed by a temp file. The caller owns the
+ * connection — close it in `afterEach`; the file is cleaned on process exit.
+ *
+ * Why not `:memory:`? libsql 0.5.x's in-memory mode drops the entire
+ * `sqlite_master` view on `tx.rollback()`, which would make `ctx.txStep`
+ * tests fail spuriously. A temp file behaves like real SQLite.
  */
 export async function newClient(): Promise<Client> {
-	const client = createClient({ url: ':memory:' })
+	const dir = mkdtempSync(join(tmpdir(), 'kokoto-test-'))
+	const path = join(dir, 'test.db')
+	tempDbs.add(dir)
+	const client = createClient({ url: `file:${path}` })
 	await client.execute('PRAGMA foreign_keys = ON')
 	await client.execute('PRAGMA busy_timeout = 5000')
 	return client
 }
+
+process.once('exit', () => {
+	for (const dir of tempDbs) {
+		try {
+			rmSync(dir, { recursive: true, force: true })
+		} catch {
+			// best-effort
+		}
+	}
+})
 
 export interface CapturedMetric {
 	name: string

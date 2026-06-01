@@ -1,5 +1,5 @@
-import { defineWorkflow } from '@pickmyfruit/kokoto'
-import { createInquiry } from '@/data/queries.server'
+import { defineWorkflow } from '@pickmyfruit/kokoto/runtime.server'
+import { createInquiryTx } from '@/data/queries.server'
 import { sendInquiryEmail } from '@/lib/email-templates.server'
 
 /**
@@ -64,8 +64,13 @@ export const submitInquiryWorkflow = defineWorkflow(
 			return null
 		})
 
-		const inquiry = await ctx.step('createInquiry', async () => {
-			const row = await createInquiry({
+		// txStep: the INSERT into `inquiries` and the `_dc_step` row commit in
+		// one libSQL transaction. If the process dies between the user write
+		// and the step-log write, both roll back and the next attempt re-runs
+		// cleanly. No idempotency key needed for this step because it owns
+		// the only write.
+		const inquiry = await ctx.txStep('createInquiry', async (tx) => {
+			const row = await createInquiryTx(tx, {
 				listingId: input.listingId,
 				gleanerId: input.gleanerId,
 				note: input.note,

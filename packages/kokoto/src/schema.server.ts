@@ -47,6 +47,10 @@ export const KOKOTO_DDL: ReadonlyArray<string> = [
 		cancel_requested_at INTEGER,
 		protocol_version INTEGER NOT NULL DEFAULT ${PROTOCOL_VERSION}
 	)`,
+	// Per-row `_dc_workflow.protocol_version` is vestigial in v1;
+	// `_dc_meta.protocol_version` is the canonical source. The per-row column
+	// stays so a future cross-version migration can gate per-row behavior
+	// without a destructive ALTER.
 	`CREATE INDEX IF NOT EXISTS _dc_workflow_status_sched_created_idx
 		ON _dc_workflow (status, scheduled_for, created_at)`,
 	`CREATE INDEX IF NOT EXISTS _dc_workflow_queue_status_sched_idx
@@ -75,6 +79,9 @@ export const KOKOTO_DDL: ReadonlyArray<string> = [
 	)`,
 	`CREATE INDEX IF NOT EXISTS _dc_step_workflow_idx
 		ON _dc_step (workflow_id)`,
+	// `heartbeat_at` is set once at `runtime.start()` and never updated in v1
+	// (we use identity-based reclaim on boot, not lease expiry). Kept so the
+	// lease-based recovery path can land without a schema migration.
 	`CREATE TABLE IF NOT EXISTS _dc_executor (
 		id TEXT PRIMARY KEY,
 		started_at INTEGER NOT NULL,

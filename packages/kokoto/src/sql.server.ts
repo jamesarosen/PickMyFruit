@@ -1,4 +1,4 @@
-import type { SqlBindable, SqlClient } from './types.ts'
+import type { SqlBindable, SqlClient, SqlStatement } from './types.ts'
 import { PAYLOAD_BYTE_CAP } from './schema.server.ts'
 import { PayloadTooLargeError } from './errors.ts'
 
@@ -240,11 +240,13 @@ export async function requeueWorkflow(
 	})
 }
 
-export async function insertStepRow(
-	client: SqlClient,
-	row: StepRow
-): Promise<void> {
-	await client.execute({
+/**
+ * Build the prepared statement for inserting a `_dc_step` row. Exposed so
+ * `ctx.txStep` can run the insert on a caller-provided transaction (same
+ * SQL, different executor).
+ */
+export function buildInsertStepStatement(row: StepRow): SqlStatement {
+	return {
 		sql: `INSERT OR IGNORE INTO _dc_step
 			(workflow_id, step_id, name, status, output, error, attempts, duration_ms, created_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -259,7 +261,14 @@ export async function insertStepRow(
 			row.duration_ms,
 			row.created_at,
 		],
-	})
+	}
+}
+
+export async function insertStepRow(
+	client: SqlClient,
+	row: StepRow
+): Promise<void> {
+	await client.execute(buildInsertStepStatement(row))
 }
 
 /**

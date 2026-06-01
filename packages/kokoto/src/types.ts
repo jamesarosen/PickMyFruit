@@ -41,10 +41,13 @@ export interface SqlStatement {
 /**
  * Minimal libsql-compatible client surface used by the runtime. Kept structural
  * so the package does not have to depend on @libsql/client directly — the host
- * app passes in its own connection.
+ * app passes in its own connection. `transaction()` is optional because the
+ * runtime falls back to `execute()` when a caller does not need same-DB
+ * atomicity (i.e. `ctx.step()` rather than `ctx.txStep()`).
  */
 export interface SqlClient {
 	execute(queryOrStatement: string | SqlStatement): Promise<SqlResult>
+	transaction?: () => Promise<SqlTransaction>
 }
 
 export interface SqlResult {
@@ -112,8 +115,24 @@ export interface WorkflowContext {
 	/**
 	 * Run an idempotent unit of work whose output is stored in the durable
 	 * step log. On replay the cached output is returned and `fn` is not invoked.
+	 *
+	 * Errors are **not** persisted: a thrown step is replayed from scratch on
+	 * the workflow's next dispatch. Only success is durable.
 	 */
 	step<T>(name: string, fn: () => Promise<T> | T): Promise<T>
+	/**
+	 * Run a same-DB step whose write and its `_dc_step` row commit in one
+	 * libSQL transaction. Use this when the step's only effect is a write
+	 * against the same database kokoto owns: the user write and the step row
+	 * become atomic, eliminating the at-least-once duplicate-row hazard. The
+	 * step `fn` receives a `SqlTransaction`; all writes must go through it.
+	 *
+	 * Errors throw and the transaction rolls back — both the user write and
+	 * the step row disappear, so the next attempt re-runs the step cleanly.
+	 *
+	 * Requires the host `SqlClient` to expose `transaction()` (libsql does).
+	 */
+	txStep<T>(name: string, fn: (tx: SqlTransaction) => Promise<T> | T): Promise<T>
 }
 
 /** A workflow body — must be deterministic outside of `ctx.step()` boundaries. */
