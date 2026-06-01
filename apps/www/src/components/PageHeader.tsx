@@ -164,6 +164,7 @@ export default function PageHeader(props: PageHeaderProps) {
 								<Show when={user()}>
 									<DropdownMenuLink to="/listings/mine">My Garden</DropdownMenuLink>
 									<DropdownMenuLink to="/profile">Profile</DropdownMenuLink>
+									<DropdownMenuLink to="/notifications">Notifications</DropdownMenuLink>
 									<DropdownMenu.Item
 										as="a"
 										href="/support?from=header"

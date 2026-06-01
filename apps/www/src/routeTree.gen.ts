@@ -14,6 +14,7 @@ import { Route as SupportRouteImport } from './routes/support'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CssTestRouteImport } from './routes/css-test'
 import { Route as AboutRouteImport } from './routes/about'
@@ -52,6 +53,11 @@ const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/css-test': typeof CssTestRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/privacy': typeof PrivacyRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/css-test': typeof CssTestRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/privacy': typeof PrivacyRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/css-test': typeof CssTestRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/privacy': typeof PrivacyRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
@@ -197,6 +206,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/css-test'
     | '/login'
+    | '/notifications'
     | '/privacy'
     | '/privacy-policy'
     | '/profile'
@@ -218,6 +228,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/css-test'
     | '/login'
+    | '/notifications'
     | '/privacy'
     | '/privacy-policy'
     | '/profile'
@@ -239,6 +250,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/css-test'
     | '/login'
+    | '/notifications'
     | '/privacy'
     | '/privacy-policy'
     | '/profile'
@@ -261,6 +273,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   CssTestRoute: typeof CssTestRoute
   LoginRoute: typeof LoginRoute
+  NotificationsRoute: typeof NotificationsRoute
   PrivacyRoute: typeof PrivacyRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   ProfileRoute: typeof ProfileRoute
@@ -311,6 +324,13 @@ declare module '@tanstack/solid-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -442,6 +462,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   CssTestRoute: CssTestRoute,
   LoginRoute: LoginRoute,
+  NotificationsRoute: NotificationsRoute,
   PrivacyRoute: PrivacyRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   ProfileRoute: ProfileRoute,
