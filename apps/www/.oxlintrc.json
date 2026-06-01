@@ -13,6 +13,10 @@
 		// Solid JS doesn't use React, so React-specific rules don't apply
 		"react/react-in-jsx-scope": "off",
 
+		// Solid JSX uses render props (inline component callbacks) as a normal pattern;
+		// the React concern about unstable re-renders doesn't apply.
+		"react/no-unstable-nested-components": "off",
+
 		// Solid JS refs appear unassigned. See https://github.com/oxc-project/oxc/issues/14621
 		"eslint/init-declarations": "off",
 		"eslint/no-unassigned-vars": "off",
@@ -79,6 +83,7 @@
 
 		// Jest plugin incorrectly flags non-test files
 		"jest/require-hook": "off",
+		"vitest/require-hook": "off",
 
 		// no-shadow triggers on idiomatic patterns like createErrorSignal() destructuring
 		// and function parameter names that happen to match outer scope identifiers
@@ -165,7 +170,8 @@
 				"jest/valid-expect": "off",
 
 				// .rejects.toThrow() without a message is acceptable when testing any error
-				"jest/require-to-throw-message": "off"
+				"jest/require-to-throw-message": "off",
+				"vitest/require-to-throw-message": "off"
 			}
 		}
 	]

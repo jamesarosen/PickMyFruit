@@ -35,7 +35,8 @@
 		"import/no-unassigned-import": "off",
 		"import/prefer-default-export": "off",
 		"jest/no-untyped-mock-factory": "off",
-		"jest/require-hook": "off"
+		"jest/require-hook": "off",
+		"vitest/require-hook": "off"
 	},
 	"overrides": [
 		{
