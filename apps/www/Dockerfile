@@ -21,21 +21,17 @@ COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 
 # Copy app package.json files to maintain workspace structure
 COPY apps/www/package.json ./apps/www/package.json
-COPY apps/resend-sync/package.json ./apps/resend-sync/package.json
+COPY packages/kokoto/package.json ./packages/kokoto/package.json
 
 # Needed by the root postinstall script. Copied before `pnpm install` so the
 # script exists when postinstall fires; it self-skips when no `.git` is present.
 COPY bin/install-git-hooks.sh ./bin/install-git-hooks.sh
-
-# Copy packages if any (for future workspace packages)
-# COPY packages/*/package.json ./packages/
 
 # Install dependencies using pnpm workspace.
 # --cpu and --os flags (pnpm 10.14+) explicitly install optional binaries for
 # all target architectures so the image runs on both x64 and arm64 hosts.
 RUN pnpm install --frozen-lockfile \
     --filter @pickmyfruit/www... \
-    --filter @pickmyfruit/resend-sync... \
     --cpu=x64 --cpu=arm64 --os=linux
 
 # Copy the entire workspace (excluding dockerignored files)
