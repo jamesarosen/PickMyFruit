@@ -45,6 +45,10 @@ export const KOKOTO_DDL: ReadonlyArray<string> = [
 		ended_at INTEGER,
 		idempotency_key TEXT UNIQUE,
 		cancel_requested_at INTEGER,
+		-- Lease ms-since-epoch. Set when the row is claimed and extended on
+		-- every dispatcher tick that still owns it; reclaim resets running
+		-- rows whose lease has expired. See _dc_workflow_status_claim_expires_idx.
+		claim_expires_at INTEGER,
 		protocol_version INTEGER NOT NULL DEFAULT ${PROTOCOL_VERSION}
 	)`,
 	// Per-row `_dc_workflow.protocol_version` is vestigial in v1;
@@ -59,6 +63,10 @@ export const KOKOTO_DDL: ReadonlyArray<string> = [
 		ON _dc_workflow (name, status)`,
 	`CREATE INDEX IF NOT EXISTS _dc_workflow_executor_status_idx
 		ON _dc_workflow (executor_id, status)`,
+	// Lease-reclaim sweep on boot: find every running row whose lease has
+	// expired (or was never set, on rows claimed by pre-lease kokoto code).
+	`CREATE INDEX IF NOT EXISTS _dc_workflow_status_claim_expires_idx
+		ON _dc_workflow (status, claim_expires_at)`,
 	`CREATE TABLE IF NOT EXISTS _dc_step (
 		workflow_id TEXT NOT NULL REFERENCES _dc_workflow(id) ON DELETE CASCADE,
 		step_id TEXT NOT NULL,
@@ -79,9 +87,10 @@ export const KOKOTO_DDL: ReadonlyArray<string> = [
 	)`,
 	`CREATE INDEX IF NOT EXISTS _dc_step_workflow_idx
 		ON _dc_step (workflow_id)`,
-	// `heartbeat_at` is set once at `runtime.start()` and never updated in v1
-	// (we use identity-based reclaim on boot, not lease expiry). Kept so the
-	// lease-based recovery path can land without a schema migration.
+	// `heartbeat_at` is updated on every dispatcher tick for ops visibility
+	// — "is this executor alive right now." It is NOT load-bearing for boot
+	// reclaim, which reads `_dc_workflow.claim_expires_at` directly. The
+	// inventory in this table is useful for postmortems and dashboards.
 	`CREATE TABLE IF NOT EXISTS _dc_executor (
 		id TEXT PRIMARY KEY,
 		started_at INTEGER NOT NULL,

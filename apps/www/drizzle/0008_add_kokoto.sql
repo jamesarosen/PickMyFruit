@@ -19,6 +19,7 @@ CREATE TABLE `_dc_workflow` (
 	`ended_at` integer,
 	`idempotency_key` text,
 	`cancel_requested_at` integer,
+	`claim_expires_at` integer,
 	`protocol_version` integer DEFAULT 1 NOT NULL
 );
 --> statement-breakpoint
@@ -31,6 +32,8 @@ CREATE INDEX `_dc_workflow_queue_status_sched_idx` ON `_dc_workflow` (`queue`, `
 CREATE INDEX `_dc_workflow_name_status_idx` ON `_dc_workflow` (`name`, `status`);
 --> statement-breakpoint
 CREATE INDEX `_dc_workflow_executor_status_idx` ON `_dc_workflow` (`executor_id`, `status`);
+--> statement-breakpoint
+CREATE INDEX `_dc_workflow_status_claim_expires_idx` ON `_dc_workflow` (`status`, `claim_expires_at`);
 --> statement-breakpoint
 CREATE TABLE `_dc_step` (
 	`workflow_id` text NOT NULL,

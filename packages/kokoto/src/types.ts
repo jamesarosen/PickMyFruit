@@ -207,6 +207,13 @@ export interface RuntimeConfig {
 	telemetry?: KokotoTelemetry
 	/** Dispatcher poll interval (ms). Default 250ms. */
 	pollMs?: number
+	/**
+	 * Lease duration on a claimed workflow (ms). The dispatcher heartbeat
+	 * extends the lease every tick; if the dispatcher dies, the lease
+	 * eventually expires and another executor reclaims the row. Default
+	 * 30000ms. Tests can pass small values (e.g. 50) to make expiry fast.
+	 */
+	leaseMs?: number
 	/** Hard global concurrency cap across all queues. Default 16. */
 	globalConcurrency?: number
 	/** Identifier for the host process; defaults to a UUIDv7. */

@@ -205,18 +205,31 @@ follow-up), the backoff floor should match the wake interval and
 `max_attempts` should raise so an outage rides across several ticks
 instead of dying in one.
 
-### Rolling deploys can duplicate-execute in-flight workflows
+## Reclaim model
 
-Boot recovery resets any `running` row whose `executor_id` differs from
-the booting process to `pending`. During a rolling deploy the old machine
-and the new machine are briefly both alive: the new boot's reclaim sweep
-yanks the old machine's in-flight workflows back to `pending`, and both
-machines may then dispatch the same workflow. Side effects with
-idempotency keys (Resend `Idempotency-Key`, kokoto `ctx.txStep`) absorb
-the duplicate; bare `ctx.step` calls without a key may run twice.
+Each claim stamps `_dc_workflow.claim_expires_at = now + leaseMs`. The
+dispatcher heartbeat (one tick on each `pollMs` interval) extends the
+lease on every running row this executor owns. Boot reclaim resets any
+`running` row whose lease is expired (`claim_expires_at <= now` or NULL)
+back to `pending`.
 
-Mitigation (out of v1 scope): switch from identity-based reclaim to
-lease-based, with a `claim_expires_at` column and a lazy expiry sweep
-inside `claimPending`. Until then, prefer non-rolling deploys
-(`strategy = 'immediate'` on Fly) when you have workflows in flight, or
-ensure every external-effect step is naturally idempotent.
+Concretely this means:
+
+- **Rolling deploys do not duplicate-execute in-flight work.** The new
+  boot's reclaim leaves alone any row whose lease the old machine is
+  still extending. If the old machine dies during cutover, its leases
+  expire on schedule (default 30s) and the new machine picks the work
+  up cleanly.
+- **A truly stuck dispatcher** (event loop wedged longer than `leaseMs`)
+  still gets its work reclaimed by a peer; this is the cost of bounding
+  duplicate-execution windows in time rather than identity.
+- **Long-running steps** must call `await` often enough that the
+  dispatcher's heartbeat tick keeps firing on the event loop. The
+  workflows shipped today (Resend + libSQL writes) are all I/O-bound
+  and re-enter the loop constantly. A future Sharp-processing step
+  would need either a worker thread or a long enough `leaseMs` to
+  cover the worst-case synchronous burst.
+
+Tune `leaseMs` via `RuntimeConfig.leaseMs` (default `30_000`). Tests
+pass small values (e.g. `50`) to make expiry observable in a single
+test.

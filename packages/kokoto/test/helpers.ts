@@ -90,12 +90,14 @@ export async function newRuntime(opts: {
 	client: Client
 	telemetry?: KokotoTelemetry
 	pollMs?: number
+	leaseMs?: number
 	globalConcurrency?: number
 }): Promise<DurableRuntime> {
 	const runtime = createRuntime({
 		client: opts.client as never,
 		telemetry: opts.telemetry,
 		pollMs: opts.pollMs ?? 25,
+		leaseMs: opts.leaseMs ?? 5_000,
 		globalConcurrency: opts.globalConcurrency,
 	})
 	await runtime.createSchema()

@@ -273,8 +273,8 @@ describe('DurableRuntime — queue concurrency', () => {
 	})
 })
 
-describe('DurableRuntime — crash recovery', () => {
-	it('reclaims abandoned running rows on next boot', async () => {
+describe('DurableRuntime — crash recovery (lease-based)', () => {
+	it('reclaims rows whose lease expired before the next boot', async () => {
 		const client = await newClient()
 		await client.execute('PRAGMA journal_mode = MEMORY')
 
@@ -283,11 +283,15 @@ describe('DurableRuntime — crash recovery', () => {
 		await r1.start({ workflows: [w] })
 		const handle = await r1.startWorkflow(w, undefined)
 
-		// Manually force the row into "running" with a stale executor id to
-		// simulate a crash mid-flight.
+		// Simulate a crash mid-flight: pin the row to `running` with a lease
+		// that has already expired, so a fresh boot's reclaim sweep picks it
+		// up. Under v1's identity-based reclaim this would have worked by
+		// just clearing executor_id; the lease path needs the expiry too.
 		await client.execute({
-			sql: `UPDATE _dc_workflow SET status='running', executor_id='dead-exec' WHERE id = ?`,
-			args: [handle.id],
+			sql: `UPDATE _dc_workflow
+				SET status='running', executor_id='dead-exec', claim_expires_at = ?
+				WHERE id = ?`,
+			args: [Date.now() - 1, handle.id],
 		})
 		await r1.stop()
 
@@ -297,6 +301,54 @@ describe('DurableRuntime — crash recovery', () => {
 		const result = await h2.result({ timeoutMs: 5_000 })
 		expect(result).toBe('ok')
 
+		await r2.stop()
+		client.close()
+	})
+
+	// Regression for the rolling-deploy duplicate-execution hazard. Two
+	// runtimes against the same DB; the second boot must NOT yank rows that
+	// the first runtime is actively heartbeating.
+	it('does not steal in-flight work from a still-heartbeating peer', async () => {
+		const client = await newClient()
+
+		// Long lease, fast heartbeat: r1's lease keeps extending while we
+		// observe r2's boot reclaim.
+		const r1 = await newRuntime({ client, pollMs: 50, leaseMs: 60_000 })
+		let releaseStep: (() => void) | undefined
+		const stepStarted = new Promise<void>((resolve) => {
+			const blockedFn = async () => {
+				resolve()
+				await new Promise<void>((r) => {
+					releaseStep = r
+				})
+				return 'ok'
+			}
+			const blockingWorkflow = defineWorkflow('long', blockedFn)
+			r1.start({ workflows: [blockingWorkflow] }).then(async () => {
+				await r1.startWorkflow(blockingWorkflow, undefined)
+			})
+		})
+		await stepStarted
+		await sleep(60) // let r1 tick once so the lease is stamped
+
+		// r2 boots while r1 is still alive and still heartbeating its lease.
+		const r2 = await newRuntime({ client, pollMs: 50, leaseMs: 60_000 })
+		const w = defineWorkflow('long', async () => 'ok-from-r2')
+		await r2.start({ workflows: [w] })
+
+		// Give r2's boot reclaim a chance to run. r1's lease is in the
+		// future, so r2 must leave the row alone.
+		await sleep(100)
+		const row = await client.execute(
+			`SELECT status, executor_id FROM _dc_workflow LIMIT 1`
+		)
+		expect(row.rows[0]?.status).toBe('running')
+		// Row is still owned by r1, not yanked by r2's reclaim.
+		expect(row.rows[0]?.executor_id).toBe(r1.id)
+
+		releaseStep!()
+		await sleep(150) // let the workflow finalize
+		await r1.stop()
 		await r2.stop()
 		client.close()
 	})

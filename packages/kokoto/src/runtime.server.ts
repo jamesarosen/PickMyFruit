@@ -53,11 +53,13 @@ import {
 	claimPending,
 	decodePayload,
 	encodePayload,
-	reclaimAbandoned,
+	extendLeases,
+	reclaimExpired,
 	requestCancel,
 	selectStepsForWorkflow,
 	selectWorkflowById,
 	selectWorkflowByIdempotencyKey,
+	touchExecutorHeartbeat,
 	type WorkflowRow,
 } from './sql.server.ts'
 import { Metrics, Telemetry } from './telemetry.server.ts'
@@ -76,6 +78,14 @@ import { runWorkflow } from './worker.server.ts'
 
 const DEFAULT_POLL_MS = 250
 const DEFAULT_GLOBAL_CONCURRENCY = 16
+/**
+ * Default lease duration: how long a claimed workflow stays un-reclaimable
+ * before the heartbeat tick must extend it. 30s gives a ~30× margin over
+ * the typical I/O step time and outlives a missed tick or two on a slow
+ * event loop, while still bounding the duplicate-execution window if the
+ * dispatcher genuinely dies. Configurable via `RuntimeConfig.leaseMs`.
+ */
+const DEFAULT_LEASE_MS = 30_000
 
 /**
  * In-process durable workflow runtime backed by a single SQLite database.
@@ -91,6 +101,7 @@ export class DurableRuntime {
 	private readonly telemetry: Telemetry
 	private readonly registry = new WorkflowRegistry()
 	private readonly pollMs: number
+	private readonly leaseMs: number
 	private readonly globalConcurrency: number
 	private readonly executorId: string
 	private readonly inFlight = new Set<string>()
@@ -105,6 +116,10 @@ export class DurableRuntime {
 		this.client = config.client
 		this.telemetry = new Telemetry(config.telemetry)
 		this.pollMs = Math.max(10, config.pollMs ?? DEFAULT_POLL_MS)
+		// leaseMs of 0 is legal (and used by the lease-expiry test): the row's
+		// expiry is set to `now`, which is already in the past by the time
+		// reclaim reads it, so the row is immediately reclaimable.
+		this.leaseMs = Math.max(0, config.leaseMs ?? DEFAULT_LEASE_MS)
 		this.globalConcurrency = Math.max(
 			1,
 			config.globalConcurrency ?? DEFAULT_GLOBAL_CONCURRENCY
@@ -154,7 +169,7 @@ export class DurableRuntime {
 			args: [this.executorId, now, now],
 		})
 
-		const reclaimed = await reclaimAbandoned(this.client, this.executorId)
+		const reclaimed = await reclaimExpired(this.client, now)
 		if (reclaimed > 0) {
 			this.telemetry.count(Metrics.workflowRecovered, {}, reclaimed)
 			this.telemetry.info(
@@ -398,6 +413,16 @@ export class DurableRuntime {
 		if (!this.dispatcherActive || this.stopping) return
 		const now = Date.now()
 
+		// Heartbeat first: extend the lease on every running row this
+		// executor owns BEFORE we look for new work. If this tick is the one
+		// that's been delayed (event loop hiccup, GC pause), the heartbeat
+		// re-anchors our leases against a fresh `now` and prevents an
+		// in-flight workflow from being reclaimed by a peer.
+		if (this.inFlight.size > 0) {
+			await extendLeases(this.client, this.executorId, now + this.leaseMs)
+		}
+		await touchExecutorHeartbeat(this.client, this.executorId, now)
+
 		const allQueues = this.registry.listQueues()
 		let totalClaimed = 0
 
@@ -408,6 +433,7 @@ export class DurableRuntime {
 				this.client,
 				this.executorId,
 				now,
+				this.leaseMs,
 				capacity,
 				queue.name
 			)
@@ -423,6 +449,7 @@ export class DurableRuntime {
 				this.client,
 				this.executorId,
 				now,
+				this.leaseMs,
 				generalCapacity,
 				null
 			)

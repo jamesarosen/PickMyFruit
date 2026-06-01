@@ -60,6 +60,7 @@ export interface WorkflowRow {
 	ended_at: number | null
 	idempotency_key: string | null
 	cancel_requested_at: number | null
+	claim_expires_at: number | null
 	protocol_version: number
 }
 
@@ -95,6 +96,8 @@ export function toWorkflowRow(row: Record<string, unknown>): WorkflowRow {
 			row.idempotency_key == null ? null : String(row.idempotency_key),
 		cancel_requested_at:
 			row.cancel_requested_at == null ? null : Number(row.cancel_requested_at),
+		claim_expires_at:
+			row.claim_expires_at == null ? null : Number(row.claim_expires_at),
 		protocol_version: Number(row.protocol_version),
 	}
 }
@@ -149,26 +152,72 @@ export async function selectStepsForWorkflow(
 }
 
 /**
- * Reset any `running` rows owned by a different executor back to `pending` so
- * this boot can re-claim them. Returns the number of rows reclaimed.
+ * Reset every `running` row whose lease has expired (or was never set) back
+ * to `pending`, so the next claim can pick it up. Returns the number of
+ * rows reclaimed.
+ *
+ * Lease-based reclaim replaces the identity-based check that v1 shipped
+ * with: a row whose owner is still heartbeating has a fresh
+ * `claim_expires_at` and is left alone, so a rolling deploy where two
+ * executors are briefly alive does not yank work from the old machine.
+ *
+ * `claim_expires_at IS NULL` catches rows claimed by older (pre-lease)
+ * kokoto code that never wrote the column. Tests rely on this branch too:
+ * a row claimed with `leaseMs: 0` writes `now` as the expiry, which is
+ * already in the past at read time and reclaims correctly.
  */
-export async function reclaimAbandoned(
+export async function reclaimExpired(
 	client: SqlClient,
-	currentExecutorId: string
+	now: number
 ): Promise<number> {
 	const result = await client.execute({
 		sql: `UPDATE _dc_workflow
-			SET status = 'pending', executor_id = NULL, started_at = NULL
+			SET status = 'pending',
+			    executor_id = NULL,
+			    started_at = NULL,
+			    claim_expires_at = NULL
 			WHERE status = 'running'
-			  AND (executor_id IS NULL OR executor_id <> ?)`,
-		args: [currentExecutorId],
+			  AND (claim_expires_at IS NULL OR claim_expires_at <= ?)`,
+		args: [now],
 	})
 	return result.rowsAffected
 }
 
 /**
+ * Extend the lease on every running row owned by this executor. Called from
+ * the dispatcher tick so the workflows in flight stay un-reclaimable as
+ * long as the dispatcher loop is alive.
+ */
+export async function extendLeases(
+	client: SqlClient,
+	executorId: string,
+	newExpiry: number
+): Promise<void> {
+	await client.execute({
+		sql: `UPDATE _dc_workflow
+			SET claim_expires_at = ?
+			WHERE status = 'running' AND executor_id = ?`,
+		args: [newExpiry, executorId],
+	})
+}
+
+/** Update `_dc_executor.heartbeat_at` for ops visibility. */
+export async function touchExecutorHeartbeat(
+	client: SqlClient,
+	executorId: string,
+	now: number
+): Promise<void> {
+	await client.execute({
+		sql: `UPDATE _dc_executor SET heartbeat_at = ? WHERE id = ?`,
+		args: [now, executorId],
+	})
+}
+
+/**
  * Atomically claim up to `limit` pending workflows whose `scheduled_for` has
- * passed, marking them `running` and assigning this executor.
+ * passed, marking them `running` and assigning this executor. The claim
+ * stamps `claim_expires_at = now + leaseMs`; the lease is extended by the
+ * dispatcher's heartbeat tick while the workflow is in flight.
  *
  * `queueFilter`:
  *   - `undefined` — claim any queue (or no queue)
@@ -179,6 +228,7 @@ export async function claimPending(
 	client: SqlClient,
 	executorId: string,
 	now: number,
+	leaseMs: number,
 	limit: number,
 	queueFilter?: string | null
 ): Promise<WorkflowRow[]> {
@@ -190,7 +240,7 @@ export async function claimPending(
 		queueClause = 'AND queue = ?'
 		args.push(queueFilter)
 	}
-	args.push(limit, executorId, now)
+	args.push(limit, executorId, now, now + leaseMs)
 	const sql = `WITH next AS (
 			SELECT id FROM _dc_workflow
 			WHERE status = 'pending' AND scheduled_for <= ? ${queueClause}
@@ -201,6 +251,7 @@ export async function claimPending(
 		SET status = 'running',
 		    executor_id = ?,
 		    started_at = COALESCE(started_at, ?),
+		    claim_expires_at = ?,
 		    attempts = attempts + 1
 		WHERE id IN (SELECT id FROM next)
 		RETURNING *`
@@ -218,7 +269,12 @@ export async function finalizeWorkflow(
 ): Promise<void> {
 	await client.execute({
 		sql: `UPDATE _dc_workflow
-			SET status = ?, ended_at = ?, output = ?, error = ?, executor_id = NULL
+			SET status = ?,
+			    ended_at = ?,
+			    output = ?,
+			    error = ?,
+			    executor_id = NULL,
+			    claim_expires_at = NULL
 			WHERE id = ?`,
 		args: [status, endedAt, output ?? null, error ?? null, workflowId],
 	})
@@ -234,6 +290,7 @@ export async function requeueWorkflow(
 			SET status = 'pending',
 			    executor_id = NULL,
 			    started_at = NULL,
+			    claim_expires_at = NULL,
 			    scheduled_for = ?
 			WHERE id = ?`,
 		args: [nextRunAt, workflowId],
