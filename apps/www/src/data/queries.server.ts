@@ -407,6 +407,39 @@ export async function createInquiry(data: NewInquiry): Promise<Inquiry> {
 	)
 }
 
+/**
+ * Same insert as {@link createInquiry} but runs on a caller-supplied libSQL
+ * transaction. Used by kokoto's `ctx.txStep`, which commits the row and the
+ * `_dc_step` log entry in one transaction — eliminating the at-least-once
+ * duplicate-row hazard on workflow retry.
+ */
+export async function createInquiryTx(
+	tx: import('@pickmyfruit/kokoto/runtime.server').SqlTransaction,
+	data: {
+		listingId: number
+		gleanerId: string
+		note: string | null
+		emailSentAt: Date
+	}
+): Promise<{ id: number }> {
+	const result = await tx.execute({
+		sql: `INSERT INTO inquiries (listing_id, gleaner_id, note, email_sent_at)
+			VALUES (?, ?, ?, ?)
+			RETURNING id`,
+		args: [
+			data.listingId,
+			data.gleanerId,
+			data.note ?? null,
+			Math.floor(data.emailSentAt.getTime() / 1000),
+		],
+	})
+	const id = result.rows[0]?.id
+	if (typeof id !== 'number') {
+		throw new Error('createInquiryTx: INSERT … RETURNING id produced no row')
+	}
+	return { id }
+}
+
 export async function hasRecentInquiry(
 	gleanerId: string,
 	listingId: number

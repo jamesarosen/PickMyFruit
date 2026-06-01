@@ -3,7 +3,12 @@ blockExoticSubdeps: true
 
 # Pin transitive deps to patched releases (Dependabot / pnpm audit).
 overrides:
-  "@tanstack/start-server-core": "1.169.4"
+  # 1.169.4 was the minimum from Dependabot PR #273; the exact pin breaks
+  # TanStack Start's SSR manifest builder (`appendUniqueManifestAssetLink`
+  # crashes on a missing `href`) in `NODE_ENV=test` whenever the kokoto
+  # workspace package is in the dep graph. 1.169.6 ships the same security
+  # fix without that regression.
+  "@tanstack/start-server-core": "1.169.6"
   brace-expansion@2: "2.0.3"
   brace-expansion@5: "5.0.6"
   defu: "6.1.7"

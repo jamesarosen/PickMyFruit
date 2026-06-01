@@ -18,7 +18,7 @@ export const submitInquiry = createServerFn({ method: 'POST' })
 			throw new UserError('AUTH_REQUIRED', 'Authentication required')
 		}
 
-		const { createInquiry, hasRecentInquiry, getListingWithOwner, getUserById } =
+		const { hasRecentInquiry, getListingWithOwner, getUserById } =
 			await import('@/data/queries.server')
 
 		const result = await getListingWithOwner(listingId)
@@ -55,36 +55,55 @@ export const submitInquiry = createServerFn({ method: 'POST' })
 			throw new UserError('NOT_FOUND', 'User not found')
 		}
 
-		// Send email first — if it fails, no inquiry record is created
-		// so the user can retry.
 		const { getRequestBaseUrl } = await import('@/lib/request-url')
 		const baseUrl = getRequestBaseUrl(headers)
-		const { sendInquiryEmail } = await import('@/lib/email-templates.server')
-		try {
-			await sendInquiryEmail({
+
+		// Side effects (Resend send + inquiry insert) run inside a durable
+		// workflow so a crash between them does not leave the owner without an
+		// email or the system without a record. The handler awaits the result so
+		// the UX stays synchronous: the form sees `{ inquiryId }` only after both
+		// steps have committed.
+		const { getRuntime } = await import('@/lib/kokoto.server')
+		const { submitInquiryWorkflow, inquiryWorkflowIdempotencyKey } =
+			await import('@/workflows/submit-inquiry.workflow.server')
+
+		const runtime = getRuntime()
+		const handle = await runtime.startWorkflow(
+			submitInquiryWorkflow,
+			{
+				listingId,
+				gleanerId: session.user.id,
+				note: note ?? null,
 				baseUrl,
 				gleaner: { ...gleaner, name: displayName(gleaner) },
-				gleanerNote: note,
-				listing,
 				owner: { ...owner, name: displayName(owner) },
-			})
+				listing: {
+					id: listing.id,
+					type: listing.type,
+					notes: listing.notes ?? null,
+					quantity: listing.quantity ?? null,
+				},
+			},
+			{
+				idempotencyKey: inquiryWorkflowIdempotencyKey(listingId, session.user.id),
+			}
+		)
+
+		try {
+			const { inquiryId } = await handle.result({ timeoutMs: 60_000 })
+			return { inquiryId }
 		} catch (error) {
 			const { Sentry } = await import('@/lib/sentry')
 			Sentry.captureException(error, {
-				extra: { listingId, gleanerId: session.user.id },
+				extra: {
+					listingId,
+					gleanerId: session.user.id,
+					workflowId: handle.id,
+				},
 			})
 			throw new UserError(
 				'EMAIL_FAILED',
 				"We couldn't send the notification email. Please try again."
 			)
 		}
-
-		const inquiry = await createInquiry({
-			listingId,
-			gleanerId: session.user.id,
-			note: note || null,
-			emailSentAt: new Date(),
-		})
-
-		return { inquiryId: inquiry.id }
 	})

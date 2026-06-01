@@ -83,8 +83,6 @@ const outputSchema = z
 			.string()
 			.regex(/^.+\s<[^@]+@[^>]+>$/, 'Must be in "Display Name <email>" format'),
 		HMAC_SECRET: z.string().min(32),
-		INTERNAL_API_SECRET: z.string().min(32).optional(),
-		INTERNAL_API_SECRET_PREVIOUS: z.string().min(32).optional(),
 		/** When true, apply journal migrations once when the server process starts. */
 		RUN_MIGRATIONS_ON_BOOT: z.stringbool().prefault('false'),
 		NODE_ENV: z.string().prefault('development'),
@@ -108,16 +106,6 @@ const outputSchema = z
 				code: 'custom',
 				path: ['STORAGE_PROVIDER'],
 				message: 'Must be "tigris" in production',
-			})
-		}
-
-		// The internal API is the only consumer of INTERNAL_API_SECRET. Require it
-		// in production so the resend-sync worker can't silently fall back to 404.
-		if (env.NODE_ENV === 'production' && !env.INTERNAL_API_SECRET) {
-			ctx.addIssue({
-				code: 'custom',
-				path: ['INTERNAL_API_SECRET'],
-				message: 'Required in production for the internal API perimeter',
 			})
 		}
 	})

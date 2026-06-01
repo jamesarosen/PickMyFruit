@@ -13,7 +13,7 @@ export const startInstance = createStart(() => ({
 	],
 }))
 
-// Start boot tasks (migrations, then resend-sync worker) when the server bundle loads.
+// Start boot tasks (migrations, then the kokoto runtime) when the server bundle loads.
 // `createIsomorphicFn` keeps the dynamic `.server` import out of the client graph.
 createIsomorphicFn()
 	.client(() => undefined)

@@ -8,6 +8,7 @@ import { serverEnv } from './env.server'
 import { logger } from './logger.server'
 import { escapeHtml } from './html-escape.server'
 import { profileNameSchema } from './validation'
+import { Sentry } from './sentry'
 
 const sendMagicLinkEmail = async ({
 	email,
@@ -61,12 +62,69 @@ const sendMagicLinkEmail = async ({
 	}
 }
 
+/**
+ * Enqueue a durable workflow that syncs this user's profile to Resend. Used
+ * by Better Auth's `user.create.after` and `user.update.after` hooks. Fires
+ * and forgets — failures must not block the auth flow.
+ */
+function enqueueResendSync(user: {
+	id: string
+	email: string
+	name: string
+	updatedAt: Date | number | string | null | undefined
+}): void {
+	void (async () => {
+		try {
+			const { getRuntime } = await import('@/lib/kokoto.server')
+			const { syncUserToResendWorkflow, syncUserIdempotencyKey } =
+				await import('@/workflows/sync-user-to-resend.workflow.server')
+			const updatedAtMs =
+				user.updatedAt instanceof Date
+					? user.updatedAt.getTime()
+					: typeof user.updatedAt === 'number'
+						? user.updatedAt
+						: typeof user.updatedAt === 'string'
+							? new Date(user.updatedAt).getTime()
+							: Date.now()
+			await getRuntime().startWorkflow(
+				syncUserToResendWorkflow,
+				{
+					userId: user.id,
+					email: user.email,
+					name: user.name,
+					updatedAtMs,
+				},
+				{ idempotencyKey: syncUserIdempotencyKey(user.id, updatedAtMs) }
+			)
+		} catch (err) {
+			Sentry.captureException(err, {
+				tags: { source: 'auth.databaseHooks.enqueueResendSync' },
+				extra: { userId: user.id },
+			})
+		}
+	})()
+}
+
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
 		provider: 'sqlite',
 	}),
 	baseURL: serverEnv.BETTER_AUTH_URL,
 	secret: serverEnv.BETTER_AUTH_SECRET,
+	databaseHooks: {
+		user: {
+			create: {
+				after: async (user) => {
+					enqueueResendSync(user)
+				},
+			},
+			update: {
+				after: async (user) => {
+					enqueueResendSync(user)
+				},
+			},
+		},
+	},
 	hooks: {
 		before: createAuthMiddleware(async (ctx) => {
 			// Enforce server-side name length — HTML maxlength is bypassable
