@@ -14,6 +14,11 @@ test.describe('Address Release Policy', () => {
 		page,
 		testUser: gleaner,
 	}) => {
+		// Anonymous load → magic-link login → revisit → click reveal is a long
+		// flow; triple the timeout so it stays green under realistic dev-server
+		// warm-up latency on slow CI hosts.
+		test.slow()
+
 		const owner = await createTestUser()
 		const listing = await createTestListing(owner.id, {
 			address: '900 Pickfair Way',
