@@ -14,6 +14,12 @@ interface OwnerProps {
 	lat: number
 	lng: number
 	h3Index: string
+	/**
+	 * Resolution to coarsen `h3Index` to for the "what others see" hexagon.
+	 * Defaults to {@link H3_RESOLUTIONS.PUBLIC_DETAIL}; pass a finer (larger)
+	 * value when the listing's address-release policy widens visibility.
+	 */
+	publicHexResolution?: number
 }
 
 interface PublicProps {
@@ -46,6 +52,7 @@ export default function ListingMap(props: Props) {
 				props.lat,
 				props.lng,
 				props.h3Index,
+				props.publicHexResolution ?? H3_RESOLUTIONS.PUBLIC_DETAIL,
 				onMapLoad
 			)
 		} else {
@@ -63,9 +70,10 @@ export default function ListingMap(props: Props) {
 		lat: number,
 		lng: number,
 		h3Index: string,
+		publicHexResolution: number,
 		onMapLoad: () => void
 	) {
-		const publicH3 = cellToParent(h3Index, H3_RESOLUTIONS.PUBLIC_DETAIL)
+		const publicH3 = cellToParent(h3Index, publicHexResolution)
 
 		map = new maplibregl.Map({
 			container,

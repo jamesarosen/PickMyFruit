@@ -14,7 +14,11 @@ import {
 	type AddressReveal,
 } from './schema.server'
 import { eq, desc, and, ne, isNull, gt, inArray, sql } from 'drizzle-orm'
-import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
+import {
+	ListingStatus,
+	type ListingStatusValue,
+	type AddressReleasePolicyValue,
+} from '@/lib/validation'
 import { Sentry } from '@/lib/sentry'
 import { storage } from '@/lib/storage.server'
 import {
@@ -541,6 +545,7 @@ export async function updateListingById(
 		variety?: string | null
 		quantity?: string | null
 		notes?: string | null
+		addressReleasePolicy?: AddressReleasePolicyValue
 	}
 ): Promise<UpdateListingResult> {
 	return Sentry.startSpan(

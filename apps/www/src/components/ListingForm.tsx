@@ -353,7 +353,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 				</fieldset>
 
 				<fieldset class="address-release-fieldset">
-					<legend>How is your address released?</legend>
+					<legend>How is your address shared?</legend>
 					<label class="address-release-option">
 						<input
 							type="radio"
@@ -380,8 +380,10 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 							</span>
 							<span class="address-release-option-description">
 								Any signed-in member with a verified email sees this address without
-								asking. <strong>Treat the location as effectively public</strong> —
-								members can reshare it.
+								asking.
+								<br />
+								<strong>Treat the location as effectively public</strong> — members can
+								reshare it.
 							</span>
 						</span>
 					</label>

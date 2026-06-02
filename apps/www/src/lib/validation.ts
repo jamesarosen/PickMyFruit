@@ -122,11 +122,18 @@ export const updateListingSchema = z
 		variety: z.string().max(200).nullable().optional(),
 		quantity: z.string().max(100).nullable().optional(),
 		notes: z.string().max(1000).nullable().optional(),
+		addressReleasePolicy: z.enum(addressReleasePolicyValues).optional(),
 	})
 	.refine(
 		(d) =>
-			[d.status, d.name, d.harvestWindow, d.variety, d.quantity, d.notes].some(
-				(v) => v !== undefined
-			),
+			[
+				d.status,
+				d.name,
+				d.harvestWindow,
+				d.variety,
+				d.quantity,
+				d.notes,
+				d.addressReleasePolicy,
+			].some((v) => v !== undefined),
 		{ message: 'At least one field must be updated' }
 	)
