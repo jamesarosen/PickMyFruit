@@ -1,4 +1,9 @@
-import { createFileRoute, Link, useRouteContext } from '@tanstack/solid-router'
+import {
+	createFileRoute,
+	Link,
+	useNavigate,
+	useRouteContext,
+} from '@tanstack/solid-router'
 import { createSignal, For, onCleanup, Show } from 'solid-js'
 import { z } from 'zod'
 import Layout from '@/components/Layout'
@@ -717,16 +722,18 @@ function OwnerEditableFields(props: {
 type RevealState =
 	| { tag: 'hidden' }
 	| { tag: 'loading' }
-	| { tag: 'gated'; reason: 'unauthenticated' | 'email_unverified' }
+	| { tag: 'gated'; reason: 'email_unverified' }
 	| { tag: 'revealed'; listing: VerifiedPublicListing }
 	| { tag: 'error'; message: string }
 
 function AddressRevealSection(props: {
 	listing: PublicListing
 	isAuthenticated: boolean
+	loginHref: string
 	onRevealed: (listing: VerifiedPublicListing) => void
 }) {
 	const [state, setState] = createSignal<RevealState>({ tag: 'hidden' })
+	const navigate = useNavigate()
 
 	async function reveal() {
 		setState({ tag: 'loading' })
@@ -735,8 +742,12 @@ function AddressRevealSection(props: {
 			if (result.tag === 'revealed') {
 				setState({ tag: 'revealed', listing: result.listing })
 				props.onRevealed(result.listing)
+			} else if (result.reason === 'email_unverified') {
+				setState({ tag: 'gated', reason: 'email_unverified' })
 			} else {
-				setState({ tag: 'gated', reason: result.reason })
+				// Session expired between page load and click — send them to /login
+				// rather than showing a "please sign in" interstitial.
+				navigate({ to: props.loginHref })
 			}
 		} catch (err) {
 			Sentry.captureException(err)
@@ -753,26 +764,25 @@ function AddressRevealSection(props: {
 				<p class="address-reveal__intro">
 					This owner shares their address with verified members automatically.
 				</p>
-				<button
-					type="button"
-					class="button button--primary"
-					onClick={() => void reveal()}
+				<Show
+					when={props.isAuthenticated}
+					fallback={
+						<a class="button button--primary" href={props.loginHref}>
+							Sign in to reveal
+						</a>
+					}
 				>
-					{props.isAuthenticated ? 'Show street address' : 'Sign in to reveal'}
-				</button>
+					<button
+						type="button"
+						class="button button--primary"
+						onClick={() => void reveal()}
+					>
+						Show street address
+					</button>
+				</Show>
 			</Show>
 			<Show when={state().tag === 'loading'}>
 				<p>Revealing address…</p>
-			</Show>
-			<Show
-				when={
-					state().tag === 'gated' &&
-					(state() as { tag: 'gated'; reason: string }).reason === 'unauthenticated'
-				}
-			>
-				<p class="address-reveal__gate">
-					Please <Link to="/login">sign in</Link> to see this address.
-				</p>
 			</Show>
 			<Show
 				when={
@@ -845,6 +855,11 @@ function ListingDetailPage() {
 	// so the map can swap from a fuzzed hexagon to an exact pin.
 	const [revealedListing, setRevealedListing] =
 		createSignal<VerifiedPublicListing | null>(null)
+
+	// Used by the unauthenticated reveal CTA to deep-link to /login and bounce
+	// the viewer right back to this listing once they're signed in.
+	const loginHref = () =>
+		`/login?returnTo=${encodeURIComponent(`/listings/${params().id}`)}`
 
 	// Tracks owner's live edits to the title for document title and breadcrumbs.
 	const [editableTitle, setEditableTitle] = createSignal<string | null>(null)
@@ -995,6 +1010,7 @@ function ListingDetailPage() {
 												<AddressRevealSection
 													listing={pub()}
 													isAuthenticated={Boolean(context().session?.user)}
+													loginHref={loginHref()}
 													onRevealed={setRevealedListing}
 												/>
 											</ListingDetailField>

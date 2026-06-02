@@ -36,11 +36,16 @@ test.describe('Address Release Policy', () => {
 				page.getByText(`${listing.city}, ${listing.state}`)
 			).toBeVisible()
 			await expect(page.getByText('900 Pickfair Way')).not.toBeVisible()
-			await expect(
-				page.getByTestId('address-reveal').getByRole('button', {
-					name: /sign in to reveal/i,
-				})
-			).toBeVisible()
+			// Unauthenticated CTA is a direct link to /login?returnTo=… — no
+			// server round-trip, no "please sign in" interstitial.
+			const signInLink = page
+				.getByTestId('address-reveal')
+				.getByRole('link', { name: /sign in to reveal/i })
+			await expect(signInLink).toBeVisible()
+			await expect(signInLink).toHaveAttribute(
+				'href',
+				`/login?returnTo=${encodeURIComponent(`/listings/${listing.id}`)}`
+			)
 
 			// The owner-approval inquiry form should not appear on auto-release
 			// listings — the address path replaces the inquiry path entirely.
