@@ -144,6 +144,8 @@ describe('revealListingAddress', () => {
 			city: 'Napa',
 			state: 'CA',
 			zip: '94558',
+			lat: 38.31,
+			lng: -122.31,
 		})
 		mockGetSession.mockResolvedValue({
 			user: { id: 'visitor-1', emailVerified: true },
@@ -158,9 +160,10 @@ describe('revealListingAddress', () => {
 		expect(result.listing.city).toBe('Napa')
 		expect(result.listing.state).toBe('CA')
 		expect(result.listing.zip).toBe('94558')
+		expect(result.listing.lat).toBe(38.31)
+		expect(result.listing.lng).toBe(-122.31)
 		expect(result.listing).toHaveProperty('approximateH3Index')
 		expect(result.listing).not.toHaveProperty('userId')
-		expect(result.listing).not.toHaveProperty('lat')
 
 		expect(mockRecordAddressReveal).toHaveBeenCalledWith('visitor-1', listing.id)
 		expect(mockMetricsCount).toHaveBeenCalledWith('listing.address.revealed', 1, {

@@ -121,13 +121,15 @@ describe('listingShapeFor', () => {
 			expect(shape).toHaveProperty('approximateH3Index')
 		})
 
-		it('verified non-owner → VerifiedPublicListing (with address)', () => {
+		it('verified non-owner → VerifiedPublicListing (with address + precise pin)', () => {
 			const listing = makeListing({
 				addressReleasePolicy: 'on_verified_request',
 				address: '777 Sunset Blvd',
 				city: 'Napa',
 				state: 'CA',
 				zip: '94558',
+				lat: 38.31,
+				lng: -122.31,
 			})
 			const shape = listingShapeFor(listing, VERIFIED)!
 
@@ -135,11 +137,13 @@ describe('listingShapeFor', () => {
 			expect(shape).toHaveProperty('city', 'Napa')
 			expect(shape).toHaveProperty('state', 'CA')
 			expect(shape).toHaveProperty('zip', '94558')
+			// Precise pin is released alongside the address so the map can swap
+			// to an exact-location marker.
+			expect(shape).toHaveProperty('lat', 38.31)
+			expect(shape).toHaveProperty('lng', -122.31)
 			// Still public — no owner-only fields leak.
 			expect(shape).not.toHaveProperty('userId')
 			expect(shape).not.toHaveProperty('accessInstructions')
-			expect(shape).not.toHaveProperty('lat')
-			expect(shape).not.toHaveProperty('lng')
 			expect(shape).not.toHaveProperty('h3Index')
 			expect(shape).toHaveProperty('approximateH3Index')
 		})

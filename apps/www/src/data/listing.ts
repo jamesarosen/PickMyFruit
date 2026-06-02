@@ -31,6 +31,8 @@ export type RevealedAddress = {
 	city: string
 	state: string
 	zip: string | null
+	lat: number
+	lng: number
 }
 
 /**
@@ -133,6 +135,8 @@ export function listingShapeFor(
 			city: listing.city,
 			state: listing.state,
 			zip: listing.zip,
+			lat: listing.lat,
+			lng: listing.lng,
 		})
 	}
 	return pub

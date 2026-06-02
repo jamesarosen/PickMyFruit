@@ -42,6 +42,12 @@ test.describe('Address Release Policy', () => {
 				})
 			).toBeVisible()
 
+			// The owner-approval inquiry form should not appear on auto-release
+			// listings — the address path replaces the inquiry path entirely.
+			await expect(
+				page.getByRole('heading', { name: 'Interested in this produce?' })
+			).toHaveCount(0)
+
 			// Pre-condition: no reveal rows yet.
 			expect(await getAddressRevealsForListing(listing.id)).toHaveLength(0)
 
@@ -62,6 +68,11 @@ test.describe('Address Release Policy', () => {
 			await expect(page.getByTestId('revealed-address')).toContainText(
 				'Napa, CA 94559'
 			)
+
+			// After reveal, the map switches from a fuzzed hexagon to an exact pin.
+			await expect(
+				page.getByRole('img', { name: 'Map showing exact listing location' })
+			).toBeVisible({ timeout: 10_000 })
 
 			// Reveal row was appended.
 			const reveals = await getAddressRevealsForListing(listing.id)

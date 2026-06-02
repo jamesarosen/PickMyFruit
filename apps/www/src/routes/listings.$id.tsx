@@ -724,6 +724,7 @@ type RevealState =
 function AddressRevealSection(props: {
 	listing: PublicListing
 	isAuthenticated: boolean
+	onRevealed: (listing: VerifiedPublicListing) => void
 }) {
 	const [state, setState] = createSignal<RevealState>({ tag: 'hidden' })
 
@@ -733,6 +734,7 @@ function AddressRevealSection(props: {
 			const result = await revealListingAddress({ data: props.listing.id })
 			if (result.tag === 'revealed') {
 				setState({ tag: 'revealed', listing: result.listing })
+				props.onRevealed(result.listing)
 			} else {
 				setState({ tag: 'gated', reason: result.reason })
 			}
@@ -827,10 +829,22 @@ function ListingDetailPage() {
 	}
 	const justCreated = () => search().created === true
 	const justMarkedUnavailable = () => search().marked === 'unavailable'
+	// Inquiry form is for the owner-approval path. When the listing's policy is
+	// `on_verified_request` the address is auto-released, so no inquiry is needed.
 	const canInquire = () => {
 		const l = listing()
-		return l && l.status === ListingStatus.available && !isOwner()
+		return (
+			l &&
+			l.status === ListingStatus.available &&
+			!isOwner() &&
+			l.addressReleasePolicy !== AddressReleasePolicy.onVerifiedRequest
+		)
 	}
+
+	// Captures the verified-shape listing once the viewer reveals the address,
+	// so the map can swap from a fuzzed hexagon to an exact pin.
+	const [revealedListing, setRevealedListing] =
+		createSignal<VerifiedPublicListing | null>(null)
 
 	// Tracks owner's live edits to the title for document title and breadcrumbs.
 	const [editableTitle, setEditableTitle] = createSignal<string | null>(null)
@@ -981,6 +995,7 @@ function ListingDetailPage() {
 												<AddressRevealSection
 													listing={pub()}
 													isAuthenticated={Boolean(context().session?.user)}
+													onRevealed={setRevealedListing}
 												/>
 											</ListingDetailField>
 										)}
@@ -999,14 +1014,27 @@ function ListingDetailPage() {
 									when={isOwner() && 'lat' in l() ? (l() as Listing) : undefined}
 									fallback={
 										<Show
-											when={
-												'approximateH3Index' in l() ? (l() as PublicListing) : undefined
+											when={revealedListing()}
+											fallback={
+												<Show
+													when={
+														'approximateH3Index' in l() ? (l() as PublicListing) : undefined
+													}
+												>
+													{(pub) => (
+														<ListingMap
+															mode="public"
+															approximateH3Index={pub().approximateH3Index}
+														/>
+													)}
+												</Show>
 											}
 										>
-											{(pub) => (
+											{(revealed) => (
 												<ListingMap
-													mode="public"
-													approximateH3Index={pub().approximateH3Index}
+													mode="verified"
+													lat={revealed().lat}
+													lng={revealed().lng}
 												/>
 											)}
 										</Show>
