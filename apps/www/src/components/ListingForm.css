@@ -49,6 +49,46 @@
 		cursor: not-allowed;
 	}
 
+	.address-release-fieldset {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.address-release-option {
+		display: flex;
+		gap: 12px;
+		align-items: flex-start;
+		padding: 12px 16px;
+		border: 1px solid var(--color-border, #d4d4d8);
+		border-radius: 8px;
+		cursor: pointer;
+	}
+
+	.address-release-option:has(input:checked) {
+		border-color: var(--color-accent);
+		background: oklch(from var(--color-accent) l c h / 0.08);
+	}
+
+	.address-release-option input[type='radio'] {
+		margin-top: 4px;
+	}
+
+	.address-release-option-text {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.address-release-option-label {
+		font-weight: 600;
+	}
+
+	.address-release-option-description {
+		font-size: 14px;
+		color: var(--color-quiet);
+	}
+
 	@media (max-width: 600px) {
 		.form-row,
 		.form-row-3 {

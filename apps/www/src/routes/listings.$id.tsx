@@ -19,11 +19,16 @@ import { Sentry } from '@/lib/sentry'
 import {
 	getListingForViewer,
 	listingIdParamSchema,
+	revealListingAddress,
 	updateListing,
 } from '@/api/listings'
 import type { Listing } from '@/data/schema.server'
 import type { PublicListing } from '@/data/queries.server'
-import type { OwnerListingView, PublicPhoto } from '@/data/listing'
+import type {
+	OwnerListingView,
+	PublicPhoto,
+	VerifiedPublicListing,
+} from '@/data/listing'
 import '@/routes/listing-show.css'
 import { createErrorSignal, ErrorMessage } from '@/components/ErrorMessage'
 
@@ -599,6 +604,104 @@ function OwnerEditableFields(props: {
 	)
 }
 
+type RevealState =
+	| { tag: 'hidden' }
+	| { tag: 'loading' }
+	| { tag: 'gated'; reason: 'unauthenticated' | 'email_unverified' }
+	| { tag: 'revealed'; listing: VerifiedPublicListing }
+	| { tag: 'error'; message: string }
+
+function AddressRevealSection(props: {
+	listing: PublicListing
+	isAuthenticated: boolean
+}) {
+	const [state, setState] = createSignal<RevealState>({ tag: 'hidden' })
+
+	async function reveal() {
+		setState({ tag: 'loading' })
+		try {
+			const result = await revealListingAddress({ data: props.listing.id })
+			if (result.tag === 'revealed') {
+				setState({ tag: 'revealed', listing: result.listing })
+			} else {
+				setState({ tag: 'gated', reason: result.reason })
+			}
+		} catch (err) {
+			Sentry.captureException(err)
+			setState({
+				tag: 'error',
+				message: err instanceof Error ? err.message : 'Could not reveal address.',
+			})
+		}
+	}
+
+	return (
+		<div class="address-reveal" data-testid="address-reveal">
+			<Show when={state().tag === 'hidden'}>
+				<p class="address-reveal__intro">
+					This owner shares their address with verified members automatically.
+				</p>
+				<button
+					type="button"
+					class="button button--primary"
+					onClick={() => void reveal()}
+				>
+					{props.isAuthenticated ? 'Show street address' : 'Sign in to reveal'}
+				</button>
+			</Show>
+			<Show when={state().tag === 'loading'}>
+				<p>Revealing address…</p>
+			</Show>
+			<Show
+				when={
+					state().tag === 'gated' &&
+					(state() as { tag: 'gated'; reason: string }).reason === 'unauthenticated'
+				}
+			>
+				<p class="address-reveal__gate">
+					Please <Link to="/login">sign in</Link> to see this address.
+				</p>
+			</Show>
+			<Show
+				when={
+					state().tag === 'gated' &&
+					(state() as { tag: 'gated'; reason: string }).reason === 'email_unverified'
+				}
+			>
+				<p class="address-reveal__gate">
+					Verify your email address to see this address.
+				</p>
+			</Show>
+			<Show
+				when={
+					state().tag === 'revealed'
+						? (state() as { tag: 'revealed'; listing: VerifiedPublicListing }).listing
+						: undefined
+				}
+			>
+				{(revealed) => (
+					<address class="address-reveal__address" data-testid="revealed-address">
+						<div>{revealed().address}</div>
+						<div>
+							{revealed().city}, {revealed().state}{' '}
+							<Show when={revealed().zip}>{revealed().zip}</Show>
+						</div>
+					</address>
+				)}
+			</Show>
+			<Show
+				when={
+					state().tag === 'error'
+						? (state() as { tag: 'error'; message: string }).message
+						: undefined
+				}
+			>
+				{(message) => <p class="address-reveal__error">{message()}</p>}
+			</Show>
+		</div>
+	)
+}
+
 function ListingDetailPage() {
 	const data = Route.useLoaderData()
 	const context = useRouteContext({ from: '__root__' })
@@ -742,6 +845,24 @@ function ListingDetailPage() {
 											{l().city}, {l().state}
 										</span>
 									</ListingDetailField>
+
+									<Show
+										when={
+											'approximateH3Index' in l() &&
+											l().addressReleasePolicy === 'on_verified_request'
+												? (l() as PublicListing)
+												: undefined
+										}
+									>
+										{(pub) => (
+											<ListingDetailField label="Address">
+												<AddressRevealSection
+													listing={pub()}
+													isAuthenticated={Boolean(context().session?.user)}
+												/>
+											</ListingDetailField>
+										)}
+									</Show>
 
 									<Show when={l().notes}>
 										<ListingDetailField label="Notes">

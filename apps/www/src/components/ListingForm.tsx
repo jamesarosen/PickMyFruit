@@ -99,6 +99,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 			state: formData.get('state'),
 			zip: formData.get('zip'),
 			notes: formData.get('notes'),
+			addressReleasePolicy: formData.get('addressReleasePolicy') ?? undefined,
 		}
 
 		const parsed = listingFormSchema.safeParse(data)
@@ -349,6 +350,41 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 						placeholder="e.g., Ring doorbell first. Take a few or take 'em all!"
 						rows={3}
 					/>
+				</fieldset>
+
+				<fieldset class="address-release-fieldset">
+					<legend>How is your address released?</legend>
+					<label class="address-release-option">
+						<input
+							type="radio"
+							name="addressReleasePolicy"
+							value="on_owner_approval"
+							checked
+						/>
+						<span class="address-release-option-text">
+							<span class="address-release-option-label">Approve each request</span>
+							<span class="address-release-option-description">
+								You approve every request before your address is shared.
+							</span>
+						</span>
+					</label>
+					<label class="address-release-option">
+						<input
+							type="radio"
+							name="addressReleasePolicy"
+							value="on_verified_request"
+						/>
+						<span class="address-release-option-text">
+							<span class="address-release-option-label">
+								Share with verified members
+							</span>
+							<span class="address-release-option-description">
+								Any signed-in member with a verified email sees this address without
+								asking. <strong>Treat the location as effectively public</strong> —
+								members can reshare it.
+							</span>
+						</span>
+					</label>
 				</fieldset>
 
 				<div class="form-actions">

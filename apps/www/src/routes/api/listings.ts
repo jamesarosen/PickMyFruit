@@ -85,6 +85,7 @@ export const Route = createFileRoute('/api/listings')({
 						userId: session.user.id,
 						notes: formData.notes || null,
 						status: 'available',
+						addressReleasePolicy: formData.addressReleasePolicy,
 					})
 
 					return Response.json(listing, { status: 201 })

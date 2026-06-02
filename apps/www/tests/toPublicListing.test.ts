@@ -26,6 +26,7 @@ function makeListing(overrides: Partial<Listing> = {}): Listing {
 		userId: faker.string.uuid(),
 		notes: null,
 		accessInstructions: 'Ring doorbell',
+		addressReleasePolicy: 'on_owner_approval',
 		deletedAt: null,
 		createdAt: new Date(),
 		updatedAt: new Date(),
@@ -47,6 +48,7 @@ function makePhoto(
 
 /** The exact set of keys a PublicListing should have, sorted. */
 const EXPECTED_PUBLIC_KEYS = [
+	'addressReleasePolicy',
 	'approximateH3Index',
 	'city',
 	'createdAt',

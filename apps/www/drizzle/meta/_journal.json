@@ -64,6 +64,13 @@
 			"when": 1779596643981,
 			"tag": "0008_add_kokoto",
 			"breakpoints": true
+		},
+		{
+			"idx": 9,
+			"version": "6",
+			"when": 1780370524164,
+			"tag": "0009_add_address_release_policy",
+			"breakpoints": true
 		}
 	]
 }

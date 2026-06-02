@@ -19,6 +19,7 @@ const EXPECTED_TABLES = [
 	'_dc_step',
 	'_dc_workflow',
 	'account',
+	'address_reveals',
 	'inquiries',
 	'listing_photos',
 	'listings',

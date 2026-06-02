@@ -20,6 +20,7 @@ function makeListing(overrides: Partial<PublicListing> = {}): PublicListing {
 		approximateH3Index: '872830828ffffff',
 		notes: null,
 		photos: [],
+		addressReleasePolicy: 'on_owner_approval',
 		createdAt: new Date(),
 		updatedAt: new Date(),
 		...overrides,
