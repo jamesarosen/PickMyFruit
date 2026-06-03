@@ -142,6 +142,14 @@ export const listings = sqliteTable(
 		// Metadata
 		notes: text('notes'),
 		accessInstructions: text('access_instructions'), // e.g., 'Ring doorbell', 'Gate code 1234'
+		// How the precise address is released to non-owners. `on_owner_approval`
+		// (default) gates on the existing inquiry flow; `on_verified_request`
+		// releases to any signed-in member with a verified email.
+		addressReleasePolicy: text('address_release_policy', {
+			enum: ['on_owner_approval', 'on_verified_request'],
+		})
+			.notNull()
+			.default('on_owner_approval'),
 		deletedAt: integer('deleted_at', { mode: 'timestamp' }), // soft delete
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
@@ -213,3 +221,36 @@ export const listingPhotos = sqliteTable(
 
 export type ListingPhoto = typeof listingPhotos.$inferSelect
 export type NewListingPhoto = typeof listingPhotos.$inferInsert
+
+// ============================================================================
+// Address Reveals Table
+// ============================================================================
+
+/**
+ * Append-only record of address reveals. Authz for `on_verified_request` is a
+ * property of the viewer (`user.email_verified`); this log exists for
+ * attribution, unique-member analytics, and as the seed for future gleaner
+ * follow-ups. Not an access-control table.
+ */
+export const addressReveals = sqliteTable(
+	'address_reveals',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		listingId: integer('listing_id')
+			.notNull()
+			.references(() => listings.id, { onDelete: 'cascade' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+	},
+	(table) => [
+		index('address_reveals_listing_idx').on(table.listingId, table.createdAt),
+		index('address_reveals_user_idx').on(table.userId, table.createdAt),
+	]
+)
+
+export type AddressReveal = typeof addressReveals.$inferSelect
+export type NewAddressReveal = typeof addressReveals.$inferInsert

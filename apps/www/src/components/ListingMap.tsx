@@ -14,6 +14,12 @@ interface OwnerProps {
 	lat: number
 	lng: number
 	h3Index: string
+	/**
+	 * Resolution to coarsen `h3Index` to for the "what others see" hexagon.
+	 * Defaults to {@link H3_RESOLUTIONS.PUBLIC_DETAIL}; pass a finer (larger)
+	 * value when the listing's address-release policy widens visibility.
+	 */
+	publicHexResolution?: number
 }
 
 interface PublicProps {
@@ -21,7 +27,13 @@ interface PublicProps {
 	approximateH3Index: string
 }
 
-type Props = OwnerProps | PublicProps
+interface VerifiedProps {
+	mode: 'verified'
+	lat: number
+	lng: number
+}
+
+type Props = OwnerProps | PublicProps | VerifiedProps
 
 // MapLibre paint properties require literal color strings, not CSS variables.
 const COLOR_MARKER = '#10b981' // --color-fresh-green
@@ -46,8 +58,11 @@ export default function ListingMap(props: Props) {
 				props.lat,
 				props.lng,
 				props.h3Index,
+				props.publicHexResolution ?? H3_RESOLUTIONS.PUBLIC_DETAIL,
 				onMapLoad
 			)
+		} else if (props.mode === 'verified') {
+			initVerifiedMap(maplibregl, container, props.lat, props.lng, onMapLoad)
 		} else {
 			initPublicMap(maplibregl, container, props.approximateH3Index, onMapLoad)
 		}
@@ -63,9 +78,10 @@ export default function ListingMap(props: Props) {
 		lat: number,
 		lng: number,
 		h3Index: string,
+		publicHexResolution: number,
 		onMapLoad: () => void
 	) {
-		const publicH3 = cellToParent(h3Index, H3_RESOLUTIONS.PUBLIC_DETAIL)
+		const publicH3 = cellToParent(h3Index, publicHexResolution)
 
 		map = new maplibregl.Map({
 			container,
@@ -113,6 +129,36 @@ export default function ListingMap(props: Props) {
 					'line-width': 2,
 				},
 			})
+		})
+
+		new maplibregl.Marker({ color: COLOR_MARKER })
+			.setLngLat([lng, lat])
+			.addTo(map)
+	}
+
+	function initVerifiedMap(
+		maplibregl: typeof import('maplibre-gl'),
+		container: HTMLDivElement,
+		lat: number,
+		lng: number,
+		onMapLoad: () => void
+	) {
+		map = new maplibregl.Map({
+			container,
+			style: 'https://tiles.openfreemap.org/styles/liberty',
+			center: [lng, lat],
+			zoom: 16,
+			attributionControl: false,
+		})
+
+		map.addControl(
+			new maplibregl.AttributionControl({ compact: true }),
+			'bottom-right'
+		)
+		map.addControl(new maplibregl.NavigationControl({ showCompass: false }))
+
+		reportMapLoadedOnce(map, onMapLoad, () => {
+			if (!map) return
 		})
 
 		new maplibregl.Marker({ color: COLOR_MARKER })
@@ -185,7 +231,9 @@ export default function ListingMap(props: Props) {
 				aria-label={
 					props.mode === 'owner'
 						? 'Map showing exact listing location and public area'
-						: 'Map showing approximate listing area'
+						: props.mode === 'verified'
+							? 'Map showing exact listing location'
+							: 'Map showing approximate listing area'
 				}
 				onReady={setupMap}
 			/>

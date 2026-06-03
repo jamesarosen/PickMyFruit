@@ -18,6 +18,20 @@ const requiredString = (message: string, max: number = 200) =>
 		z.string().min(1, message).max(max)
 	)
 
+/** Allowed values for a listing's address-release policy. */
+export const AddressReleasePolicy = {
+	onOwnerApproval: 'on_owner_approval',
+	onVerifiedRequest: 'on_verified_request',
+} as const
+
+export type AddressReleasePolicyValue =
+	(typeof AddressReleasePolicy)[keyof typeof AddressReleasePolicy]
+
+const addressReleasePolicyValues = Object.values(AddressReleasePolicy) as [
+	AddressReleasePolicyValue,
+	...AddressReleasePolicyValue[],
+]
+
 // Schema for form input (before geocoding)
 export const listingFormSchema = z.object({
 	type: z.preprocess(
@@ -42,6 +56,9 @@ export const listingFormSchema = z.object({
 			z.string().max(1000).optional()
 		)
 		.optional(),
+	addressReleasePolicy: z
+		.enum(addressReleasePolicyValues)
+		.default(AddressReleasePolicy.onOwnerApproval),
 })
 
 export type ListingFormData = z.infer<typeof listingFormSchema>
@@ -105,11 +122,18 @@ export const updateListingSchema = z
 		variety: z.string().max(200).nullable().optional(),
 		quantity: z.string().max(100).nullable().optional(),
 		notes: z.string().max(1000).nullable().optional(),
+		addressReleasePolicy: z.enum(addressReleasePolicyValues).optional(),
 	})
 	.refine(
 		(d) =>
-			[d.status, d.name, d.harvestWindow, d.variety, d.quantity, d.notes].some(
-				(v) => v !== undefined
-			),
+			[
+				d.status,
+				d.name,
+				d.harvestWindow,
+				d.variety,
+				d.quantity,
+				d.notes,
+				d.addressReleasePolicy,
+			].some((v) => v !== undefined),
 		{ message: 'At least one field must be updated' }
 	)

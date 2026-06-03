@@ -7,6 +7,7 @@ import {
 	verification,
 	listings,
 	inquiries,
+	addressReveals,
 	type NewListing,
 } from '../../../src/data/schema.server'
 import { eq, desc, like } from 'drizzle-orm'
@@ -150,6 +151,21 @@ export async function createTestListing(
 	}
 	const result = await db.insert(listings).values(data).returning()
 	return result[0]
+}
+
+/** Queries address-reveal rows for a given listing from the test DB. */
+export async function getAddressRevealsForListing(listingId: number): Promise<
+	Array<{
+		id: number
+		userId: string
+		listingId: number
+		createdAt: Date
+	}>
+> {
+	return db
+		.select()
+		.from(addressReveals)
+		.where(eq(addressReveals.listingId, listingId))
 }
 
 /** Queries inquiries for a given listing from the test DB. */

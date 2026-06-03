@@ -65,6 +65,7 @@ function makeListingRow(id: number) {
 		userId: 'owner-1',
 		notes: null,
 		accessInstructions: null,
+		addressReleasePolicy: 'on_owner_approval',
 		deletedAt: null,
 		createdAt: new Date(),
 		updatedAt: new Date(),

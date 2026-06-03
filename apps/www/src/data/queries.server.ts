@@ -4,15 +4,21 @@ import {
 	inquiries,
 	listingPhotos,
 	user,
+	addressReveals,
 	type Listing,
 	type NewListing,
 	type Inquiry,
 	type NewInquiry,
 	type AddressFields,
 	type ListingPhoto,
+	type AddressReveal,
 } from './schema.server'
 import { eq, desc, and, ne, isNull, gt, inArray, sql } from 'drizzle-orm'
-import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
+import {
+	ListingStatus,
+	type ListingStatusValue,
+	type AddressReleasePolicyValue,
+} from '@/lib/validation'
 import { Sentry } from '@/lib/sentry'
 import { storage } from '@/lib/storage.server'
 import {
@@ -539,6 +545,7 @@ export async function updateListingById(
 		variety?: string | null
 		quantity?: string | null
 		notes?: string | null
+		addressReleasePolicy?: AddressReleasePolicyValue
 	}
 ): Promise<UpdateListingResult> {
 	return Sentry.startSpan(
@@ -608,6 +615,36 @@ export async function getUserLastAddress(
 				.where(and(eq(listings.userId, userId), isNull(listings.deletedAt)))
 				.orderBy(desc(listings.createdAt))
 				.limit(1)
+			return result[0]
+		}
+	)
+}
+
+// ============================================================================
+// Address Reveal Functions
+// ============================================================================
+
+/**
+ * Appends an `address_reveals` row. Append-only by design — repeat reveals
+ * are a real engagement signal, so we record every one (no dedupe).
+ */
+export async function recordAddressReveal(
+	userId: string,
+	listingId: number
+): Promise<AddressReveal> {
+	return Sentry.startSpan(
+		{
+			name: 'recordAddressReveal',
+			op: 'db.query',
+			attributes: { listingId },
+		},
+		async () => {
+			const result = await db
+				.insert(addressReveals)
+				.values({ userId, listingId })
+				.returning()
+			if (!result[0])
+				throw new DataInvariantError('recordAddressReveal: insert returned no row')
 			return result[0]
 		}
 	)

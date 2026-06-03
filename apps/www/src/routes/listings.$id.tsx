@@ -1,4 +1,9 @@
-import { createFileRoute, Link, useRouteContext } from '@tanstack/solid-router'
+import {
+	createFileRoute,
+	Link,
+	useNavigate,
+	useRouteContext,
+} from '@tanstack/solid-router'
 import { createSignal, For, onCleanup, Show } from 'solid-js'
 import { z } from 'zod'
 import Layout from '@/components/Layout'
@@ -9,21 +14,34 @@ import ListingMap from '@/components/ListingMap'
 import ListingPhotosSection from '@/components/ListingPhotosSection'
 import { ListingDetailField } from '@/components/ListingDetailField'
 import {
+	ADDRESS_RELEASE_OPTIONS,
+	addressReleaseSemanticColor,
 	getStatusVariant,
 	VISIBILITY_OPTIONS,
 	statusSemanticColor,
 } from '@/lib/listing-status'
-import { ListingStatus, type ListingStatusValue } from '@/lib/validation'
+import {
+	AddressReleasePolicy,
+	ListingStatus,
+	type AddressReleasePolicyValue,
+	type ListingStatusValue,
+} from '@/lib/validation'
+import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
 import { buildListingMeta } from '@/lib/listing-meta'
 import { Sentry } from '@/lib/sentry'
 import {
 	getListingForViewer,
 	listingIdParamSchema,
+	revealListingAddress,
 	updateListing,
 } from '@/api/listings'
 import type { Listing } from '@/data/schema.server'
 import type { PublicListing } from '@/data/queries.server'
-import type { OwnerListingView, PublicPhoto } from '@/data/listing'
+import type {
+	OwnerListingView,
+	PublicPhoto,
+	VerifiedPublicListing,
+} from '@/data/listing'
 import '@/routes/listing-show.css'
 import { createErrorSignal, ErrorMessage } from '@/components/ErrorMessage'
 
@@ -219,6 +237,94 @@ function OwnerControls(props: {
 	)
 }
 
+function AddressVisibilityControls(props: {
+	listingId: number
+	initialPolicy: AddressReleasePolicyValue
+	clientUpdatedAt: () => number
+	onUpdated: (updatedAt: Date) => void
+	onPolicyChanged: (policy: AddressReleasePolicyValue) => void
+}) {
+	const [isUpdating, setIsUpdating] = createSignal(false)
+	const [savedPolicy, setSavedPolicy] = createSignal(props.initialPolicy)
+	const [displayPolicy, setDisplayPolicy] = createSignal(props.initialPolicy)
+	const [error, setError] = createErrorSignal()
+	let debounceTimer: ReturnType<typeof setTimeout> | undefined
+
+	onCleanup(() => {
+		clearTimeout(debounceTimer)
+		const pending = displayPolicy()
+		if (pending !== savedPolicy()) void commit(pending)
+	})
+
+	function select(newPolicy: AddressReleasePolicyValue) {
+		if (newPolicy === displayPolicy()) return
+		setDisplayPolicy(newPolicy)
+		props.onPolicyChanged(newPolicy)
+		setError(null)
+		clearTimeout(debounceTimer)
+		debounceTimer = setTimeout(() => commit(newPolicy), STATUS_DEBOUNCE_MS)
+	}
+
+	async function commit(newPolicy: AddressReleasePolicyValue) {
+		if (newPolicy === savedPolicy()) return
+		setIsUpdating(true)
+		try {
+			const result = await updateListing({
+				data: {
+					id: props.listingId,
+					addressReleasePolicy: newPolicy,
+					clientUpdatedAt: props.clientUpdatedAt(),
+				},
+			})
+			setSavedPolicy(newPolicy)
+			props.onUpdated(result.updatedAt!)
+		} catch (err) {
+			Sentry.captureException(err)
+			setError(err)
+			setDisplayPolicy(savedPolicy())
+			props.onPolicyChanged(savedPolicy())
+		} finally {
+			setIsUpdating(false)
+		}
+	}
+
+	return (
+		<fieldset class="visibility-fieldset" aria-busy={isUpdating()}>
+			<legend class="sr-only">Address Visibility</legend>
+			<For each={ADDRESS_RELEASE_OPTIONS}>
+				{(option) => (
+					<label
+						class="visibility-option"
+						classList={{
+							'visibility-option--selected': displayPolicy() === option.value,
+						}}
+						style={{
+							'--visibility-color': addressReleaseSemanticColor[option.value],
+						}}
+					>
+						<input
+							type="radio"
+							name="addressReleasePolicy"
+							value={option.value}
+							checked={displayPolicy() === option.value}
+							onChange={() => select(option.value)}
+						/>
+						<span class="visibility-option-text">
+							<span class="visibility-option-label">{option.label}</span>
+							<span class="visibility-option-description">{option.description}</span>
+						</span>
+					</label>
+				)}
+			</For>
+			<ErrorMessage
+				class="visibility-error"
+				defaultMessage="Failed to update"
+				error={error()}
+			/>
+		</fieldset>
+	)
+}
+
 function OwnerTitleField(props: {
 	listing: OwnerListingView
 	clientUpdatedAt: () => number
@@ -304,6 +410,7 @@ function OwnerEditableFields(props: {
 	listing: OwnerListingView
 	clientUpdatedAt: () => number
 	onUpdated: (updatedAt: Date) => void
+	onAddressReleasePolicyChanged: (policy: AddressReleasePolicyValue) => void
 }) {
 	const [savedHarvest, setSavedHarvest] = createSignal(
 		props.listing.harvestWindow ?? ''
@@ -565,6 +672,19 @@ function OwnerEditableFields(props: {
 				</span>
 			</ListingDetailField>
 
+			<div class="listing-detail-field listing-detail-field--visibility">
+				<span class="listing-detail-field__label">Address Visibility</span>
+				<div class="listing-detail-field__value">
+					<AddressVisibilityControls
+						listingId={props.listing.id}
+						initialPolicy={props.listing.addressReleasePolicy}
+						clientUpdatedAt={props.clientUpdatedAt}
+						onUpdated={props.onUpdated}
+						onPolicyChanged={props.onAddressReleasePolicyChanged}
+					/>
+				</div>
+			</div>
+
 			<ListingDetailField label="Notes" id="listing-notes">
 				<textarea
 					id="listing-notes"
@@ -599,6 +719,111 @@ function OwnerEditableFields(props: {
 	)
 }
 
+type RevealState =
+	| { tag: 'hidden' }
+	| { tag: 'loading' }
+	| { tag: 'gated'; reason: 'email_unverified' }
+	| { tag: 'revealed'; listing: VerifiedPublicListing }
+	| { tag: 'error'; message: string }
+
+function AddressRevealSection(props: {
+	listing: PublicListing
+	isAuthenticated: boolean
+	loginHref: string
+	onRevealed: (listing: VerifiedPublicListing) => void
+}) {
+	const [state, setState] = createSignal<RevealState>({ tag: 'hidden' })
+	const navigate = useNavigate()
+
+	async function reveal() {
+		setState({ tag: 'loading' })
+		try {
+			const result = await revealListingAddress({ data: props.listing.id })
+			if (result.tag === 'revealed') {
+				setState({ tag: 'revealed', listing: result.listing })
+				props.onRevealed(result.listing)
+			} else if (result.reason === 'email_unverified') {
+				setState({ tag: 'gated', reason: 'email_unverified' })
+			} else {
+				// Session expired between page load and click — send them to /login
+				// rather than showing a "please sign in" interstitial.
+				navigate({ to: props.loginHref })
+			}
+		} catch (err) {
+			Sentry.captureException(err)
+			setState({
+				tag: 'error',
+				message: err instanceof Error ? err.message : 'Could not reveal address.',
+			})
+		}
+	}
+
+	return (
+		<div class="address-reveal" data-testid="address-reveal">
+			<Show when={state().tag === 'hidden'}>
+				<p class="address-reveal__intro">
+					This owner shares their address with verified members automatically.
+				</p>
+				<Show
+					when={props.isAuthenticated}
+					fallback={
+						<a class="button button--primary" href={props.loginHref}>
+							Sign in to reveal
+						</a>
+					}
+				>
+					<button
+						type="button"
+						class="button button--primary"
+						onClick={() => void reveal()}
+					>
+						Show street address
+					</button>
+				</Show>
+			</Show>
+			<Show when={state().tag === 'loading'}>
+				<p>Revealing address…</p>
+			</Show>
+			<Show
+				when={
+					state().tag === 'gated' &&
+					(state() as { tag: 'gated'; reason: string }).reason === 'email_unverified'
+				}
+			>
+				<p class="address-reveal__gate">
+					Verify your email address to see this address.
+				</p>
+			</Show>
+			<Show
+				when={
+					state().tag === 'revealed'
+						? (state() as { tag: 'revealed'; listing: VerifiedPublicListing }).listing
+						: undefined
+				}
+			>
+				{(revealed) => (
+					<address class="address-reveal__address" data-testid="revealed-address">
+						<div>{revealed().address}</div>
+						<div>
+							{revealed().city}, {revealed().state}{' '}
+							<Show when={revealed().zip}>{revealed().zip}</Show>
+						</div>
+					</address>
+				)}
+			</Show>
+			<Show
+				when={
+					state().tag === 'error'
+						? (state() as { tag: 'error'; message: string }).message
+						: undefined
+				}
+			>
+				{(message) => <p class="address-reveal__error">{message()}</p>}
+			</Show>
+		</div>
+	)
+}
+
 function ListingDetailPage() {
 	const data = Route.useLoaderData()
 	const context = useRouteContext({ from: '__root__' })
@@ -614,10 +839,27 @@ function ListingDetailPage() {
 	}
 	const justCreated = () => search().created === true
 	const justMarkedUnavailable = () => search().marked === 'unavailable'
+	// Inquiry form is for the owner-approval path. When the listing's policy is
+	// `on_verified_request` the address is auto-released, so no inquiry is needed.
 	const canInquire = () => {
 		const l = listing()
-		return l && l.status === ListingStatus.available && !isOwner()
+		return (
+			l &&
+			l.status === ListingStatus.available &&
+			!isOwner() &&
+			l.addressReleasePolicy !== AddressReleasePolicy.onVerifiedRequest
+		)
 	}
+
+	// Captures the verified-shape listing once the viewer reveals the address,
+	// so the map can swap from a fuzzed hexagon to an exact pin.
+	const [revealedListing, setRevealedListing] =
+		createSignal<VerifiedPublicListing | null>(null)
+
+	// Used by the unauthenticated reveal CTA to deep-link to /login and bounce
+	// the viewer right back to this listing once they're signed in.
+	const loginHref = () =>
+		`/login?returnTo=${encodeURIComponent(`/listings/${params().id}`)}`
 
 	// Tracks owner's live edits to the title for document title and breadcrumbs.
 	const [editableTitle, setEditableTitle] = createSignal<string | null>(null)
@@ -635,6 +877,17 @@ function ListingDetailPage() {
 	)
 	const clientUpdatedAt = () =>
 		Math.floor((liveUpdatedAt()?.getTime() ?? 0) / 1000)
+
+	// Tracks owner's live edits to the release policy so the public-hex
+	// preview on the owner map can shrink without waiting for a save.
+	const [liveAddressReleasePolicy, setLiveAddressReleasePolicy] =
+		createSignal<AddressReleasePolicyValue>(
+			ownerListing()?.addressReleasePolicy ?? AddressReleasePolicy.onOwnerApproval
+		)
+	const ownerPublicHexResolution = () =>
+		liveAddressReleasePolicy() === AddressReleasePolicy.onVerifiedRequest
+			? 12
+			: H3_RESOLUTIONS.PUBLIC_DETAIL
 
 	return (
 		<Show when={listing()} fallback={<ListingNotFoundFallback />}>
@@ -705,6 +958,7 @@ function ListingDetailPage() {
 											listing={ownerListing()}
 											clientUpdatedAt={clientUpdatedAt}
 											onUpdated={setLiveUpdatedAt}
+											onAddressReleasePolicyChanged={setLiveAddressReleasePolicy}
 										/>
 									</div>
 								)}
@@ -743,6 +997,26 @@ function ListingDetailPage() {
 										</span>
 									</ListingDetailField>
 
+									<Show
+										when={
+											'approximateH3Index' in l() &&
+											l().addressReleasePolicy === 'on_verified_request'
+												? (l() as PublicListing)
+												: undefined
+										}
+									>
+										{(pub) => (
+											<ListingDetailField label="Address">
+												<AddressRevealSection
+													listing={pub()}
+													isAuthenticated={Boolean(context().session?.user)}
+													loginHref={loginHref()}
+													onRevealed={setRevealedListing}
+												/>
+											</ListingDetailField>
+										)}
+									</Show>
+
 									<Show when={l().notes}>
 										<ListingDetailField label="Notes">
 											<span>{l().notes}</span>
@@ -756,26 +1030,44 @@ function ListingDetailPage() {
 									when={isOwner() && 'lat' in l() ? (l() as Listing) : undefined}
 									fallback={
 										<Show
-											when={
-												'approximateH3Index' in l() ? (l() as PublicListing) : undefined
+											when={revealedListing()}
+											fallback={
+												<Show
+													when={
+														'approximateH3Index' in l() ? (l() as PublicListing) : undefined
+													}
+												>
+													{(pub) => (
+														<ListingMap
+															mode="public"
+															approximateH3Index={pub().approximateH3Index}
+														/>
+													)}
+												</Show>
 											}
 										>
-											{(pub) => (
+											{(revealed) => (
 												<ListingMap
-													mode="public"
-													approximateH3Index={pub().approximateH3Index}
+													mode="verified"
+													lat={revealed().lat}
+													lng={revealed().lng}
 												/>
 											)}
 										</Show>
 									}
 								>
 									{(owner) => (
-										<ListingMap
-											mode="owner"
-											lat={owner().lat}
-											lng={owner().lng}
-											h3Index={owner().h3Index}
-										/>
+										<Show when={ownerPublicHexResolution()} keyed>
+											{(resolution) => (
+												<ListingMap
+													mode="owner"
+													lat={owner().lat}
+													lng={owner().lng}
+													h3Index={owner().h3Index}
+													publicHexResolution={resolution}
+												/>
+											)}
+										</Show>
 									)}
 								</Show>
 							</div>

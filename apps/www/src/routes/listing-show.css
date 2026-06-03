@@ -358,6 +358,32 @@
 			margin: 8px 0 0;
 		}
 
+		& .address-reveal {
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+		}
+
+		& .address-reveal__intro {
+			margin: 0;
+			color: var(--color-quiet);
+			font-size: 14px;
+		}
+
+		& .address-reveal__gate {
+			margin: 0;
+			color: var(--color-quiet);
+		}
+
+		& .address-reveal__address {
+			font-style: normal;
+		}
+
+		& .address-reveal__error {
+			margin: 0;
+			color: var(--color-danger, oklch(0.55 0.2 25));
+		}
+
 		@media (max-width: 600px) {
 			& .listing-detail {
 				padding: 24px;

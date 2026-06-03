@@ -6,7 +6,7 @@ import { NotFoundError } from '@/lib/user-error'
 import { Sentry } from '@/lib/sentry'
 import { updateListingSchema } from '@/lib/validation'
 import type { AddressFields, Listing } from '@/data/schema.server'
-import type { OwnerListingView } from '@/data/listing'
+import type { OwnerListingView, VerifiedPublicListing } from '@/data/listing'
 
 /** Fetches the current user's listings, or empty array if not authenticated. */
 export const getMyListings = createServerFn({ method: 'GET' })
@@ -119,6 +119,191 @@ export const getListingForViewer = createServerFn({ method: 'GET' })
 			}
 		}
 		return getPublic(id)
+	})
+
+/**
+ * Result of a {@link revealListingAddress} call. `gated` is not an error —
+ * it's the expected response when the viewer hasn't yet verified their
+ * email; the UI surfaces a "verify to reveal" affordance instead of an
+ * address.
+ */
+export type RevealAddressResult =
+	| { tag: 'revealed'; listing: VerifiedPublicListing }
+	| { tag: 'gated'; reason: 'unauthenticated' | 'email_unverified' }
+
+/**
+ * Synchronously records an address reveal for the current viewer and
+ * returns the precise address. POST semantics because it writes an
+ * append-only row to `address_reveals`. Eligibility is `policy ===
+ * on_verified_request` and the viewer is email-verified.
+ */
+export const revealListingAddress = createServerFn({ method: 'POST' })
+	.middleware([errorMiddleware])
+	.inputValidator((id: unknown) => listingIdParamSchema.parse(id))
+	.handler(async ({ data: id }): Promise<RevealAddressResult> => {
+		const headers = getRequestHeaders()
+		const { auth } = await import('@/lib/auth.server')
+		const { logger } = await import('@/lib/logger.server')
+
+		const session = await auth.api.getSession({ headers })
+
+		const { getListingById, getPhotosForListing, recordAddressReveal } =
+			await import('@/data/queries.server')
+		const { toPublicListing, toVerifiedPublicListing } =
+			await import('@/data/listing')
+
+		const listing = await getListingById(id)
+		if (!listing) throw new NotFoundError('Listing not found')
+
+		// Owners would never hit this path from the UI, but if they do, do not
+		// record a reveal for themselves — return the address directly via the
+		// verified shape so the caller gets a consistent payload.
+		const isOwner = session?.user?.id === listing.userId
+
+		const policy = listing.addressReleasePolicy
+
+		Sentry.addBreadcrumb({
+			category: 'address-release',
+			type: 'info',
+			message: 'reveal.requested',
+			data: { listingId: id, policy },
+		})
+
+		Sentry.metrics.count('listing.address.reveal.click', 1, {
+			attributes: { policy },
+		})
+
+		if (policy !== 'on_verified_request' && !isOwner) {
+			// This endpoint is only for the verified-request path. Treat misuse as
+			// "not allowed" rather than gated — the caller is on the wrong flow.
+			throw new UserError(
+				'NOT_ALLOWED',
+				'This listing does not release its address automatically.'
+			)
+		}
+
+		const verified = Boolean(session?.user?.emailVerified)
+
+		Sentry.addBreadcrumb({
+			category: 'address-release',
+			type: 'info',
+			message: 'auth.checked',
+			data: { verified },
+		})
+
+		if (!session?.user) {
+			Sentry.metrics.count('listing.address.reveal.gated', 1)
+			Sentry.addBreadcrumb({
+				category: 'address-release',
+				type: 'info',
+				message: 'reveal.gated',
+			})
+			logger.info(
+				{
+					listingId: id,
+					userId: null,
+					policy,
+					verified: false,
+					wroteEvent: false,
+				},
+				'address reveal gated: unauthenticated'
+			)
+			return { tag: 'gated', reason: 'unauthenticated' }
+		}
+
+		if (!verified && !isOwner) {
+			Sentry.metrics.count('listing.address.reveal.gated', 1)
+			Sentry.addBreadcrumb({
+				category: 'address-release',
+				type: 'info',
+				message: 'reveal.gated',
+			})
+			logger.info(
+				{
+					listingId: id,
+					userId: session.user.id,
+					policy,
+					verified: false,
+					wroteEvent: false,
+				},
+				'address reveal gated: email unverified'
+			)
+			return { tag: 'gated', reason: 'email_unverified' }
+		}
+
+		const photos = await getPhotosForListing(id)
+		const pub = toPublicListing(listing, photos)
+		if (!pub) {
+			throw new UserError(
+				'INTERNAL_ERROR',
+				'This listing has an invalid location and cannot be released.'
+			)
+		}
+
+		if (!listing.address || (listing.lat === 0 && listing.lng === 0)) {
+			Sentry.withScope((scope) => {
+				scope.setFingerprint(['address-release', 'reveal', 'missing-address'])
+				Sentry.captureMessage(
+					'Address reveal requested on listing without a usable address',
+					{ level: 'warning', extra: { listingId: id } }
+				)
+			})
+		}
+
+		let wroteEvent = false
+		if (!isOwner) {
+			try {
+				await recordAddressReveal(session.user.id, id)
+				wroteEvent = true
+				Sentry.addBreadcrumb({
+					category: 'address-release',
+					type: 'info',
+					message: 'reveal.event.written',
+					data: { listingId: id },
+				})
+			} catch (error) {
+				// Silent-failure detector: we still hand back the address, so the
+				// member is unblocked, but losing the audit trail is significant
+				// enough to capture.
+				Sentry.withScope((scope) => {
+					scope.setFingerprint(['address-release', 'reveal', 'event-write-failed'])
+					Sentry.captureException(error, {
+						extra: { listingId: id, userId: session.user.id },
+					})
+				})
+				Sentry.captureMessage(
+					'Address reveal event write failed; address still released',
+					{ level: 'error', extra: { listingId: id, userId: session.user.id } }
+				)
+			}
+		}
+
+		Sentry.metrics.count('listing.address.revealed', 1, {
+			attributes: { policy },
+		})
+
+		logger.info(
+			{
+				listingId: id,
+				userId: session.user.id,
+				policy,
+				verified: true,
+				wroteEvent,
+			},
+			'address reveal: address released'
+		)
+
+		return {
+			tag: 'revealed',
+			listing: toVerifiedPublicListing(pub, {
+				address: listing.address,
+				city: listing.city,
+				state: listing.state,
+				zip: listing.zip,
+				lat: listing.lat,
+				lng: listing.lng,
+			}),
+		}
 	})
 
 /** Updates any combination of listing fields for the authenticated owner. */
