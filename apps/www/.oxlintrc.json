@@ -10,6 +10,23 @@
 	"jsPlugins": ["./oxlint-plugins/no-server-static-import.js"],
 	"rules": {
 		"local/no-server-static-import": "error",
+
+		// ES2023 array copy methods are missing in some runtimes (e.g. Apple Mail WebKit).
+		"eslint/no-restricted-properties": [
+			"error",
+			{
+				"property": "toSorted",
+				"message": "Use .sort() on a fresh array (e.g. after .map()) or [...arr].sort() — toSorted is unavailable in some browsers."
+			},
+			{
+				"property": "toReversed",
+				"message": "Use [...arr].reverse() or arr.slice().reverse() — toReversed is unavailable in some browsers."
+			},
+			{
+				"property": "toSpliced",
+				"message": "Use .slice().splice() or spread — toSpliced is unavailable in some browsers."
+			}
+		],
 		// Solid JS doesn't use React, so React-specific rules don't apply
 		"react/react-in-jsx-scope": "off",
 
@@ -137,6 +154,12 @@
 			"files": ["src/components/ListingForm.tsx"],
 			"rules": {
 				"import/max-dependencies": ["warn", { "max": 15 }]
+			}
+		},
+		{
+			"files": ["tests/produce-types-legacy.test.ts"],
+			"rules": {
+				"eslint/no-restricted-properties": "off"
 			}
 		},
 		{
