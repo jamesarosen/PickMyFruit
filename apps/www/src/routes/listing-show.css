@@ -21,7 +21,13 @@
 			display: flex;
 			justify-content: space-between;
 			align-items: flex-start;
+			gap: 4px;
 			margin-bottom: 0;
+		}
+
+		& .listing-detail-header .badge {
+			flex-shrink: 0;
+			white-space: nowrap;
 		}
 
 		& .listing-detail-header h1 {
