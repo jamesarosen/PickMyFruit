@@ -1,28 +1,40 @@
 @layer components {
+	/* The form owns the vertical rhythm between its top-level blocks (optional
+	   email field, fieldsets, actions) so individual sections don't each carry
+	   their own margins. */
 	.listing-form {
 		max-width: 600px;
 		margin: 0 auto;
+		display: flex;
+		flex-direction: column;
+		gap: 32px;
 	}
 
 	.listing-form fieldset {
+		--fieldset-gap: 12px;
+		display: flex;
+		flex-direction: column;
+		gap: var(--fieldset-gap);
 		border: none;
 		padding: 0;
-		margin: 0 0 32px 0;
-	}
+		margin: 0;
 
-	.listing-form legend {
-		font-size: 20px;
-		font-weight: 600;
-		color: var(--color-foreground);
-		margin-bottom: 20px;
-		padding: 0;
+		legend {
+			font-size: 20px;
+			font-weight: 600;
+			color: var(--color-foreground);
+			/* Legends render outside the fieldset's flex flow, so its gap never
+			   applies below them; match the gap with an explicit margin. */
+			margin-block-end: var(--fieldset-gap);
+			padding: 0;
+		}
 	}
 
 	.form-prefill-notice {
 		font-size: 13px;
 		color: var(--color-quiet);
 		font-style: italic;
-		margin: 0 0 16px 0;
+		margin: 0;
 	}
 
 	.form-row {
@@ -40,19 +52,12 @@
 	.form-actions {
 		display: flex;
 		gap: 16px;
-		margin-top: 32px;
 	}
 
 	/* Readonly input styling */
 	.form-field input[readonly] {
 		background: oklch(from var(--color-quiet) l c h / 0.1);
 		cursor: not-allowed;
-	}
-
-	.address-release-fieldset {
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
 	}
 
 	.address-release-option {
