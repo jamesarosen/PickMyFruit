@@ -341,17 +341,6 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 					</div>
 				</fieldset>
 
-				<fieldset>
-					<legend>Notes</legend>
-					<Textarea
-						errors={fieldErrors().properties?.notes?.errors}
-						label="Additional Details"
-						name="notes"
-						placeholder="e.g., Ring doorbell first. Take a few or take 'em all!"
-						rows={3}
-					/>
-				</fieldset>
-
 				<fieldset class="address-release-fieldset">
 					<legend>How is your address shared?</legend>
 					<label class="address-release-option">
@@ -387,6 +376,17 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 							</span>
 						</span>
 					</label>
+				</fieldset>
+
+				<fieldset>
+					<legend>Notes</legend>
+					<Textarea
+						errors={fieldErrors().properties?.notes?.errors}
+						label="Additional Details"
+						name="notes"
+						placeholder="e.g., Ring doorbell first. Take a few or take 'em all!"
+						rows={3}
+					/>
 				</fieldset>
 
 				<div class="form-actions">
