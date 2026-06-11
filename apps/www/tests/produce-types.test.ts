@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { produceTypes, produceTypeSlugs } from '../src/lib/produce-types'
+import {
+	produceTypes,
+	produceTypeSlugs,
+	inquiryDesire,
+} from '../src/lib/produce-types'
 
 const LEGACY_SLUGS = [
 	'apple',
@@ -114,5 +118,21 @@ describe('produceTypeSlugs', () => {
 
 	it('returns false for an empty string', () => {
 		expect(produceTypeSlugs.has('')).toBe(false)
+	})
+})
+
+describe('inquiryDesire', () => {
+	it('names the stand itself for a produce stand (no single produce noun)', () => {
+		expect(inquiryDesire('produce-stand')).toBe(
+			'wants to visit your produce stand'
+		)
+	})
+
+	it('uses the plural produce noun for an ordinary listing', () => {
+		expect(inquiryDesire('apple')).toBe('wants your apples')
+	})
+
+	it('falls back to the raw slug for an unknown type', () => {
+		expect(inquiryDesire('unicorn-fruit')).toBe('wants your unicorn-fruit')
 	})
 })

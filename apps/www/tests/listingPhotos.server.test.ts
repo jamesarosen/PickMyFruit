@@ -106,6 +106,7 @@ function makeListingRow(id: number, overrides: Record<string, unknown> = {}) {
 		notes: null,
 		accessInstructions: null,
 		addressReleasePolicy: 'on_owner_approval',
+		acceptsDropOffs: false,
 		deletedAt: null,
 		createdAt: new Date(),
 		updatedAt: new Date(),

@@ -10,6 +10,7 @@ import { authClient } from '@/lib/auth-client'
 import { Sentry } from '@/lib/sentry'
 import { geocodeAddress, GeocodingNotFoundError } from '@/lib/geocoding'
 import { listingFormSchema } from '@/lib/validation'
+import { PRODUCE_STAND_SLUG } from '@/lib/produce-types'
 import '@/components/ListingForm.css'
 
 type FieldErrors = ReturnType<
@@ -39,6 +40,10 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 	const [selectedType, setSelectedType] = createSignal<string>('')
 	const [email, setEmail] = createSignal('')
 	const [emailError, setEmailError] = createSignal<string | null>(null)
+
+	// A produce stand is simply the `produce-stand` produce type. It unlocks the
+	// drop-off option; the address-release policy stays an independent choice.
+	const isStand = () => selectedType() === PRODUCE_STAND_SLUG
 
 	const isAuthenticated = () => Boolean(context().session?.user)
 	const isSubmitting = () => formState() === 'submitting'
@@ -100,6 +105,9 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 			zip: formData.get('zip'),
 			notes: formData.get('notes'),
 			addressReleasePolicy: formData.get('addressReleasePolicy') ?? undefined,
+			// Drop-offs only apply to the produce-stand type.
+			acceptsDropOffs: isStand() ? formData.get('acceptsDropOffs') != null : false,
+			tosAcknowledged: formData.get('tosAcknowledged') != null,
 		}
 
 		const parsed = listingFormSchema.safeParse(data)
@@ -292,6 +300,42 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 						/>
 					</div>
 				</fieldset>
+
+				<Show when={isStand()}>
+					<fieldset class="stand-fieldset">
+						<legend>Stand details</legend>
+						<label class="address-release-option">
+							<input type="checkbox" name="acceptsDropOffs" checked />
+							<span class="address-release-option-text">
+								<span class="address-release-option-label">Accept drop-offs too</span>
+								<span class="address-release-option-description">
+									Let verified members leave produce here, not just take it. A one-way
+									(take-only) stand is fine too — uncheck this.
+								</span>
+							</span>
+						</label>
+						<p class="stand-restriction">
+							Drop-offs must obey local law and the listing's restrictions: all
+							listings are limited to <strong>raw, whole, uncut produce</strong>.
+						</p>
+						<label class="address-release-option stand-tos">
+							<input type="checkbox" name="tosAcknowledged" />
+							<span class="address-release-option-text">
+								<span class="address-release-option-label">
+									I'll keep this stand to raw, whole produce
+								</span>
+								<span class="address-release-option-description">
+									You're the accountable steward for this stand.
+								</span>
+							</span>
+						</label>
+						<Show when={fieldErrors().properties?.tosAcknowledged?.errors?.length}>
+							<ErrorMessage
+								error={fieldErrors().properties?.tosAcknowledged?.errors?.[0]}
+							/>
+						</Show>
+					</fieldset>
+				</Show>
 
 				<fieldset>
 					<legend>Where is it?</legend>

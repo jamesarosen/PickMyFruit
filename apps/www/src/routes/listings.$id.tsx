@@ -12,6 +12,7 @@ import Banner from '@/components/Banner'
 import InquiryForm from '@/components/InquiryForm'
 import ListingMap from '@/components/ListingMap'
 import ListingPhotosSection from '@/components/ListingPhotosSection'
+import DropOffIndicator from '@/components/DropOffIndicator'
 import { ListingDetailField } from '@/components/ListingDetailField'
 import {
 	ADDRESS_RELEASE_OPTIONS,
@@ -27,6 +28,7 @@ import {
 	type ListingStatusValue,
 } from '@/lib/validation'
 import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
+import { PRODUCE_STAND_SLUG } from '@/lib/produce-types'
 import { buildListingMeta } from '@/lib/listing-meta'
 import { Sentry } from '@/lib/sentry'
 import {
@@ -406,6 +408,74 @@ function OwnerTitleField(props: {
 	)
 }
 
+/**
+ * Owner toggle for a produce stand's two-way (take-and-give) behavior. Commits
+ * immediately on change with an optimistic update that rolls back on error,
+ * mirroring {@link AddressVisibilityControls}.
+ */
+function StandDetailsControls(props: {
+	listingId: number
+	initialAcceptsDropOffs: boolean
+	clientUpdatedAt: () => number
+	onUpdated: (updatedAt: Date) => void
+}) {
+	const [isUpdating, setIsUpdating] = createSignal(false)
+	const [saved, setSaved] = createSignal(props.initialAcceptsDropOffs)
+	const [display, setDisplay] = createSignal(props.initialAcceptsDropOffs)
+	const [error, setError] = createErrorSignal()
+
+	async function toggle(next: boolean) {
+		if (next === saved()) return
+		setDisplay(next)
+		setError(null)
+		setIsUpdating(true)
+		try {
+			const result = await updateListing({
+				data: {
+					id: props.listingId,
+					acceptsDropOffs: next,
+					clientUpdatedAt: props.clientUpdatedAt(),
+				},
+			})
+			setSaved(next)
+			props.onUpdated(result.updatedAt!)
+		} catch (err) {
+			Sentry.captureException(err)
+			setError(err)
+			setDisplay(saved())
+		} finally {
+			setIsUpdating(false)
+		}
+	}
+
+	return (
+		<div class="stand-details" aria-busy={isUpdating()}>
+			<label class="stand-details__toggle">
+				<input
+					type="checkbox"
+					checked={display()}
+					onChange={(e) => void toggle(e.currentTarget.checked)}
+				/>
+				<span class="stand-details__text">
+					<span class="stand-details__label">Accept drop-offs</span>
+					<span class="stand-details__description">
+						Let verified members leave produce here, not just take it.
+					</span>
+				</span>
+			</label>
+			<p class="stand-details__restriction">
+				Drop-offs must obey local law and the listing's restrictions: all listings
+				are limited to <strong>raw, whole, uncut produce</strong>.
+			</p>
+			<ErrorMessage
+				class="visibility-error"
+				defaultMessage="Failed to update"
+				error={error()}
+			/>
+		</div>
+	)
+}
+
 function OwnerEditableFields(props: {
 	listing: OwnerListingView
 	clientUpdatedAt: () => number
@@ -664,6 +734,20 @@ function OwnerEditableFields(props: {
 				</Show>
 			</ListingDetailField>
 
+			<Show when={props.listing.type === PRODUCE_STAND_SLUG}>
+				<div class="listing-detail-field listing-detail-field--stand">
+					<span class="listing-detail-field__label">Stand details</span>
+					<div class="listing-detail-field__value">
+						<StandDetailsControls
+							listingId={props.listing.id}
+							initialAcceptsDropOffs={props.listing.acceptsDropOffs}
+							clientUpdatedAt={props.clientUpdatedAt}
+							onUpdated={props.onUpdated}
+						/>
+					</div>
+				</div>
+			</Show>
+
 			{/* TODO: changing location requires re-geocoding the address; leave as
 			    read-only until we build that flow. */}
 			<ListingDetailField label="Location">
@@ -735,6 +819,9 @@ function AddressRevealSection(props: {
 	const [state, setState] = createSignal<RevealState>({ tag: 'hidden' })
 	const navigate = useNavigate()
 
+	const isStand = () => props.listing.type === PRODUCE_STAND_SLUG
+	const acceptsDropOffs = () => props.listing.acceptsDropOffs
+
 	async function reveal() {
 		setState({ tag: 'loading' })
 		try {
@@ -762,7 +849,11 @@ function AddressRevealSection(props: {
 		<div class="address-reveal" data-testid="address-reveal">
 			<Show when={state().tag === 'hidden'}>
 				<p class="address-reveal__intro">
-					This owner shares their address with verified members automatically.
+					{isStand()
+						? acceptsDropOffs()
+							? 'This stand shares its location with verified members. Take what you need, or bring produce to drop off.'
+							: 'This stand shares its location with verified members.'
+						: 'This owner shares their address with verified members automatically.'}
 				</p>
 				<Show
 					when={props.isAuthenticated}
@@ -772,13 +863,15 @@ function AddressRevealSection(props: {
 						</a>
 					}
 				>
-					<button
-						type="button"
-						class="button button--primary"
-						onClick={() => void reveal()}
-					>
-						Show street address
-					</button>
+					<div class="address-reveal__actions">
+						<button
+							type="button"
+							class="button button--primary"
+							onClick={() => void reveal()}
+						>
+							{isStand() ? 'Show stand location' : 'Show street address'}
+						</button>
+					</div>
 				</Show>
 			</Show>
 			<Show when={state().tag === 'loading'}>
@@ -802,13 +895,29 @@ function AddressRevealSection(props: {
 				}
 			>
 				{(revealed) => (
-					<address class="address-reveal__address" data-testid="revealed-address">
-						<div>{revealed().address}</div>
-						<div>
-							{revealed().city}, {revealed().state}{' '}
-							<Show when={revealed().zip}>{revealed().zip}</Show>
-						</div>
-					</address>
+					<>
+						<address class="address-reveal__address" data-testid="revealed-address">
+							<div>{revealed().address}</div>
+							<div>
+								{revealed().city}, {revealed().state}{' '}
+								<Show when={revealed().zip}>{revealed().zip}</Show>
+							</div>
+						</address>
+						<Show when={revealed().stewardName}>
+							{(name) => (
+								<p class="address-reveal__steward" data-testid="steward-name">
+									Maintained by {name()}
+								</p>
+							)}
+						</Show>
+						<Show when={revealed().dropOffGuidance}>
+							{(guidance) => (
+								<p class="address-reveal__dropoff" data-testid="dropoff-guidance">
+									{guidance()}
+								</p>
+							)}
+						</Show>
+					</>
 				)}
 			</Show>
 			<Show
@@ -996,6 +1105,12 @@ function ListingDetailPage() {
 											{l().city}, {l().state}
 										</span>
 									</ListingDetailField>
+
+									<Show when={l().type === PRODUCE_STAND_SLUG}>
+										<ListingDetailField label="Drop-offs">
+											<DropOffIndicator acceptsDropOffs={l().acceptsDropOffs} />
+										</ListingDetailField>
+									</Show>
 
 									<Show
 										when={

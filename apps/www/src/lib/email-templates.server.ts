@@ -2,6 +2,12 @@ import { buildUnavailableUrl } from './hmac.server'
 import { serverEnv } from './env.server'
 import { logger } from './logger.server'
 import { escapeHtml } from './html-escape.server'
+import {
+	produceTypeBySlug,
+	pluralProduceName,
+	inquiryDesire,
+	PRODUCE_STAND_SLUG,
+} from './produce-types'
 
 /** Builds an absolute /support URL with the given source param. */
 function buildSupportUrl(baseUrl: string, from: string): string {
@@ -43,11 +49,20 @@ interface InquiryEmailData {
 }
 
 export function buildInquiryEmailSubject(data: InquiryEmailData): string {
-	return `${data.gleaner.name} wants your ${data.listing.type}`
+	return `${data.gleaner.name} ${inquiryDesire(data.listing.type)}`
 }
 
 export function buildInquiryEmailHtml(data: InquiryEmailData): string {
 	const { unavailableUrl } = data
+	const isStand = data.listing.type === PRODUCE_STAND_SLUG
+	const pluralName = pluralProduceName(data.listing.type)
+	const typeLabel =
+		produceTypeBySlug(data.listing.type)?.nameSingularTitleCase ??
+		data.listing.type
+	// A stand has no single produce noun, so inquiry prose names the stand itself.
+	const interestPhrase = isStand
+		? `your ${produceTypeBySlug(data.listing.type)?.nameSingularSentenceCase ?? data.listing.type}`
+		: `your ${pluralName}`
 
 	const quantitySection = data.listing.quantity
 		? `<p style="margin: 0 0 8px 0;"><strong>Quantity:</strong> ${escapeHtml(data.listing.quantity)}</p>`
@@ -73,15 +88,15 @@ export function buildInquiryEmailHtml(data: InquiryEmailData): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <h1 style="color: #2d5016; margin-bottom: 24px;">Someone wants your ${escapeHtml(data.listing.type)}!</h1>
+  <h1 style="color: #2d5016; margin-bottom: 24px;">Someone ${escapeHtml(inquiryDesire(data.listing.type))}!</h1>
 
   <p>Hi ${escapeHtml(data.owner.name)},</p>
 
-  <p><strong>${escapeHtml(data.gleaner.name)}</strong> is interested in your ${escapeHtml(data.listing.type)}.</p>
+  <p><strong>${escapeHtml(data.gleaner.name)}</strong> is interested in ${escapeHtml(interestPhrase)}.</p>
 
   <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin: 24px 0;">
     <h3 style="margin: 0 0 12px 0; color: #2d5016;">Listing Details</h3>
-    <p style="margin: 0 0 8px 0;"><strong>Type:</strong> ${escapeHtml(data.listing.type)}</p>
+    <p style="margin: 0 0 8px 0;"><strong>Type:</strong> ${escapeHtml(typeLabel)}</p>
     ${quantitySection}
     ${notesSection}
   </div>

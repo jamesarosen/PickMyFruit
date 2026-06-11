@@ -4,7 +4,7 @@ import { latLngToCell } from 'h3-js'
 import { createListingSchema } from '@/lib/validation'
 import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
 import { Sentry } from '@/lib/sentry'
-import { produceTypes } from '@/lib/produce-types'
+import { produceTypes, PRODUCE_STAND_SLUG } from '@/lib/produce-types'
 
 const querySchema = z.object({
 	limit: z.coerce.number().int().positive().max(100).default(10),
@@ -86,6 +86,9 @@ export const Route = createFileRoute('/api/listings')({
 						notes: formData.notes || null,
 						status: 'available',
 						addressReleasePolicy: formData.addressReleasePolicy,
+						// Only stands accept drop-offs; the form omits the flag otherwise.
+						acceptsDropOffs:
+							formData.type === PRODUCE_STAND_SLUG ? formData.acceptsDropOffs : false,
 					})
 
 					return Response.json(listing, { status: 201 })

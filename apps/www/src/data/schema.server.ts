@@ -139,6 +139,12 @@ export const listings = sqliteTable(
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 
+		// Two-way (take-and-give) flag. Only meaningful for produce stands
+		// (`type = 'produce-stand'`); an ordinary listing is take-only.
+		acceptsDropOffs: integer('accepts_drop_offs', { mode: 'boolean' })
+			.notNull()
+			.default(false),
+
 		// Metadata
 		notes: text('notes'),
 		accessInstructions: text('access_instructions'), // e.g., 'Ring doorbell', 'Gate code 1234'
@@ -229,8 +235,7 @@ export type NewListingPhoto = typeof listingPhotos.$inferInsert
 /**
  * Append-only record of address reveals. Authz for `on_verified_request` is a
  * property of the viewer (`user.email_verified`); this log exists for
- * attribution, unique-member analytics, and as the seed for future gleaner
- * follow-ups. Not an access-control table.
+ * attribution and unique-member analytics. Not an access-control table.
  */
 export const addressReveals = sqliteTable(
 	'address_reveals',

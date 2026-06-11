@@ -364,6 +364,44 @@
 			margin: 8px 0 0;
 		}
 
+		& .stand-details {
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+		}
+
+		& .stand-details__toggle {
+			display: flex;
+			gap: 8px;
+			align-items: flex-start;
+			cursor: pointer;
+		}
+
+		& .stand-details__toggle input[type='checkbox'] {
+			margin-top: 3px;
+		}
+
+		& .stand-details__text {
+			display: flex;
+			flex-direction: column;
+		}
+
+		& .stand-details__label {
+			font-size: 14px;
+			font-weight: 500;
+		}
+
+		& .stand-details__description {
+			font-size: 12px;
+			color: var(--color-quiet);
+		}
+
+		& .stand-details__restriction {
+			margin: 0;
+			font-size: 12px;
+			color: var(--color-quiet);
+		}
+
 		& .address-reveal {
 			display: flex;
 			flex-direction: column;
@@ -381,8 +419,29 @@
 			color: var(--color-quiet);
 		}
 
+		& .address-reveal__actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 12px;
+		}
+
 		& .address-reveal__address {
 			font-style: normal;
+		}
+
+		& .address-reveal__steward {
+			margin: 0;
+			font-weight: 600;
+			color: var(--color-foreground);
+		}
+
+		& .address-reveal__dropoff {
+			margin: 0;
+			padding: 12px 16px;
+			border-radius: 8px;
+			background: oklch(from var(--color-secondary) l c h / 0.1);
+			color: var(--color-foreground);
+			font-size: 14px;
 		}
 
 		& .address-reveal__error {

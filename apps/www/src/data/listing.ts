@@ -36,11 +36,31 @@ export type RevealedAddress = {
 }
 
 /**
- * Public listing plus the precise street address. Returned to verified
- * members for listings whose `addressReleasePolicy` is `on_verified_request`,
- * after a reveal is recorded.
+ * Trust/guidance fields that are released under the *same* gate as the address
+ * (`on_verified_request` × verified viewer). `stewardName` is security-gated:
+ * it is added to the verified and owner shapes only, never to {@link
+ * PublicListing}, so an anonymous or unverified viewer's payload cannot contain
+ * it.
  */
-export type VerifiedPublicListing = PublicListing & RevealedAddress
+export type StewardedFields = {
+	/** "Maintained by {name}" trust signal — the accountable steward's display name. */
+	stewardName?: string
+	/** Guidance shown to a member dropping produce at a stand. */
+	dropOffGuidance?: string
+}
+
+/** Guidance shown to a verified member who chooses to drop produce at a stand. */
+export const DROP_OFF_GUIDANCE =
+	'Drop-offs must obey local law and the listing’s restrictions. All listings are limited to raw, whole, uncut produce.'
+
+/**
+ * Public listing plus the precise street address and gated steward fields.
+ * Returned to verified members for listings whose `addressReleasePolicy` is
+ * `on_verified_request`, after a reveal is recorded.
+ */
+export type VerifiedPublicListing = PublicListing &
+	RevealedAddress &
+	StewardedFields
 
 /** Full listing row plus public photo fields — returned to the listing owner only. */
 export type OwnerListingView = Listing & {
@@ -52,7 +72,7 @@ export type OwnerListingView = Listing & {
 }
 
 /** Owner / steward view of a listing — the most permissive shape. */
-export type PrivateListing = OwnerListingView
+export type PrivateListing = OwnerListingView & StewardedFields
 
 /** The minimum viewer information needed to decide which shape to present. */
 export type ListingViewer = {
@@ -99,12 +119,25 @@ export function toPublicListing(
 	}
 }
 
-/** Promotes a {@link PublicListing} to a {@link VerifiedPublicListing} by adding the precise address. */
+/**
+ * Promotes a {@link PublicListing} to a {@link VerifiedPublicListing} by adding
+ * the precise address and any gated steward fields. `dropOffGuidance` defaults
+ * to the standard restriction text when the listing accepts drop-offs.
+ */
 export function toVerifiedPublicListing(
 	publicListing: PublicListing,
-	address: RevealedAddress
+	address: RevealedAddress,
+	steward: StewardedFields = {}
 ): VerifiedPublicListing {
-	return { ...publicListing, ...address }
+	const dropOffGuidance =
+		steward.dropOffGuidance ??
+		(publicListing.acceptsDropOffs ? DROP_OFF_GUIDANCE : undefined)
+	return {
+		...publicListing,
+		...address,
+		...(steward.stewardName ? { stewardName: steward.stewardName } : {}),
+		...(dropOffGuidance ? { dropOffGuidance } : {}),
+	}
 }
 
 /**
@@ -113,16 +146,23 @@ export function toVerifiedPublicListing(
  * public (the existing inquiry flow gates address release); verified members
  * looking at `on_verified_request` listings see the address.
  *
+ * `ownerName`, when supplied, is surfaced as the gated `stewardName` on the
+ * verified and owner shapes only — it is never added to {@link PublicListing},
+ * so an anonymous or unverified viewer's payload cannot contain it.
+ *
  * Returns `null` when the listing cannot be projected (invalid h3 index).
  */
 export function listingShapeFor(
 	listing: Listing,
 	viewer: ListingViewer,
 	photos: PublicPhoto[] = [],
-	onError?: (listingId: number, error: unknown) => void
+	onError?: (listingId: number, error: unknown) => void,
+	ownerName?: string
 ): ListingShape | null {
 	if (viewer.userId && viewer.userId === listing.userId) {
-		return { ...listing, photos }
+		const owner: PrivateListing = { ...listing, photos }
+		if (ownerName) owner.stewardName = ownerName
+		return owner
 	}
 	const pub = toPublicListing(listing, photos, onError)
 	if (!pub) return null
@@ -130,14 +170,18 @@ export function listingShapeFor(
 		listing.addressReleasePolicy === 'on_verified_request' &&
 		viewer.emailVerified
 	) {
-		return toVerifiedPublicListing(pub, {
-			address: listing.address,
-			city: listing.city,
-			state: listing.state,
-			zip: listing.zip,
-			lat: listing.lat,
-			lng: listing.lng,
-		})
+		return toVerifiedPublicListing(
+			pub,
+			{
+				address: listing.address,
+				city: listing.city,
+				state: listing.state,
+				zip: listing.zip,
+				lat: listing.lat,
+				lng: listing.lng,
+			},
+			ownerName ? { stewardName: ownerName } : {}
+		)
 	}
 	return pub
 }

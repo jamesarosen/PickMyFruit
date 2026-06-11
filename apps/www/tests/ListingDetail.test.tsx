@@ -21,6 +21,7 @@ function makeListing(overrides: Partial<PublicListing> = {}): PublicListing {
 		notes: null,
 		photos: [],
 		addressReleasePolicy: 'on_owner_approval',
+		acceptsDropOffs: false,
 		createdAt: new Date(),
 		updatedAt: new Date(),
 		...overrides,

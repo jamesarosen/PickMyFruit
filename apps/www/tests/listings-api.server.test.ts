@@ -45,6 +45,7 @@ function makeListing(id: number): OwnerListingView {
 		notes: null,
 		accessInstructions: null,
 		addressReleasePolicy: 'on_owner_approval',
+		acceptsDropOffs: false,
 		deletedAt: null,
 		createdAt: new Date(),
 		updatedAt: new Date(),

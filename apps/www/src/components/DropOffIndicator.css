@@ -1,0 +1,36 @@
+@layer components {
+	/* The root is both the query container and the flex layout. It is
+	   block-level so its inline size comes from the slot it's placed in: a narrow
+	   slot collapses to the icon, a wide slot shows the icon beside the label. */
+	.drop-off-indicator {
+		container-type: inline-size;
+		display: flex;
+		align-items: center;
+		gap: 0.375em;
+		min-width: 0;
+		font-size: 14px;
+		line-height: 1;
+		color: var(--color-quiet);
+	}
+
+	.drop-off-indicator--accepts {
+		color: var(--color-secondary);
+	}
+
+	.drop-off-indicator__icon {
+		flex: none;
+	}
+
+	/* Narrow (default): icon only — the label is exposed via title / aria-label. */
+	.drop-off-indicator__text {
+		display: none;
+		white-space: nowrap;
+	}
+
+	/* Wide: icon beside the label. */
+	@container (min-width: 11em) {
+		.drop-off-indicator__text {
+			display: inline;
+		}
+	}
+}

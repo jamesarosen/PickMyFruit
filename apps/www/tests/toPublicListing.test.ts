@@ -27,6 +27,7 @@ function makeListing(overrides: Partial<Listing> = {}): Listing {
 		notes: null,
 		accessInstructions: 'Ring doorbell',
 		addressReleasePolicy: 'on_owner_approval',
+		acceptsDropOffs: false,
 		deletedAt: null,
 		createdAt: new Date(),
 		updatedAt: new Date(),
@@ -48,6 +49,7 @@ function makePhoto(
 
 /** The exact set of keys a PublicListing should have, sorted. */
 const EXPECTED_PUBLIC_KEYS = [
+	'acceptsDropOffs',
 	'addressReleasePolicy',
 	'approximateH3Index',
 	'city',
