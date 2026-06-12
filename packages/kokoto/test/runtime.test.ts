@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { Client } from '@libsql/client/node'
+import type { Client, InStatement } from '@libsql/client/node'
 import { defineQueue, defineWorkflow } from '../src/registry.ts'
 import { DurableCancelledError, DurableTimeoutError } from '../src/errors.ts'
 import { Metrics } from '../src/telemetry.server.ts'
@@ -444,5 +444,44 @@ describe('DurableRuntime — ctx.txStep (same-DB atomicity)', () => {
 		expect(calls).toBe(2)
 		const appRows = await client.execute('SELECT note FROM app_writes')
 		expect(appRows.rows).toEqual([{ note: 'second-try' }])
+	})
+})
+
+describe('DurableRuntime — idle backoff', () => {
+	it('backs off dispatcher writes while idle but dispatches enqueues immediately', async () => {
+		const client = await newClient()
+		let heartbeats = 0
+		const origExecute = client.execute.bind(client)
+		// Count heartbeat UPDATEs as a proxy for dispatcher ticks.
+		const countingExecute = (stmt: InStatement) => {
+			const sql = typeof stmt === 'string' ? stmt : stmt.sql
+			if (sql.includes('_dc_executor SET heartbeat_at')) heartbeats++
+			return origExecute(stmt)
+		}
+		;(client as unknown as { execute: typeof countingExecute }).execute =
+			countingExecute
+
+		const runtime = await newRuntime({ client, pollMs: 10, idleMaxMs: 200 })
+		const echo = defineWorkflow('idle-echo', async (_ctx, input: string) =>
+			input.toUpperCase()
+		)
+		await runtime.start({ workflows: [echo] })
+
+		try {
+			await sleep(600)
+			// Without backoff a 10ms cadence would tick ~60 times in 600ms; with
+			// doubling toward the 200ms cap it stays in the low teens. The bound
+			// is loose to absorb scheduler jitter.
+			expect(heartbeats).toBeLessThan(30)
+
+			// A backed-off dispatcher must still pick up new work via the wake
+			// event, not the (now slow) poll.
+			const handle = await runtime.startWorkflow(echo, 'hello')
+			const result = await handle.result({ timeoutMs: 5_000, pollMs: 25 })
+			expect(result).toBe('HELLO')
+		} finally {
+			await runtime.stop()
+			client.close()
+		}
 	})
 })

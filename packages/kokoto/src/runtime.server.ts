@@ -77,6 +77,13 @@ import { uuidv7 } from './uuidv7.ts'
 import { runWorkflow } from './worker.server.ts'
 
 const DEFAULT_POLL_MS = 250
+/**
+ * Default `idleMaxMs` as a multiple of `pollMs`. An idle dispatcher (nothing
+ * claimed, nothing in flight) doubles its delay each tick up to this cap, so
+ * it stops hammering SQLite with heartbeat/claim writes when there is no
+ * work. Wake events (enqueues, worker completions) reset the cadence.
+ */
+const DEFAULT_IDLE_BACKOFF_FACTOR = 10
 const DEFAULT_GLOBAL_CONCURRENCY = 16
 /**
  * Default lease duration: how long a claimed workflow stays un-reclaimable
@@ -101,6 +108,7 @@ export class DurableRuntime {
 	private readonly telemetry: Telemetry
 	private readonly registry = new WorkflowRegistry()
 	private readonly pollMs: number
+	private readonly idleMaxMs: number
 	private readonly leaseMs: number
 	private readonly globalConcurrency: number
 	private readonly executorId: string
@@ -110,12 +118,19 @@ export class DurableRuntime {
 	private dispatcherActive = false
 	private stopping = false
 	private startedAt: number | null = null
-	private currentDispatch: Promise<void> = Promise.resolve()
+	private currentDispatch: Promise<unknown> = Promise.resolve()
+	/** Current dispatcher delay; grows toward idleMaxMs while idle. */
+	private idleDelayMs: number
 
 	constructor(config: RuntimeConfig) {
 		this.client = config.client
 		this.telemetry = new Telemetry(config.telemetry)
 		this.pollMs = Math.max(10, config.pollMs ?? DEFAULT_POLL_MS)
+		this.idleMaxMs = Math.max(
+			this.pollMs,
+			config.idleMaxMs ?? this.pollMs * DEFAULT_IDLE_BACKOFF_FACTOR
+		)
+		this.idleDelayMs = this.pollMs
 		// leaseMs of 0 is legal (and used by the lease-expiry test): the row's
 		// expiry is set to `now`, which is already in the past by the time
 		// reclaim reads it, so the row is immediately reclaimable.
@@ -373,23 +388,37 @@ export class DurableRuntime {
 	/**
 	 * Schedule the next dispatcher tick. Uses `setTimeout` so each tick is
 	 * decoupled from the previous one — a slow tick doesn't stall wake events.
+	 *
+	 * While the runtime is idle, the delay doubles each tick from `pollMs` up
+	 * to `idleMaxMs` so an idle process doesn't keep writing to SQLite; any
+	 * wake event resets the cadence to `pollMs` and dispatches immediately.
 	 */
 	private scheduleDispatchSoon(): void {
 		if (!this.dispatcherActive) return
 		const tickPromise = this.dispatchTick()
 		this.currentDispatch = tickPromise
 		tickPromise
-			.catch((err) => {
-				this.telemetry.captureException(err)
-			})
+			.then(
+				(claimed) => {
+					const idle = claimed === 0 && this.inFlight.size === 0
+					this.idleDelayMs = idle
+						? Math.min(this.idleDelayMs * 2, this.idleMaxMs)
+						: this.pollMs
+				},
+				(err) => {
+					this.idleDelayMs = this.pollMs
+					this.telemetry.captureException(err)
+				}
+			)
 			.finally(() => {
 				if (!this.dispatcherActive) return
 				const timer: NodeJS.Timeout = setTimeout(() => {
 					this.wake.off('wake', wakeHandler)
 					this.scheduleDispatchSoon()
-				}, this.pollMs)
+				}, this.idleDelayMs)
 				const wakeHandler = (): void => {
 					clearTimeout(timer)
+					this.idleDelayMs = this.pollMs
 					this.scheduleDispatchSoon()
 				}
 				this.wake.once('wake', wakeHandler)
@@ -409,8 +438,9 @@ export class DurableRuntime {
 		)
 	}
 
-	private async dispatchTick(): Promise<void> {
-		if (!this.dispatcherActive || this.stopping) return
+	/** Returns the number of workflows claimed, so the scheduler can detect idleness. */
+	private async dispatchTick(): Promise<number> {
+		if (!this.dispatcherActive || this.stopping) return 0
 		const now = Date.now()
 
 		// Heartbeat first: extend the lease on every running row this
@@ -462,6 +492,7 @@ export class DurableRuntime {
 		if (totalClaimed > 0) {
 			this.telemetry.count(Metrics.dispatchClaimed, {}, totalClaimed)
 		}
+		return totalClaimed
 	}
 
 	private launchWorker(row: WorkflowRow, queueName: string | null): void {

@@ -126,7 +126,7 @@ We use a monorepo structure
 
 ## Known Issues
 
-- **E2E SQLite write-lock flake**: occasionally the Vite dev server holds the test DB's write lock for 30–95 s (suspect: kokoto's `BEGIN IMMEDIATE` dispatcher polls wedging behind dev-server load), so `tests/e2e/helpers/test-db.ts` writes (`INSERT INTO user`, `DELETE FROM verification`) fail despite WAL + `busy_timeout`, and magic-link token polls time out. Mitigations: helper pragmas, a 30 s token-poll budget in `getMagicLinkToken`, and one local Playwright retry (`retries: 1`; CI uses 2). A real fix means finding why the dispatcher transaction stalls.
+- **E2E SQLite write-lock flake**: under dev-server load, `tests/e2e/helpers/test-db.ts` writes (`INSERT INTO user`, `DELETE FROM verification`) occasionally fail despite WAL + `busy_timeout`, and magic-link token polls time out. Investigation findings: kokoto's dispatcher held no long transaction (claims are single `UPDATE…RETURNING` statements), but it wrote an executor heartbeat on every tick even when idle; SQLite's busy-handler retry is not fair, so a steady stream of in-process writes can starve the test helper's separate connection past its 30 s budget, especially when Vite compile stalls bunch up the event loop. Mitigations: kokoto idle backoff (delay doubles to `idleMaxMs` = 10 × `pollMs` when nothing is claimed or in flight; wake events reset it, so enqueue latency is unaffected), helper pragmas, a 30 s token-poll budget in `getMagicLinkToken`, and one local Playwright retry (`retries: 1`; CI uses 2). If the flake recurs, the remaining suspects are `ctx.txStep` write transactions spanning event-loop stalls and better-auth session writes.
 
 ## Future Plans
 

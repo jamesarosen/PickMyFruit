@@ -208,6 +208,16 @@ export interface RuntimeConfig {
 	/** Dispatcher poll interval (ms). Default 250ms. */
 	pollMs?: number
 	/**
+	 * Maximum dispatcher delay (ms) while idle. After a tick that claims
+	 * nothing with nothing in flight, the next delay doubles (starting from
+	 * `pollMs`) up to this cap; wake events reset the cadence to `pollMs`, so
+	 * enqueue latency is unaffected. Keeps an idle dispatcher from writing
+	 * heartbeats to SQLite several times a second. `runAt`-scheduled and
+	 * backoff-requeued rows may start up to `idleMaxMs` late. Default
+	 * 10 × `pollMs`.
+	 */
+	idleMaxMs?: number
+	/**
 	 * Lease duration on a claimed workflow (ms). The dispatcher heartbeat
 	 * extends the lease every tick; if the dispatcher dies, the lease
 	 * eventually expires and another executor reclaims the row. Default

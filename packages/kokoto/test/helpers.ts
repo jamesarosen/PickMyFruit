@@ -90,6 +90,7 @@ export async function newRuntime(opts: {
 	client: Client
 	telemetry?: KokotoTelemetry
 	pollMs?: number
+	idleMaxMs?: number
 	leaseMs?: number
 	globalConcurrency?: number
 }): Promise<DurableRuntime> {
@@ -97,6 +98,7 @@ export async function newRuntime(opts: {
 		client: opts.client as never,
 		telemetry: opts.telemetry,
 		pollMs: opts.pollMs ?? 25,
+		idleMaxMs: opts.idleMaxMs,
 		leaseMs: opts.leaseMs ?? 5_000,
 		globalConcurrency: opts.globalConcurrency,
 	})
