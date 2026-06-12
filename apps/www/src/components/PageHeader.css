@@ -52,17 +52,6 @@
 		line-height: 1;
 	}
 
-	.page-header__support-link {
-		font-size: 14px;
-		font-weight: 500;
-		color: var(--color-foreground);
-		text-decoration: none;
-	}
-
-	.page-header__support-link:hover {
-		text-decoration: underline;
-	}
-
 	/* ── Menu trigger ──────────────────────────────────────────────────── */
 
 	.page-header__menu-trigger {
@@ -165,7 +154,9 @@
 	}
 
 	.page-header__menu-item {
-		display: block;
+		display: flex;
+		align-items: center;
+		gap: 8px;
 		width: 100%;
 		padding: 8px 12px;
 		border-radius: 4px;
