@@ -23,8 +23,15 @@ test.describe('Listing Detail Page', () => {
 			page.getByText(`${testListing.city}, ${testListing.state}`)
 		).toBeVisible()
 
-		// Verify status badge
-		await expect(page.locator('.badge')).toHaveText(testListing.status)
+		// Verify status badge shows the user-facing label, not the raw enum
+		const statusLabels: Record<string, string> = {
+			available: 'Available',
+			unavailable: 'Unavailable',
+			private: 'Private',
+		}
+		await expect(page.locator('.badge')).toHaveText(
+			statusLabels[testListing.status]
+		)
 	})
 
 	test('shows not-found for non-existent listing', async ({ page }) => {
