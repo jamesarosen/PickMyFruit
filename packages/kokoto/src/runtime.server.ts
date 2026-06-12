@@ -395,6 +395,14 @@ export class DurableRuntime {
 	 */
 	private scheduleDispatchSoon(): void {
 		if (!this.dispatcherActive) return
+		// Capture wake events that fire while the tick itself is running —
+		// otherwise an enqueue landing mid-tick has no listener and would wait
+		// out the full (possibly backed-off) delay before being claimed.
+		let wokeDuringTick = false
+		const wakeDuringTick = (): void => {
+			wokeDuringTick = true
+		}
+		this.wake.once('wake', wakeDuringTick)
 		const tickPromise = this.dispatchTick()
 		this.currentDispatch = tickPromise
 		tickPromise
@@ -411,7 +419,13 @@ export class DurableRuntime {
 				}
 			)
 			.finally(() => {
+				this.wake.off('wake', wakeDuringTick)
 				if (!this.dispatcherActive) return
+				if (wokeDuringTick) {
+					this.idleDelayMs = this.pollMs
+					this.scheduleDispatchSoon()
+					return
+				}
 				const timer: NodeJS.Timeout = setTimeout(() => {
 					this.wake.off('wake', wakeHandler)
 					this.scheduleDispatchSoon()

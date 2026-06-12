@@ -76,7 +76,7 @@ function InquiryItem(props: { inquiry: OwnerInquiry }) {
 			<Show when={props.inquiry.note}>
 				<blockquote class="inquiry-note">{props.inquiry.note}</blockquote>
 			</Show>
-			<a class="button button--secondary inquiry-reply" href={replyHref()}>
+			<a class="button button--ghost inquiry-reply" href={replyHref()}>
 				Reply to {gleaner()}
 			</a>
 		</li>
