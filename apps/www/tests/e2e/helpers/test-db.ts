@@ -153,6 +153,14 @@ export async function createTestListing(
 	return result[0]
 }
 
+/** Sets a listing's status directly in the test DB. */
+export async function setListingStatus(
+	listingId: number,
+	status: 'available' | 'unavailable'
+): Promise<void> {
+	await db.update(listings).set({ status }).where(eq(listings.id, listingId))
+}
+
 /** Queries address-reveal rows for a given listing from the test DB. */
 export async function getAddressRevealsForListing(listingId: number): Promise<
 	Array<{

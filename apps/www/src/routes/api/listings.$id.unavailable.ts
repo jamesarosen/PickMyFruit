@@ -66,15 +66,18 @@ export const Route = createFileRoute('/api/listings/$id/unavailable')({
 				}
 
 				try {
-					const updated = await markListingUnavailable(id)
-					if (!updated) {
+					const result = await markListingUnavailable(id, nonce)
+					if (result === 'not_found') {
 						return Response.json({ error: 'Listing not found' }, { status: 404 })
 					}
 
+					// A replayed link ('already_used') changes nothing and redirects
+					// without the confirmation banner — the listing page shows the
+					// current status, which keeps an accidental double-click friendly.
 					throw redirect({
 						to: '/listings/$id',
 						params: { id: String(id) },
-						search: { marked: 'unavailable' },
+						search: result === 'marked' ? { marked: 'unavailable' } : {},
 					})
 				} catch (error) {
 					if (

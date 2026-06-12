@@ -276,3 +276,27 @@ export const addressReveals = sqliteTable(
 
 export type AddressReveal = typeof addressReveals.$inferSelect
 export type NewAddressReveal = typeof addressReveals.$inferInsert
+
+// ============================================================================
+// Used Link Nonces Table
+// ============================================================================
+
+/**
+ * Consumed nonces from HMAC-signed one-click URLs (see `lib/hmac.server.ts`).
+ * A nonce is recorded when its link is first used, making every signed link
+ * single-use; rows older than the signature window are purged opportunistically
+ * because their links are already rejected as expired.
+ */
+export const usedLinkNonces = sqliteTable(
+	'used_link_nonces',
+	{
+		nonce: text('nonce').primaryKey(),
+		listingId: integer('listing_id')
+			.notNull()
+			.references(() => listings.id, { onDelete: 'cascade' }),
+		usedAt: integer('used_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+	},
+	(table) => [index('used_link_nonces_used_at_idx').on(table.usedAt)]
+)

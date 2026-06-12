@@ -5,6 +5,7 @@ import {
 	listingPhotos,
 	user,
 	addressReveals,
+	usedLinkNonces,
 	type Listing,
 	type NewListing,
 	type Inquiry,
@@ -13,7 +14,7 @@ import {
 	type ListingPhoto,
 	type AddressReveal,
 } from './schema.server'
-import { eq, desc, and, ne, isNull, gt, inArray, sql } from 'drizzle-orm'
+import { eq, desc, and, ne, isNull, gt, lt, inArray, sql } from 'drizzle-orm'
 import {
 	ListingStatus,
 	type ListingStatusValue,
@@ -21,6 +22,7 @@ import {
 } from '@/lib/validation'
 import { Sentry } from '@/lib/sentry'
 import { storage } from '@/lib/storage.server'
+import { SIGNATURE_MAX_AGE_MS } from '@/lib/signed-url'
 import {
 	toPublicListing,
 	type PublicListing,
@@ -659,17 +661,50 @@ export async function recordAddressReveal(
 	)
 }
 
-/** Mark a listing as unavailable (used by HMAC-signed one-click URL). */
-export async function markListingUnavailable(id: number): Promise<boolean> {
+export type MarkUnavailableResult = 'marked' | 'already_used' | 'not_found'
+
+/** Thrown inside the transaction to roll back the status update on a replayed nonce. */
+class NonceAlreadyUsedError extends Error {}
+
+/**
+ * Marks a listing as unavailable via an HMAC-signed one-click URL, consuming
+ * the URL's nonce so the link cannot be replayed — e.g. to re-mark a listing
+ * the grower has since re-listed.
+ */
+export async function markListingUnavailable(
+	id: number,
+	nonce: string
+): Promise<MarkUnavailableResult> {
 	return Sentry.startSpan(
 		{ name: 'markListingUnavailable', op: 'db.query', attributes: { id } },
 		async () => {
-			const result = await db
-				.update(listings)
-				.set({ status: ListingStatus.unavailable, updatedAt: new Date() })
-				.where(and(eq(listings.id, id), isNull(listings.deletedAt)))
-				.returning({ id: listings.id })
-			return result.length > 0
+			try {
+				return await db.transaction(async (tx) => {
+					const updated = await tx
+						.update(listings)
+						.set({ status: ListingStatus.unavailable, updatedAt: new Date() })
+						.where(and(eq(listings.id, id), isNull(listings.deletedAt)))
+						.returning({ id: listings.id })
+					if (updated.length === 0) return 'not_found'
+					const consumed = await tx
+						.insert(usedLinkNonces)
+						.values({ nonce, listingId: id })
+						.onConflictDoNothing()
+						.returning({ nonce: usedLinkNonces.nonce })
+					if (consumed.length === 0) throw new NonceAlreadyUsedError()
+					// Nonces older than the signature window are dead weight — their
+					// links are already rejected as expired before reaching the DB.
+					await tx
+						.delete(usedLinkNonces)
+						.where(
+							lt(usedLinkNonces.usedAt, new Date(Date.now() - SIGNATURE_MAX_AGE_MS))
+						)
+					return 'marked'
+				})
+			} catch (error) {
+				if (error instanceof NonceAlreadyUsedError) return 'already_used'
+				throw error
+			}
 		}
 	)
 }

@@ -24,6 +24,7 @@ const EXPECTED_TABLES = [
 	'listing_photos',
 	'listings',
 	'session',
+	'used_link_nonces',
 	'user',
 	'verification',
 ]

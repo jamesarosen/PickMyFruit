@@ -1,8 +1,8 @@
 import { createHmac, timingSafeEqual, randomUUID } from 'crypto'
 import { serverEnv } from './env.server'
+import { SIGNATURE_MAX_AGE_MS } from './signed-url'
 
-/** Signed URLs expire after 7 days. */
-export const SIGNATURE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
+export { SIGNATURE_MAX_AGE_MS }
 
 /** Signs a listing ID with a nonce and timestamp for URL construction. */
 export function signUrl(listingId: number): {
