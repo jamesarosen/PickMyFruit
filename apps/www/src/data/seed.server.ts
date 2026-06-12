@@ -120,6 +120,7 @@ function generateListing(userId: string): NewListing {
 		city: 'Napa',
 		state: 'CA',
 		zip: faker.helpers.arrayElement(['94558', '94559', '94581', '94574']),
+		country: 'US',
 		lat,
 		lng,
 		h3Index,

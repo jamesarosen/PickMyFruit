@@ -143,10 +143,12 @@ export async function fetchAddressSuggestions(
 	query: string,
 	options: { signal?: AbortSignal } = {}
 ): Promise<AddressSuggestion[]> {
+	// Unlike geocoding.ts this runs per keystroke, so only the length is
+	// breadcrumbed — never the partial address itself.
 	Sentry.addBreadcrumb({
 		category: 'address-suggestions',
 		level: 'info',
-		data: { query },
+		data: { queryLength: query.length },
 	})
 
 	return Sentry.startSpan(

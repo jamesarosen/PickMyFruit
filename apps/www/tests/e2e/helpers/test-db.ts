@@ -153,6 +153,29 @@ export async function createTestListing(
 	return result[0]
 }
 
+/** Queries a listing's stored location fields from the test DB. */
+export async function getListingLocation(listingId: number): Promise<
+	| {
+			lat: number
+			lng: number
+			city: string
+			country: string
+	  }
+	| undefined
+> {
+	const rows = await db
+		.select({
+			lat: listings.lat,
+			lng: listings.lng,
+			city: listings.city,
+			country: listings.country,
+		})
+		.from(listings)
+		.where(eq(listings.id, listingId))
+		.limit(1)
+	return rows[0]
+}
+
 /** Queries address-reveal rows for a given listing from the test DB. */
 export async function getAddressRevealsForListing(listingId: number): Promise<
 	Array<{

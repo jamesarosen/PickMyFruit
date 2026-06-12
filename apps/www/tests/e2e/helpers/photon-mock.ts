@@ -62,6 +62,8 @@ export type PhotonMockFixture = {
 	callCount: number
 	/** The most recent `q` parameter the mock saw. */
 	lastQuery: string | null
+	/** Coordinates of the most recent non-empty result, for assertions. */
+	lastResult: { lat: number; lng: number } | null
 }
 
 /**
@@ -73,7 +75,11 @@ export type PhotonMockFixture = {
 export const test = tileBase.extend<{ photonMock: PhotonMockFixture }>({
 	photonMock: [
 		async ({ context }, use) => {
-			const fixture: PhotonMockFixture = { callCount: 0, lastQuery: null }
+			const fixture: PhotonMockFixture = {
+				callCount: 0,
+				lastQuery: null,
+				lastResult: null,
+			}
 
 			await context.route('**/photon.komoot.io/**', async (route) => {
 				const url = new URL(route.request().url())
@@ -89,6 +95,11 @@ export const test = tileBase.extend<{ photonMock: PhotonMockFixture }>({
 					features = [PARIS_FEATURE]
 				} else {
 					features = [napaFeature(q)]
+				}
+
+				if (features.length > 0) {
+					const [lng, lat] = features[0].geometry.coordinates
+					fixture.lastResult = { lat, lng }
 				}
 
 				await route.fulfill({

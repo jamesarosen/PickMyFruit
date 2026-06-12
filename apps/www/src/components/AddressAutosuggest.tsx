@@ -35,6 +35,9 @@ export interface AddressAutosuggestProps {
 export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 	const inputId = createUniqueId()
 	const listboxId = createUniqueId()
+	const statusId = `${inputId}-status`
+	const hintId = `${inputId}-hint`
+	const errorsId = `${inputId}-errors`
 	const optionId = (index: number) => `${listboxId}-option-${index}`
 
 	const [query, setQuery] = createSignal(props.defaultSelection?.label ?? '')
@@ -43,6 +46,26 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 	const [activeIndex, setActiveIndex] = createSignal(-1)
 	const [status, setStatus] = createSignal<SuggestStatus>('idle')
 
+	const hasErrors = () => (props.errors?.length ?? 0) > 0
+
+	const describedBy = () => {
+		const ids = [statusId]
+		if (props.hint) ids.push(hintId)
+		if (hasErrors()) ids.push(errorsId)
+		return ids.join(' ')
+	}
+
+	const statusMessage = () => {
+		switch (status()) {
+			case 'empty':
+				return 'No matching addresses. Check the spelling, or enter the address manually below.'
+			case 'error':
+				return 'Suggestions are unavailable right now. Enter the address manually below.'
+			default:
+				return ''
+		}
+	}
+
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined
 	let inFlight: AbortController | undefined
 	// Monotonic request marker — a response only applies if it is still the
@@ -50,14 +73,24 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 	// after a newer one; this guard makes ordering explicit.
 	let requestSeq = 0
 
-	onCleanup(() => {
+	onCleanup(cancelPending)
+
+	// Invalidates any scheduled debounce and in-flight request so a late
+	// response cannot reopen the listbox after blur or selection.
+	function cancelPending() {
 		clearTimeout(debounceTimer)
+		requestSeq++
 		inFlight?.abort()
-	})
+	}
 
 	function closeListbox() {
 		setOpen(false)
 		setActiveIndex(-1)
+	}
+
+	function handleBlur() {
+		cancelPending()
+		closeListbox()
 	}
 
 	async function runFetch(value: string) {
@@ -95,10 +128,8 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 		// matches the suggestion's coordinates.
 		props.onSelect(null)
 
-		clearTimeout(debounceTimer)
+		cancelPending()
 		if (value.trim().length < MIN_QUERY_LENGTH) {
-			requestSeq++
-			inFlight?.abort()
 			setSuggestions([])
 			closeListbox()
 			setStatus('idle')
@@ -108,6 +139,7 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 	}
 
 	function select(suggestion: AddressSuggestion) {
+		cancelPending()
 		setQuery(suggestion.label)
 		setSuggestions([])
 		closeListbox()
@@ -116,7 +148,15 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
-		if (!open()) return
+		// ArrowDown reopens a listbox dismissed with Escape (APG pattern).
+		if (!open()) {
+			if (event.key === 'ArrowDown' && suggestions().length > 0) {
+				event.preventDefault()
+				setOpen(true)
+				setActiveIndex(0)
+			}
+			return
+		}
 		const count = suggestions().length
 		switch (event.key) {
 			case 'ArrowDown':
@@ -159,12 +199,14 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 				}
 				aria-autocomplete="list"
 				aria-controls={listboxId}
+				aria-describedby={describedBy()}
 				aria-expanded={open()}
+				aria-invalid={hasErrors() ? 'true' : undefined}
 				autocomplete="off"
 				class="form-field__control"
 				disabled={props.disabled}
 				id={inputId}
-				onBlur={closeListbox}
+				onBlur={handleBlur}
 				onInput={handleInput}
 				onKeyDown={handleKeyDown}
 				placeholder="Start typing your address…"
@@ -173,42 +215,42 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 				type="text"
 				value={query()}
 			/>
-			<Show when={open()}>
-				<ul class="address-autosuggest__listbox" id={listboxId} role="listbox">
-					<For each={suggestions()}>
-						{(suggestion, index) => (
-							<li
-								aria-selected={index() === activeIndex()}
-								class="address-autosuggest__option"
-								id={optionId(index())}
-								// preventDefault keeps focus in the input so the blur
-								// handler doesn't close the listbox before click fires.
-								onMouseDown={(e) => e.preventDefault()}
-								onClick={() => select(suggestion)}
-								role="option"
-							>
-								{suggestion.label}
-							</li>
-						)}
-					</For>
-				</ul>
-			</Show>
-			<Show when={status() === 'empty'}>
-				<p class="address-autosuggest__status" role="status">
-					No matching addresses. Check the spelling, or enter the address manually
-					below.
-				</p>
-			</Show>
-			<Show when={status() === 'error'}>
-				<p class="address-autosuggest__status" role="status">
-					Suggestions are unavailable right now. Enter the address manually below.
-				</p>
-			</Show>
+			{/* Always mounted so aria-controls resolves while closed. */}
+			<ul
+				class="address-autosuggest__listbox"
+				hidden={!open()}
+				id={listboxId}
+				role="listbox"
+			>
+				<For each={suggestions()}>
+					{(suggestion, index) => (
+						<li
+							aria-selected={index() === activeIndex()}
+							class="address-autosuggest__option"
+							id={optionId(index())}
+							// preventDefault keeps focus in the input so the blur
+							// handler doesn't close the listbox before click fires.
+							onMouseDown={(e) => e.preventDefault()}
+							onClick={() => select(suggestion)}
+							role="option"
+						>
+							{suggestion.label}
+						</li>
+					)}
+				</For>
+			</ul>
+			{/* Always mounted: a live region must exist before its content
+			    changes for screen readers to announce it. */}
+			<p class="address-autosuggest__status" id={statusId} role="status">
+				{statusMessage()}
+			</p>
 			<Show when={props.hint}>
-				<div class="form-field__hint">{props.hint}</div>
+				<div class="form-field__hint" id={hintId}>
+					{props.hint}
+				</div>
 			</Show>
-			<Show when={(props.errors?.length ?? 0) > 0}>
-				<div class="form-field__errors">
+			<Show when={hasErrors()}>
+				<div class="form-field__errors" id={errorsId}>
 					<For each={props.errors}>
 						{(error) => <div class="form-field__error">{error}</div>}
 					</For>

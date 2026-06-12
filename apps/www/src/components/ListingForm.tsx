@@ -57,6 +57,29 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 		string | null
 	>(null)
 
+	// Manual entry starts from the picked suggestion when there is one (the
+	// user is likely correcting it), else from the last listing's address.
+	const manualDefaults = () => {
+		const s = selectedAddress()
+		if (s) {
+			return {
+				address: s.address,
+				city: s.city,
+				state: s.state ?? '',
+				zip: s.postcode ?? '',
+				country: s.countryCode,
+			}
+		}
+		const d = props.defaultAddress
+		return {
+			address: d?.address ?? '',
+			city: d?.city ?? '',
+			state: d?.state ?? '',
+			zip: d?.zip ?? '',
+			country: d?.country ?? 'US',
+		}
+	}
+
 	// A produce stand is simply the `produce-stand` produce type. It unlocks the
 	// drop-off option; the address-release policy stays an independent choice.
 	const isStand = () => selectedType() === PRODUCE_STAND_SLUG
@@ -152,7 +175,16 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 		if (!parsed.success) {
 			const tree = z.treeifyError(parsed.error)
 			setFieldErrors(tree)
-			if (tree.errors.length > 0) setSubmitError(tree.errors.join(' '))
+			const messages = [...tree.errors]
+			if (selection) {
+				// In autosuggest mode these fields have no visible input, so
+				// their errors must surface at the form level or the submit
+				// fails silently.
+				for (const key of ['city', 'state', 'zip', 'country'] as const) {
+					messages.push(...(tree.properties?.[key]?.errors ?? []))
+				}
+			}
+			if (messages.length > 0) setSubmitError(messages.join(' '))
 			return
 		}
 
@@ -395,7 +427,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 						fallback={
 							<>
 								<Input
-									defaultValue={props.defaultAddress?.address ?? ''}
+									defaultValue={manualDefaults().address}
 									errors={fieldErrors().properties?.address?.errors}
 									hint="Others will see your neighborhood, but not your exact address."
 									label="Street Address"
@@ -404,7 +436,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 									required
 								/>
 								<Input
-									defaultValue={props.defaultAddress?.city ?? ''}
+									defaultValue={manualDefaults().city}
 									errors={fieldErrors().properties?.city?.errors}
 									label="City"
 									name="city"
@@ -412,13 +444,13 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 								/>
 								<div class="form-row-3">
 									<Input
-										defaultValue={props.defaultAddress?.state ?? ''}
+										defaultValue={manualDefaults().state}
 										errors={fieldErrors().properties?.state?.errors}
 										label="State / Province / Region"
 										name="state"
 									/>
 									<Input
-										defaultValue={props.defaultAddress?.zip ?? ''}
+										defaultValue={manualDefaults().zip}
 										errors={fieldErrors().properties?.zip?.errors}
 										label="Postal code"
 										name="zip"
@@ -440,7 +472,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 											<For each={countryOptions}>
 												{(option) => (
 													<option
-														selected={option.code === (props.defaultAddress?.country ?? 'US')}
+														selected={option.code === manualDefaults().country}
 														value={option.code}
 													>
 														{option.name}

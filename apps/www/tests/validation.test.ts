@@ -103,6 +103,8 @@ describe('listingFormSchema — international addresses', () => {
 		['a 3-letter country code', 'FRA'],
 		['digits', '12'],
 		['a country name', 'France'],
+		['an unassigned 2-letter code', 'ZZ'],
+		['a user-assigned 2-letter code', 'XA'],
 	])('rejects %s as a country', (_, country) => {
 		const result = listingFormSchema.safeParse({ ...baseForm, country })
 		expect(result.success).toBe(false)

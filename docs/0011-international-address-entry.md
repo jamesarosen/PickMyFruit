@@ -124,6 +124,14 @@ translating the UI itself.
 - Photon's public instance has a fair-use policy and no SLA. The combobox
   degrades gracefully (suggestion failure → inline notice + manual entry),
   so an outage never blocks listing creation.
+- Place-level suggestions (a bare village/POI name with no street) are
+  accepted intentionally: rural properties and named orchards/farms are
+  legitimate listing locations even when OSM lacks a street address. The
+  owner sees exactly what they picked; public display stays
+  neighborhood-level either way.
+- Switching manual → search → manual discards manual edits (the fields
+  re-mount with defaults from the current selection or last listing).
+  Acceptable for a rarely-toggled escape hatch.
 
 ## Implementation plan
 

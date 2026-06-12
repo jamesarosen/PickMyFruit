@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ISO_COUNTRY_CODES } from '@/lib/countries'
 import { produceTypeSlugs, PRODUCE_STAND_SLUG } from '@/lib/produce-types'
 
 // Postal code formats vary by country — only bound the length.
@@ -17,12 +18,14 @@ const optionalRegion = z
 	)
 	.optional()
 
-// ISO 3166-1 alpha-2 country code, case-insensitive on input.
+// ISO 3166-1 alpha-2 country code, case-insensitive on input. Checked
+// against the officially assigned codes, not just the two-letter shape.
+const assignedCountryCodes = new Set<string>(ISO_COUNTRY_CODES)
 const countryCode = z.preprocess(
 	(val) => (val === '' || val == null ? undefined : String(val).toUpperCase()),
 	z
 		.string()
-		.regex(/^[A-Z]{2}$/, 'Invalid country')
+		.refine((code) => assignedCountryCodes.has(code), 'Invalid country')
 		.default('US')
 )
 

@@ -206,6 +206,93 @@ describe('AddressAutosuggest — selection', () => {
 	})
 })
 
+describe('AddressAutosuggest — pending work is cancelled', () => {
+	it('does not open the listbox when the fetch resolves after blur', async () => {
+		mockFetchSuggestions.mockResolvedValue([PARIS])
+		const { input, queryByRole } = renderAutosuggest()
+
+		fireEvent.input(input, { target: { value: 'paris' } })
+		fireEvent.blur(input)
+		await vi.advanceTimersByTimeAsync(SUGGEST_DEBOUNCE_MS * 2)
+
+		expect(queryByRole('listbox')).not.toBeInTheDocument()
+	})
+
+	it('does not reopen the listbox when a debounce fires after selection', async () => {
+		mockFetchSuggestions.mockResolvedValue([PARIS, NAPA])
+		const { input, getAllByRole, queryByRole } = renderAutosuggest()
+
+		await typeAndSettle(input, 'paris')
+		// Schedule a new debounce, then select before it fires.
+		fireEvent.input(input, { target: { value: 'paris 2' } })
+		await vi.advanceTimersByTimeAsync(SUGGEST_DEBOUNCE_MS / 2)
+		await typeAndSettle(input, 'paris 3')
+		fireEvent.input(input, { target: { value: 'paris 4' } })
+		fireEvent.click(getAllByRole('option')[0])
+		await vi.advanceTimersByTimeAsync(SUGGEST_DEBOUNCE_MS * 2)
+
+		expect(input.value).toBe(PARIS.label)
+		expect(queryByRole('listbox')).not.toBeInTheDocument()
+	})
+})
+
+describe('AddressAutosuggest — keyboard', () => {
+	it('reopens the listbox with ArrowDown after Escape', async () => {
+		mockFetchSuggestions.mockResolvedValue([PARIS])
+		const { input, queryByRole } = renderAutosuggest()
+
+		await typeAndSettle(input, 'paris')
+		fireEvent.keyDown(input, { key: 'Escape' })
+		expect(queryByRole('listbox')).not.toBeInTheDocument()
+
+		fireEvent.keyDown(input, { key: 'ArrowDown' })
+		expect(queryByRole('listbox')).toBeInTheDocument()
+	})
+})
+
+describe('AddressAutosuggest — accessibility wiring', () => {
+	it('marks the input invalid and links the error via aria-describedby', () => {
+		const { getByLabelText, getByText } = render(() => (
+			<AddressAutosuggest
+				onSelect={vi.fn()}
+				errors={['Choose a suggested address, or enter it manually.']}
+			/>
+		))
+		const input = getByLabelText('Address', {
+			exact: true,
+			selector: 'input',
+		}) as HTMLInputElement
+		const error = getByText(/Choose a suggested address/)
+
+		expect(input).toHaveAttribute('aria-invalid', 'true')
+		expect(input.getAttribute('aria-describedby')).toContain(
+			error.closest('[id]')!.id
+		)
+	})
+
+	it('links the hint via aria-describedby', () => {
+		const { getByLabelText, getByText } = render(() => (
+			<AddressAutosuggest onSelect={vi.fn()} hint="A helpful hint" />
+		))
+		const input = getByLabelText('Address', {
+			exact: true,
+			selector: 'input',
+		}) as HTMLInputElement
+
+		expect(input).not.toHaveAttribute('aria-invalid', 'true')
+		expect(input.getAttribute('aria-describedby')).toContain(
+			getByText('A helpful hint').id
+		)
+	})
+
+	it('always points aria-controls at a real element', () => {
+		const { input } = renderAutosuggest()
+
+		const controls = input.getAttribute('aria-controls')!
+		expect(document.getElementById(controls)).not.toBeNull()
+	})
+})
+
 describe('AddressAutosuggest — degraded states', () => {
 	it('shows an empty-state message when nothing matches', async () => {
 		mockFetchSuggestions.mockResolvedValue([])

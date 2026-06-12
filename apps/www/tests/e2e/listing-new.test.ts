@@ -1,5 +1,5 @@
 import { test, expect } from './helpers/fixtures'
-import { getMagicLinkToken } from './helpers/test-db'
+import { getMagicLinkToken, getListingLocation } from './helpers/test-db'
 
 test.describe('New Listing', () => {
 	test.describe.configure({ mode: 'serial' })
@@ -59,5 +59,16 @@ test.describe('New Listing', () => {
 
 		// Listing created — navigated to detail page
 		await expect(page).toHaveURL(/\/listings\/\d+/, { timeout: 10_000 })
+
+		// The stored coordinates must be the ones the suggestion supplied —
+		// guards against submit ignoring the selection and sending garbage.
+		const listingId = Number(page.url().match(/\/listings\/(\d+)/)![1])
+		const stored = await getListingLocation(listingId)
+		expect(stored).toBeDefined()
+		expect(photonMock.lastResult).not.toBeNull()
+		expect(stored!.lat).toBeCloseTo(photonMock.lastResult!.lat, 5)
+		expect(stored!.lng).toBeCloseTo(photonMock.lastResult!.lng, 5)
+		expect(stored!.city).toBe('Napa')
+		expect(stored!.country).toBe('US')
 	})
 })
