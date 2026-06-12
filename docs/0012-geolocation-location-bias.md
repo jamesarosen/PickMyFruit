@@ -102,8 +102,11 @@ full addresses to Photon and Nominatim. On our side, the Sentry SDK's
 default fetch instrumentation would otherwise record every request URL
 (query string included) in breadcrumbs and tracing spans, so `sentry.ts`
 redacts the query string from Photon and Nominatim URLs in
-`beforeBreadcrumb` and `beforeSendSpan` — coordinates and typed addresses
-never reach Sentry.
+`beforeBreadcrumb` and `beforeSendSpan`, and the hand-written breadcrumbs in
+`geocoding.ts`/`address-suggestions.ts` record only the query length. The
+one remaining exception is deliberate: when Nominatim returns a malformed
+response, `geocoding.ts` attaches up to 1 KB of that raw response to the
+error report for diagnosis, and it can echo the queried address.
 
 ## Testing
 

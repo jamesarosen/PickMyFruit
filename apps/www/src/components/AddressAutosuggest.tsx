@@ -341,6 +341,11 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 			    changes for screen readers to announce it. */}
 			<p class="address-autosuggest__status" id={statusId} role="status">
 				{statusMessage()}
+				{/* A value change on an unfocused input is never announced, so
+				    speak the filled-in address; sighted users already see it. */}
+				<Show when={status() === 'prepopulated'}>
+					<span class="sr-only"> The address is {query()}.</span>
+				</Show>
 			</p>
 			<Show when={props.hint}>
 				<div class="form-field__hint" id={hintId}>

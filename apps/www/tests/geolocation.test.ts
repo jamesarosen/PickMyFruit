@@ -8,7 +8,7 @@ const GEOLOCATION_ERROR_CODES = {
 	TIMEOUT: 3,
 } as const
 
-function stubGeolocation(getCurrentPosition: PositionCallback | unknown) {
+function stubGeolocation(getCurrentPosition: unknown) {
 	vi.stubGlobal('navigator', {
 		...globalThis.navigator,
 		geolocation: { getCurrentPosition },

@@ -88,7 +88,12 @@ describe('redactGeoBreadcrumb', () => {
 })
 
 describe('redactGeoSpan', () => {
+	// Mirrors what @sentry/core's getFetchSpanAttributes actually sets on
+	// browser fetch spans (`url`, `http.url`, `http.query`, `http.fragment`,
+	// `server.address`, `type`) plus the server-side shape (`url.full`,
+	// `url.query`) — not merely the keys the implementation happens to know.
 	function makeSpan() {
+		const fullUrl = 'https://photon.komoot.io/api/?q=secret&lat=38.29&lon=-122.45'
 		return {
 			span_id: 'a',
 			trace_id: 'b',
@@ -96,10 +101,15 @@ describe('redactGeoSpan', () => {
 			description:
 				'GET https://photon.komoot.io/api/?q=secret&lat=38.29&lon=-122.45',
 			data: {
-				'http.url': 'https://photon.komoot.io/api/?q=secret&lat=38.29&lon=-122.45',
-				'url.full': 'https://photon.komoot.io/api/?q=secret&lat=38.29&lon=-122.45',
+				url: fullUrl,
+				'http.url': fullUrl,
+				'url.full': fullUrl,
 				'http.query': '?q=secret&lat=38.29&lon=-122.45',
+				'url.query': 'q=secret&lat=38.29&lon=-122.45',
+				'http.fragment': 'frag',
+				'server.address': 'photon.komoot.io',
 				'http.method': 'GET',
+				type: 'fetch',
 			},
 		}
 	}
@@ -108,10 +118,14 @@ describe('redactGeoSpan', () => {
 		const span = redactGeoSpan(makeSpan())
 
 		expect(span.description).toBe('GET https://photon.komoot.io/api/')
+		expect(span.data?.url).toBe('https://photon.komoot.io/api/')
 		expect(span.data?.['http.url']).toBe('https://photon.komoot.io/api/')
 		expect(span.data?.['url.full']).toBe('https://photon.komoot.io/api/')
 		expect(span.data?.['http.query']).toBeUndefined()
+		expect(span.data?.['url.query']).toBeUndefined()
+		expect(span.data?.['http.fragment']).toBeUndefined()
 		expect(span.data?.['http.method']).toBe('GET')
+		expect(span.data?.['server.address']).toBe('photon.komoot.io')
 	})
 
 	it('leaves spans for other hosts untouched', () => {

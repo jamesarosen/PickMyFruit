@@ -68,7 +68,10 @@ export function redactGeoBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb {
 export function redactGeoSpan(span: SpanJSON): SpanJSON {
 	let touchesGeoService = false
 	if (span.data) {
-		for (const key of ['http.url', 'url.full'] as const) {
+		// Browser fetch spans carry the full URL in `url` and `http.url`
+		// (see @sentry/core's getFetchSpanAttributes); server-side HTTP
+		// instrumentation uses `url.full`.
+		for (const key of ['url', 'http.url', 'url.full'] as const) {
 			const value = span.data[key]
 			if (typeof value !== 'string') continue
 			const redacted = redactGeoServiceUrl(value)
@@ -77,8 +80,12 @@ export function redactGeoSpan(span: SpanJSON): SpanJSON {
 				touchesGeoService = true
 			}
 		}
-		// The raw query string would undo the URL redaction.
-		if (touchesGeoService) delete span.data['http.query']
+		// The standalone query/fragment attributes would undo the redaction.
+		if (touchesGeoService) {
+			delete span.data['http.query']
+			delete span.data['url.query']
+			delete span.data['http.fragment']
+		}
 	}
 	if (typeof span.description === 'string') {
 		span.description = span.description.replace(

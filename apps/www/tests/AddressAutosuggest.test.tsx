@@ -405,6 +405,9 @@ describe('AddressAutosuggest — prepopulation from the granted position', () =>
 		expect(getByRole('status')).toHaveTextContent(
 			/filled in from your current location/i
 		)
+		// A value change on an unfocused input is not announced, so the live
+		// region must speak the filled-in address itself.
+		expect(getByRole('status')).toHaveTextContent('1600 Reverse Road')
 	})
 
 	it('clears the prepopulation notice once the user edits the field', async () => {
@@ -452,6 +455,15 @@ describe('AddressAutosuggest — prepopulation from the granted position', () =>
 
 		await typeAndSettle(input, 'school')
 		await typeAndSettle(input, 'school street')
+
+		expect(onInteract).toHaveBeenCalledTimes(1)
+	})
+
+	it('reports focus via onInteract so the claim survives remounts', async () => {
+		const onInteract = vi.fn()
+		const { input } = renderAutosuggest({ onInteract })
+
+		fireEvent.focus(input)
 
 		expect(onInteract).toHaveBeenCalledTimes(1)
 	})
