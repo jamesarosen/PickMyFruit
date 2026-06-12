@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { AddressFields } from '@/data/schema.server'
 import { countryName } from '@/lib/format-location'
+import type { LocationBias } from '@/lib/geolocation'
 import { Sentry } from '@/lib/sentry'
 
 /** A structured address suggestion with its coordinates. */
@@ -34,6 +35,8 @@ export class SuggestionsUnavailableError extends Error {
 // Like Nominatim in geocoding.ts, requests come directly from the browser.
 // @see docs/0011-international-address-entry.md
 const SUGGEST_URL = 'https://photon.komoot.io/api/?limit=5&lang=en'
+// @see docs/0012-geolocation-location-bias.md
+const REVERSE_URL = 'https://photon.komoot.io/reverse?limit=1&lang=en'
 
 const photonFeatureSchema = z.object({
 	geometry: z.object({
@@ -129,7 +132,69 @@ export function addressFieldsToSuggestion(
 }
 
 /**
- * Fetch address suggestions for a partial query from Photon.
+ * Fetches a Photon endpoint and maps its features to suggestions, skipping
+ * any feature that lacks the parts a listing needs.
+ *
+ * @throws {SuggestionsUnavailableError} on network, HTTP, or response-shape
+ * failures
+ * @throws {DOMException} `AbortError` is re-thrown untouched so callers can
+ * silently drop stale in-flight requests
+ */
+async function fetchPhotonSuggestions(
+	url: URL,
+	signal?: AbortSignal
+): Promise<AddressSuggestion[]> {
+	let response: Response
+	try {
+		response = await fetch(url.toString(), { signal })
+	} catch (err) {
+		if (err instanceof DOMException && err.name === 'AbortError') throw err
+		throw new SuggestionsUnavailableError(
+			err instanceof Error ? err.message : 'Network error fetching suggestions'
+		)
+	}
+
+	if (!response.ok) {
+		Sentry.captureMessage('suggestions.request_failed', {
+			level: 'warning',
+			extra: { status: response.status },
+		})
+		throw new SuggestionsUnavailableError(
+			`Suggestion request failed: ${response.status}`
+		)
+	}
+
+	let json: unknown
+	try {
+		json = await response.json()
+	} catch {
+		throw new SuggestionsUnavailableError(
+			'Suggestion response was not valid JSON'
+		)
+	}
+
+	const parsed = photonResponseSchema.safeParse(json)
+	if (!parsed.success) {
+		const err = new SuggestionsUnavailableError(
+			'Suggestion response did not match expected shape'
+		)
+		Sentry.captureException(err)
+		throw err
+	}
+
+	const suggestions: AddressSuggestion[] = []
+	for (const raw of parsed.data.features) {
+		const feature = photonFeatureSchema.safeParse(raw)
+		if (!feature.success) continue
+		const suggestion = toSuggestion(feature.data)
+		if (suggestion) suggestions.push(suggestion)
+	}
+	return suggestions
+}
+
+/**
+ * Fetch address suggestions for a partial query from Photon, optionally
+ * re-ranked toward a bias point (the results are biased, never filtered).
  *
  * Features that cannot be mapped to a usable suggestion are skipped, so the
  * result may be shorter than Photon's response (or empty).
@@ -141,10 +206,11 @@ export function addressFieldsToSuggestion(
  */
 export async function fetchAddressSuggestions(
 	query: string,
-	options: { signal?: AbortSignal } = {}
+	options: { signal?: AbortSignal; bias?: LocationBias } = {}
 ): Promise<AddressSuggestion[]> {
 	// Unlike geocoding.ts this runs per keystroke, so only the length is
-	// breadcrumbed — never the partial address itself.
+	// breadcrumbed — never the partial address itself (nor the bias point,
+	// which may be the user's position).
 	Sentry.addBreadcrumb({
 		category: 'address-suggestions',
 		level: 'info',
@@ -156,53 +222,36 @@ export async function fetchAddressSuggestions(
 		async () => {
 			const url = new URL(SUGGEST_URL)
 			url.searchParams.append('q', query)
-
-			let response: Response
-			try {
-				response = await fetch(url.toString(), { signal: options.signal })
-			} catch (err) {
-				if (err instanceof DOMException && err.name === 'AbortError') throw err
-				throw new SuggestionsUnavailableError(
-					err instanceof Error ? err.message : 'Network error fetching suggestions'
-				)
+			if (options.bias) {
+				url.searchParams.append('lat', String(options.bias.lat))
+				url.searchParams.append('lon', String(options.bias.lng))
 			}
+			return fetchPhotonSuggestions(url, options.signal)
+		}
+	)
+}
 
-			if (!response.ok) {
-				Sentry.captureMessage('suggestions.request_failed', {
-					level: 'warning',
-					extra: { status: response.status },
-				})
-				throw new SuggestionsUnavailableError(
-					`Suggestion request failed: ${response.status}`
-				)
-			}
-
-			let json: unknown
-			try {
-				json = await response.json()
-			} catch {
-				throw new SuggestionsUnavailableError(
-					'Suggestion response was not valid JSON'
-				)
-			}
-
-			const parsed = photonResponseSchema.safeParse(json)
-			if (!parsed.success) {
-				const err = new SuggestionsUnavailableError(
-					'Suggestion response did not match expected shape'
-				)
-				Sentry.captureException(err)
-				throw err
-			}
-
-			const suggestions: AddressSuggestion[] = []
-			for (const raw of parsed.data.features) {
-				const feature = photonFeatureSchema.safeParse(raw)
-				if (!feature.success) continue
-				const suggestion = toSuggestion(feature.data)
-				if (suggestion) suggestions.push(suggestion)
-			}
-			return suggestions
+/**
+ * Reverse-geocodes a position into a suggestion via Photon, or null when
+ * Photon returns nothing usable for a listing address.
+ *
+ * @throws {SuggestionsUnavailableError} on network, HTTP, or response-shape
+ * failures
+ * @throws {DOMException} `AbortError` is re-thrown untouched so callers can
+ * silently drop stale in-flight requests
+ */
+export async function fetchReverseGeocodedAddress(
+	location: LocationBias,
+	options: { signal?: AbortSignal } = {}
+): Promise<AddressSuggestion | null> {
+	return Sentry.startSpan(
+		{ name: 'suggestions.photon.reverse', op: 'http.client' },
+		async () => {
+			const url = new URL(REVERSE_URL)
+			url.searchParams.append('lat', String(location.lat))
+			url.searchParams.append('lon', String(location.lng))
+			const suggestions = await fetchPhotonSuggestions(url, options.signal)
+			return suggestions[0] ?? null
 		}
 	)
 }

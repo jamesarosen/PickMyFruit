@@ -1,9 +1,22 @@
-import { createSignal, createUniqueId, For, onCleanup, Show } from 'solid-js'
+import {
+	createSignal,
+	createUniqueId,
+	For,
+	onCleanup,
+	onMount,
+	Show,
+} from 'solid-js'
 import {
 	fetchAddressSuggestions,
+	fetchReverseGeocodedAddress,
 	SuggestionsUnavailableError,
 	type AddressSuggestion,
 } from '@/lib/address-suggestions'
+import {
+	NAPA_CITY_HALL,
+	requestCurrentLocation,
+	type LocationBias,
+} from '@/lib/geolocation'
 import { Sentry } from '@/lib/sentry'
 import '@/components/AddressAutosuggest.css'
 
@@ -31,6 +44,11 @@ export interface AddressAutosuggestProps {
  * the structured address and its coordinates via `onSelect`. Degrades to a
  * status message (never an error wall) when the suggestion service fails —
  * the manual-entry fallback rendered by the parent stays available.
+ *
+ * On mount it asks for the user's position (the browser shows its permission
+ * prompt) to bias suggestion ranking; when granted and the field is empty,
+ * the position is also reverse-geocoded to prepopulate the address.
+ * See docs/0012-geolocation-location-bias.md.
  */
 export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 	const inputId = createUniqueId()
@@ -45,6 +63,49 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 	const [open, setOpen] = createSignal(false)
 	const [activeIndex, setActiveIndex] = createSignal(-1)
 	const [status, setStatus] = createSignal<SuggestStatus>('idle')
+	// Until (and unless) the user grants access to their position, searches
+	// are biased toward the launch city so a typed-before-answering query
+	// still gets deterministic ranking.
+	const [bias, setBias] = createSignal<LocationBias>(NAPA_CITY_HALL)
+
+	// Once the user has typed or picked anything, the field is theirs — the
+	// reverse-geocoded prepopulation must never overwrite it.
+	let userInteracted = false
+	const prepopulateAbort = new AbortController()
+	onCleanup(() => prepopulateAbort.abort())
+
+	onMount(() => void initLocationBias())
+
+	async function initLocationBias() {
+		const position = await requestCurrentLocation()
+		if (!position) return
+		setBias(position)
+		await prepopulateFrom(position)
+	}
+
+	// Fills the empty field with the address at the user's position, applied
+	// exactly like a picked suggestion. Best-effort: any failure is silent,
+	// and the user's own input always wins.
+	async function prepopulateFrom(position: LocationBias) {
+		if (userInteracted || query() !== '' || props.defaultSelection) return
+		let suggestion: AddressSuggestion | null
+		try {
+			suggestion = await fetchReverseGeocodedAddress(position, {
+				signal: prepopulateAbort.signal,
+			})
+		} catch (err) {
+			if (err instanceof DOMException && err.name === 'AbortError') return
+			if (!(err instanceof SuggestionsUnavailableError)) {
+				Sentry.captureException(err)
+			}
+			return
+		}
+		if (!suggestion) return
+		// Re-check: the user may have started typing while the request ran.
+		if (userInteracted || query() !== '') return
+		setQuery(suggestion.label)
+		props.onSelect(suggestion)
+	}
 
 	const hasErrors = () => (props.errors?.length ?? 0) > 0
 
@@ -108,6 +169,7 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 		try {
 			const results = await fetchAddressSuggestions(value, {
 				signal: controller.signal,
+				bias: bias(),
 			})
 			if (seq !== requestSeq) return
 			setSuggestions(results)
@@ -127,6 +189,7 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 	}
 
 	function handleInput(event: InputEvent) {
+		userInteracted = true
 		const value = (event.currentTarget as HTMLInputElement).value
 		setQuery(value)
 		// Any edit invalidates a previous selection — the text no longer
@@ -144,6 +207,7 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 	}
 
 	function select(suggestion: AddressSuggestion) {
+		userInteracted = true
 		cancelPending()
 		setQuery(suggestion.label)
 		setSuggestions([])

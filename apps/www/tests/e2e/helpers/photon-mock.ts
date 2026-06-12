@@ -57,8 +57,27 @@ function napaFeature(query: string): PhotonFeature {
 	}
 }
 
+/** A reverse-geocode result clearly distinguishable from search results. */
+function reverseFeature(lat: number, lng: number): PhotonFeature {
+	return {
+		type: 'Feature',
+		geometry: { type: 'Point', coordinates: [lng, lat] },
+		properties: {
+			housenumber: '1600',
+			street: 'Reverse Road',
+			city: 'Sonoma',
+			postcode: '95476',
+			state: 'California',
+			country: 'United States',
+			countrycode: 'US',
+			osm_key: 'building',
+			osm_value: 'yes',
+		},
+	}
+}
+
 export type PhotonMockFixture = {
-	/** Number of intercepted Photon requests served by the mock. */
+	/** Number of intercepted Photon search requests served by the mock. */
 	callCount: number
 	/** The most recent `q` parameter the mock saw. */
 	lastQuery: string | null
@@ -68,30 +87,70 @@ export type PhotonMockFixture = {
 	 * assertion.
 	 */
 	resultFor: (query: string) => { lat: number; lng: number } | undefined
+	/**
+	 * The `lat`/`lon` location-bias parameters a search request carried, or
+	 * null when it carried none. Keyed by query for the same race-free reason
+	 * as `resultFor`.
+	 */
+	biasFor: (query: string) => { lat: number; lng: number } | null | undefined
+	/** Number of intercepted Photon reverse-geocode requests. */
+	reverseCallCount: number
+	/** The `lat`/`lon` of the most recent reverse-geocode request. */
+	lastReverse: { lat: number; lng: number } | null
+}
+
+/** Reads the `lat`/`lon` pair from a Photon URL, or null when absent. */
+function readLatLng(url: URL): { lat: number; lng: number } | null {
+	const lat = url.searchParams.get('lat')
+	const lng = url.searchParams.get('lon')
+	if (lat === null || lng === null) return null
+	return { lat: Number(lat), lng: Number(lng) }
 }
 
 /**
  * Fixture that intercepts all Photon (address autosuggest) requests at the
- * network boundary. Queries containing "paris" get a French address,
+ * network boundary. Search queries containing "paris" get a French address,
  * "nowhere" gets an empty result set, and anything else gets a deterministic
- * Napa address.
+ * Napa address. Reverse-geocode requests echo the requested coordinates back
+ * as "1600 Reverse Road, Sonoma".
  */
 export const test = tileBase.extend<{ photonMock: PhotonMockFixture }>({
 	photonMock: [
 		async ({ context }, use) => {
 			const servedResults = new Map<string, { lat: number; lng: number }>()
+			const servedBiases = new Map<string, { lat: number; lng: number } | null>()
 			const fixture: PhotonMockFixture = {
 				callCount: 0,
 				lastQuery: null,
 				resultFor: (query) => servedResults.get(query),
+				biasFor: (query) => servedBiases.get(query),
+				reverseCallCount: 0,
+				lastReverse: null,
 			}
 
 			await context.route('**/photon.komoot.io/**', async (route) => {
 				const url = new URL(route.request().url())
+
+				if (url.pathname.startsWith('/reverse')) {
+					fixture.reverseCallCount++
+					const position = readLatLng(url)
+					fixture.lastReverse = position
+					await route.fulfill({
+						status: 200,
+						contentType: 'application/json',
+						body: JSON.stringify({
+							type: 'FeatureCollection',
+							features: position ? [reverseFeature(position.lat, position.lng)] : [],
+						}),
+					})
+					return
+				}
+
 				const q = url.searchParams.get('q') ?? ''
 
 				fixture.callCount++
 				fixture.lastQuery = q
+				servedBiases.set(q, readLatLng(url))
 
 				let features: PhotonFeature[]
 				if (/nowhere/i.test(q)) {

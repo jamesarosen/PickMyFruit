@@ -52,9 +52,11 @@ export function applySecurityHeaders(
 	headers.set('X-Frame-Options', 'DENY')
 	headers.set('X-Content-Type-Options', 'nosniff')
 	headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+	// geolocation=(self): the New Listing form asks for the user's position
+	// to bias address suggestions (docs/0012-geolocation-location-bias.md).
 	headers.set(
 		'Permissions-Policy',
-		['camera=()', 'microphone=()', 'geolocation=()', 'payment=()'].join(', ')
+		['camera=()', 'microphone=()', 'geolocation=(self)', 'payment=()'].join(', ')
 	)
 }
 

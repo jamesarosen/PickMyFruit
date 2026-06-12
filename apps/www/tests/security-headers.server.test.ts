@@ -41,6 +41,19 @@ describe('applySecurityHeaders', () => {
 		expect(csp).not.toContain('https://*.fly.storage.tigris.dev')
 	})
 
+	it('allows geolocation for our own origin only, keeping other features blocked', () => {
+		const headers = new Headers()
+		applySecurityHeaders(headers)
+
+		const policy = headers.get('Permissions-Policy')!
+		// (self), not (): the New Listing form asks for the user's position to
+		// bias address suggestions. Everything else stays denied.
+		expect(policy).toContain('geolocation=(self)')
+		expect(policy).toContain('camera=()')
+		expect(policy).toContain('microphone=()')
+		expect(policy).toContain('payment=()')
+	})
+
 	it('uses only the passed mediaOrigin in img-src, not the default bucket host', () => {
 		const headers = new Headers()
 		applySecurityHeaders(headers, ['https://media.pickmyfruit.com'])
