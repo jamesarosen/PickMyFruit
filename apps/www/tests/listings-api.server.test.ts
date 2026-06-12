@@ -3,6 +3,7 @@ import type { OwnerListingView } from '../src/data/listing'
 
 const mockGetSession = vi.fn()
 const mockGetUserListings = vi.fn()
+const mockGetInquiriesForOwner = vi.fn()
 const mockCaptureMessage = vi.fn()
 
 vi.mock('../src/lib/auth.server', () => ({
@@ -15,6 +16,8 @@ vi.mock('../src/lib/auth.server', () => ({
 
 vi.mock('../src/data/queries.server', () => ({
 	getUserListings: (...args: unknown[]) => mockGetUserListings(...args),
+	getInquiriesForOwner: (...args: unknown[]) =>
+		mockGetInquiriesForOwner(...args),
 }))
 
 vi.mock('../src/lib/sentry', () => ({
@@ -23,7 +26,7 @@ vi.mock('../src/lib/sentry', () => ({
 	},
 }))
 
-const { getMyListings } = await import('../src/api/listings')
+const { getMyListings, getMyInquiries } = await import('../src/api/listings')
 
 function makeListing(id: number): OwnerListingView {
 	return {
@@ -94,5 +97,39 @@ describe('getMyListings Sentry threshold signal', () => {
 				extra: { userId: 'user-123', listingCount: 16 },
 			})
 		)
+	})
+})
+
+describe('getMyInquiries', () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	it('returns empty array without querying when unauthenticated', async () => {
+		mockGetSession.mockResolvedValue(null)
+
+		const result = await getMyInquiries()
+
+		expect(result).toEqual([])
+		expect(mockGetInquiriesForOwner).not.toHaveBeenCalled()
+	})
+
+	it('fetches inquiries scoped to the session user', async () => {
+		const inquiry = {
+			id: 1,
+			createdAt: new Date(),
+			note: 'May I pick on Saturday?',
+			listingId: 7,
+			listingName: 'Backyard fig tree',
+			gleanerName: 'Glea Ner',
+			gleanerEmail: 'gleaner@example.com',
+		}
+		mockGetSession.mockResolvedValue({ user: { id: 'user-123' } })
+		mockGetInquiriesForOwner.mockResolvedValue([inquiry])
+
+		const result = await getMyInquiries()
+
+		expect(result).toEqual([inquiry])
+		expect(mockGetInquiriesForOwner).toHaveBeenCalledWith('user-123')
 	})
 })

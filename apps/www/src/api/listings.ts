@@ -6,6 +6,7 @@ import { NotFoundError } from '@/lib/user-error'
 import { Sentry } from '@/lib/sentry'
 import { updateListingSchema } from '@/lib/validation'
 import type { AddressFields, Listing } from '@/data/schema.server'
+import type { OwnerInquiry } from '@/data/queries.server'
 import type { OwnerListingView, VerifiedPublicListing } from '@/data/listing'
 
 /** Fetches the current user's listings, or empty array if not authenticated. */
@@ -31,6 +32,21 @@ export const getMyListings = createServerFn({ method: 'GET' })
 			})
 		}
 		return listings
+	})
+
+/** Fetches inquiries on the current user's listings, or empty array if not authenticated. */
+export const getMyInquiries = createServerFn({ method: 'GET' })
+	.middleware([errorMiddleware])
+	.handler(async (): Promise<OwnerInquiry[]> => {
+		const headers = getRequestHeaders()
+		const { auth } = await import('@/lib/auth.server')
+		const session = await auth.api.getSession({ headers })
+		if (!session?.user) {
+			return []
+		}
+
+		const { getInquiriesForOwner } = await import('@/data/queries.server')
+		return getInquiriesForOwner(session.user.id)
 	})
 
 /** Returns the current user's most recent address, or undefined. */

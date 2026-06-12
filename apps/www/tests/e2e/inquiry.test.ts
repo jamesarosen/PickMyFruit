@@ -3,6 +3,7 @@ import { test, expect } from './helpers/fixtures'
 import {
 	createTestUser,
 	cleanupTestUser,
+	createTestInquiry,
 	createTestListing,
 	getInquiriesForListing,
 	getMagicLinkToken,
@@ -255,5 +256,35 @@ test.describe('Inquiry Flow', () => {
 		await expect(
 			page.getByRole('heading', { name: 'Interested in this produce?' })
 		).not.toBeVisible()
+	})
+
+	test('owner sees inquiries with gleaner contact in My Garden', async ({
+		page,
+		testUser: owner,
+	}) => {
+		const listing = await createTestListing(owner.id)
+		const gleaner = await createTestUser()
+		const note = 'May I come pick on Saturday morning?'
+
+		try {
+			await createTestInquiry(listing.id, gleaner.id, note)
+
+			await loginViaUI(page, owner)
+			await page.goto('/listings/mine')
+
+			const inbox = page.getByRole('region', { name: 'Inquiries' })
+			await expect(inbox.getByText(gleaner.name, { exact: true })).toBeVisible()
+			await expect(inbox.getByRole('link', { name: listing.name })).toBeVisible()
+			await expect(inbox.getByText(note)).toBeVisible()
+
+			const reply = inbox.getByRole('link', {
+				name: `Reply to ${gleaner.name}`,
+			})
+			expect(await reply.getAttribute('href')).toContain(
+				`mailto:${gleaner.email}?subject=`
+			)
+		} finally {
+			await cleanupTestUser(gleaner)
+		}
 	})
 })

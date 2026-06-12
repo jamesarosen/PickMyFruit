@@ -153,6 +153,25 @@ export async function createTestListing(
 	return result[0]
 }
 
+/** Inserts an inquiry into the test DB and returns it. */
+export async function createTestInquiry(
+	listingId: number,
+	gleanerId: string,
+	note: string | null = null
+) {
+	const result = await db
+		.insert(inquiries)
+		.values({
+			listingId,
+			gleanerId,
+			note,
+			createdAt: new Date(),
+			emailSentAt: new Date(),
+		})
+		.returning()
+	return result[0]
+}
+
 /** Sets a listing's status directly in the test DB. */
 export async function setListingStatus(
 	listingId: number,

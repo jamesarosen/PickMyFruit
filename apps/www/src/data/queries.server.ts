@@ -481,6 +481,45 @@ export async function hasRecentInquiry(
 	)
 }
 
+/** An inquiry on one of the owner's listings, with gleaner contact info. */
+export type OwnerInquiry = {
+	id: number
+	createdAt: Date
+	note: string | null
+	listingId: number
+	listingName: string
+	gleanerName: string
+	gleanerEmail: string
+}
+
+/** Fetches recent inquiries across all of an owner's listings, newest first. */
+export async function getInquiriesForOwner(
+	ownerId: string,
+	limit = 50
+): Promise<OwnerInquiry[]> {
+	return Sentry.startSpan(
+		{ name: 'getInquiriesForOwner', op: 'db.query' },
+		async () => {
+			return db
+				.select({
+					id: inquiries.id,
+					createdAt: inquiries.createdAt,
+					note: inquiries.note,
+					listingId: inquiries.listingId,
+					listingName: listings.name,
+					gleanerName: user.name,
+					gleanerEmail: user.email,
+				})
+				.from(inquiries)
+				.innerJoin(listings, eq(inquiries.listingId, listings.id))
+				.innerJoin(user, eq(inquiries.gleanerId, user.id))
+				.where(and(eq(listings.userId, ownerId), isNull(listings.deletedAt)))
+				.orderBy(desc(inquiries.createdAt))
+				.limit(limit)
+		}
+	)
+}
+
 export async function getListingWithOwner(id: number): Promise<
 	| {
 			listing: Listing
