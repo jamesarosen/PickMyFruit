@@ -21,12 +21,14 @@ primary_region = 'sjc'
   [build.args]
     VITE_SENTRY_ENABLED = "true"
 
-# Single process group. The web server (Nitro) is the foreground process.
+# Single process group. The entrypoint wraps the web server (Nitro) in
+# Litestream replication when LITESTREAM_REPLICA_URL is set — see
+# apps/www/docker-entrypoint.sh and docs/0010-database-durability.md.
 # Background work (email sends, user syncs, photo processing) runs as durable
 # kokoto workflows inside the same Node process — see
 # `apps/www/src/lib/kokoto.server.ts`.
 [processes]
-  app = "node .output/server/index.mjs"
+  app = "./docker-entrypoint.sh"
 
 # HTTP service configuration
 [http_service]
@@ -61,6 +63,9 @@ primary_region = 'sjc'
 
 # Persistent volume for SQLite database.
 # Single machine, single mount — the worker child inherits the same FS.
+# Durability: Fly's automatic volume snapshots (daily, ~5-day retention) are
+# the coarse fallback; continuous off-volume replication via Litestream is
+# configured with the LITESTREAM_* secrets — see docs/0010-database-durability.md.
 [[mounts]]
   source = 'data'
   destination = '/app/data'

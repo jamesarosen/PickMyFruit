@@ -5,8 +5,10 @@
 
 primary_region = 'sjc'
 
+# Preview apps set no LITESTREAM_* secrets, so the entrypoint starts the
+# server directly (no replication) — see apps/www/docker-entrypoint.sh.
 [processes]
-  app = "node .output/server/index.mjs"
+  app = "./docker-entrypoint.sh"
 
 [build]
   dockerfile = "apps/www/Dockerfile"

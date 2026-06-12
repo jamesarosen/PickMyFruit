@@ -110,6 +110,7 @@ We use a monorepo structure
 - `db:migrate` applies the journal (agents: run after schema changes; also used by Vitest/E2E setup)
 - `db:push` is for local-only schema experiments — do not use on branches you intend to merge; it skips journal SQL (including data migrations) and must not be mixed with `db:migrate` on the same file (delete the `.db` and `db:migrate` to recover)
 - Set `RUN_MIGRATIONS_ON_BOOT=true` (`.env.development`, `fly.toml`) to apply pending migrations at server boot; leave it off in test so Vitest/Playwright setup owns the test DBs
+- Production DB backups: the Docker entrypoint (`apps/www/docker-entrypoint.sh`) runs the server under Litestream when `LITESTREAM_REPLICA_URL` is set — setup and restore runbook in `docs/0010-database-durability.md`
 - When writing a migration by hand, set `when` in `drizzle/meta/_journal.json` to `Date.now()` at the time of writing (milliseconds since epoch). Values must be strictly increasing; entries with a `when` below the current `MAX(created_at)` in `__drizzle_migrations` are silently skipped by the migrator.
 - Use Solid JS for reactive UI components
 - Routes are defined using TanStack Router's file-based routing
@@ -167,4 +168,3 @@ The only service is the **Solid JS web application** in `apps/www`. It uses an e
 - **Magic link auth in dev**: `EMAIL_PROVIDER=console` (default) logs the magic link token to the Vite dev server stdout. Look for the Pino log line with `token:` to extract it for manual testing.
 - **E2E test server**: Playwright starts its own Vite dev server on port 5174 with test-specific env vars (`reuseExistingServer: false`). The port-5173 dev server does not interfere.
 - **pnpm build script warnings**: `pnpm install` may show "Ignored build scripts" for `esbuild`, `sharp`, `@parcel/watcher`, `@sentry/cli`. The platform-specific binaries are still installed correctly via optional dependencies; these warnings are safe to ignore.
-- **`pnpm db:seed` script reference**: The `package.json` `db:seed` script references `src/data/seed.ts` but the actual file is `src/data/seed.server.ts`. The seed script will fail; this is a known discrepancy in the repo.

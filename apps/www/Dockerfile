@@ -114,6 +114,15 @@ RUN find apps/www/.output/server/node_modules/@img -name '*.node' | grep -q . ||
 # Production stage
 FROM node:24-slim AS runner
 
+# Litestream continuously replicates the SQLite database to object storage and
+# restores it onto a fresh volume at boot — see docs/0010-database-durability.md
+# and docker-entrypoint.sh. Pinned version; bump intentionally.
+# Changelog: https://github.com/benbjohnson/litestream/releases
+ARG TARGETARCH
+ARG LITESTREAM_VERSION=0.3.13
+ADD https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/litestream-v${LITESTREAM_VERSION}-linux-${TARGETARCH}.deb /tmp/litestream.deb
+RUN dpkg -i /tmp/litestream.deb && rm /tmp/litestream.deb && litestream version
+
 WORKDIR /app
 
 # Copy built application from builder
@@ -129,10 +138,14 @@ RUN test -f /app/drizzle/meta/_journal.json || \
 # Create directory for SQLite database.
 RUN mkdir -p /app/data
 
+# Entrypoint wraps the server in Litestream replication when configured.
+COPY apps/www/docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
+
 # Expose port 3000
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-CMD ["node", ".output/server/index.mjs"]
+CMD ["./docker-entrypoint.sh"]

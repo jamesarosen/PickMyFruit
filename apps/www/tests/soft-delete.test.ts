@@ -15,10 +15,19 @@ vi.mock('../src/lib/storage.server', () => ({
 	storage: { publicUrl: (path: string) => `https://cdn.example.com/${path}` },
 }))
 
+// deleteListingById runs inside db.transaction; the callback receives a tx
+// object exposing the same chain mocks so assertions can distinguish
+// transactional writes from direct ones.
+const mockTxUpdate = vi.fn(() => ({ set: mockUpdateSet }))
+const mockTxDelete = vi.fn(() => ({ where: mockDeleteWhere }))
+
 vi.mock('../src/data/db.server', () => ({
 	db: {
 		update: vi.fn(() => ({ set: mockUpdateSet })),
 		delete: vi.fn(() => ({ where: mockDeleteWhere })),
+		transaction: vi.fn((fn: (tx: unknown) => unknown) =>
+			fn({ update: mockTxUpdate, delete: mockTxDelete })
+		),
 		select: (...args: unknown[]) => {
 			mockSelect(...args)
 			return { from: mockSelectFrom }
@@ -36,7 +45,6 @@ vi.mock('../src/lib/sentry', () => ({
 }))
 
 // Must import after mocking
-const { db } = await import('../src/data/db.server')
 const {
 	deleteListingById,
 	getAvailableListings,
@@ -83,9 +91,9 @@ describe('deleteListingById', () => {
 
 		expect(result).toBe(true)
 		// Should have called update (soft-delete), not delete
-		expect(db.update).toHaveBeenCalled()
+		expect(mockTxUpdate).toHaveBeenCalled()
 		// Should clean up inquiries after successful soft-delete
-		expect(db.delete).toHaveBeenCalled()
+		expect(mockTxDelete).toHaveBeenCalled()
 	})
 
 	it('returns false and skips inquiry cleanup when listing not found', async () => {
@@ -96,7 +104,7 @@ describe('deleteListingById', () => {
 
 		expect(result).toBe(false)
 		// Should NOT clean up inquiries when no listing was soft-deleted
-		expect(db.delete).not.toHaveBeenCalled()
+		expect(mockTxDelete).not.toHaveBeenCalled()
 	})
 })
 

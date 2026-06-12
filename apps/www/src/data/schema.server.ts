@@ -158,7 +158,16 @@ export const listings = sqliteTable(
 			.notNull()
 			.default(sql`(unixepoch())`),
 	},
-	(table) => [index('listings_user_id_idx').on(table.userId)]
+	(table) => [
+		index('listings_user_id_idx').on(table.userId),
+		// Serves the public feed: status = 'available' AND deleted_at IS NULL
+		// ORDER BY created_at (getAvailableListings / getNearbyListings).
+		index('listings_status_deleted_created_idx').on(
+			table.status,
+			table.deletedAt,
+			table.createdAt
+		),
+	]
 )
 
 export type Listing = typeof listings.$inferSelect

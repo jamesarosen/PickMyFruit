@@ -253,25 +253,29 @@ export async function deleteListingById(
 ): Promise<boolean> {
 	return Sentry.startSpan(
 		{ name: 'deleteListingById', op: 'db.query', attributes: { id } },
-		async () => {
-			const result = await db
-				.update(listings)
-				.set({ deletedAt: new Date() })
-				.where(
-					and(
-						eq(listings.id, id),
-						eq(listings.userId, userId),
-						isNull(listings.deletedAt)
+		// A transaction keeps the soft-delete and the inquiry cleanup atomic — a
+		// crash between the two statements would otherwise leave inquiries
+		// pointing at a deleted listing forever.
+		() =>
+			db.transaction(async (tx) => {
+				const result = await tx
+					.update(listings)
+					.set({ deletedAt: new Date() })
+					.where(
+						and(
+							eq(listings.id, id),
+							eq(listings.userId, userId),
+							isNull(listings.deletedAt)
+						)
 					)
-				)
-				.returning({ id: listings.id })
+					.returning({ id: listings.id })
 
-			if (result.length > 0) {
-				await db.delete(inquiries).where(eq(inquiries.listingId, id))
-			}
+				if (result.length > 0) {
+					await tx.delete(inquiries).where(eq(inquiries.listingId, id))
+				}
 
-			return result.length > 0
-		}
+				return result.length > 0
+			})
 	)
 }
 

@@ -25,6 +25,11 @@ try {
 	// contention than the default rollback journal — critical when the e2e
 	// suite opens a second connection from test-db.ts to seed/teardown data.
 	await libsqlClient.execute('PRAGMA journal_mode = WAL')
+	// NORMAL is the recommended setting under WAL: fsync at checkpoint rather
+	// than per-commit. Power loss can drop the last few commits but cannot
+	// corrupt the database; Litestream replication (docs/0010) narrows that
+	// window further in production.
+	await libsqlClient.execute('PRAGMA synchronous = NORMAL')
 } catch (err) {
 	Sentry.captureException(err)
 	throw err
