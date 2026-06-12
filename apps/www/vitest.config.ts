@@ -51,6 +51,7 @@ export default defineConfig({
 						EMAIL_PROVIDER: 'silent',
 						HMAC_SECRET: 'test-secret-do-not-use-in-production-min32chars',
 						NODE_ENV: 'test',
+						NOMINATIM_URL: 'http://127.0.0.1:5175',
 						STORAGE_PROVIDER: 'local',
 					},
 				},

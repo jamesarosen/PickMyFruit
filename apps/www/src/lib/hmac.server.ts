@@ -41,6 +41,26 @@ export function verifySignature(
 	return timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
 }
 
+/** Signs an arbitrary message under a feature-specific domain prefix. */
+export function signMessage(domain: string, message: string): string {
+	return createHmac('sha256', serverEnv.HMAC_SECRET)
+		.update(`${domain}:${message}`)
+		.digest('hex')
+}
+
+/** Verifies a signMessage signature in constant time. */
+export function verifyMessageSignature(
+	domain: string,
+	message: string,
+	sig: string
+): boolean {
+	const expected = signMessage(domain, message)
+	if (sig.length !== expected.length) {
+		return false
+	}
+	return timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
+}
+
 /** Builds a signed "mark unavailable" URL for email links. */
 export function buildUnavailableUrl(
 	baseUrl: string,

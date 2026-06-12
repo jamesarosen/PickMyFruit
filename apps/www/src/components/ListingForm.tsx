@@ -8,7 +8,11 @@ import ProduceTypeSelector from '@/components/ProduceTypeSelector'
 import type { AddressFields } from '@/data/schema.server'
 import { authClient } from '@/lib/auth-client'
 import { Sentry } from '@/lib/sentry'
-import { geocodeAddress, GeocodingNotFoundError } from '@/lib/geocoding'
+import {
+	geocodeAddress,
+	GeocodingNotFoundError,
+	type SignedGeocodingResult,
+} from '@/lib/geocoding'
 import { listingFormSchema } from '@/lib/validation'
 import '@/components/ListingForm.css'
 
@@ -111,15 +115,12 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 		}
 
 		// Geocode before any auth check so failures surface immediately and
-		// the coords are stored in sessionStorage for the unauth round-trip.
+		// the coords (plus their provenance token) are stored in sessionStorage
+		// for the unauth round-trip.
 		setFormState('submitting')
-		let geocoded: { lat: number; lng: number }
+		let geocoded: SignedGeocodingResult
 		try {
-			const result = await geocodeAddress(parsed.data)
-			geocoded = {
-				lat: result.lat,
-				lng: result.lng,
-			}
+			geocoded = await geocodeAddress(parsed.data)
 		} catch (err) {
 			if (err instanceof GeocodingNotFoundError) {
 				setSubmitError(err.message)

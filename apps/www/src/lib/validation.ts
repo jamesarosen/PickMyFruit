@@ -67,6 +67,10 @@ export type ListingFormData = z.infer<typeof listingFormSchema>
 export const createListingSchema = listingFormSchema.extend({
 	lat: z.number().gte(-90).lte(90),
 	lng: z.number().gte(-180).lte(180),
+	// Server-issued proof that (address, lat, lng) came from our geocoder —
+	// see src/lib/geocode-token.server.ts.
+	geocodeTs: z.number().int().positive(),
+	geocodeSig: z.string().min(1),
 })
 
 export type CreateListingData = z.infer<typeof createListingSchema>

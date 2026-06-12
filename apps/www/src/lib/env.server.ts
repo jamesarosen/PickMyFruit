@@ -83,6 +83,12 @@ const outputSchema = z
 			.string()
 			.regex(/^.+\s<[^@]+@[^>]+>$/, 'Must be in "Display Name <email>" format'),
 		HMAC_SECRET: z.string().min(32),
+		/** Base URL of the Nominatim geocoding service; tests point this at a local mock. */
+		NOMINATIM_URL: z
+			.string()
+			.url()
+			.transform((url) => url.replace(/\/+$/, ''))
+			.prefault('https://nominatim.openstreetmap.org'),
 		/** When true, apply journal migrations once when the server process starts. */
 		RUN_MIGRATIONS_ON_BOOT: z.stringbool().prefault('false'),
 		NODE_ENV: z.string().prefault('development'),

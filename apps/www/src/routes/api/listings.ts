@@ -56,13 +56,37 @@ export const Route = createFileRoute('/api/listings')({
 					return Response.json({ error: 'Invalid JSON body' }, { status: 400 })
 				}
 
-				// Validate body — client supplies lat/lng from browser geocoding
 				const parsed = createListingSchema.safeParse(body)
 				if (!parsed.success) {
 					return Response.json({ error: parsed.error.flatten() }, { status: 400 })
 				}
 
-				const { lat, lng, ...formData } = parsed.data
+				const { lat, lng, geocodeTs, geocodeSig, ...formData } = parsed.data
+
+				// lat/lng echo what our geocoder returned for this address; the HMAC
+				// token proves it (see src/lib/geocode-token.server.ts). Reject
+				// tampered or stale coordinates.
+				const { verifyGeocodeToken } = await import('@/lib/geocode-token.server')
+				const tokenValid = verifyGeocodeToken(
+					{
+						address: formData.address,
+						city: formData.city,
+						state: formData.state,
+						zip: formData.zip || undefined,
+					},
+					lat,
+					lng,
+					{ ts: geocodeTs, sig: geocodeSig }
+				)
+				if (!tokenValid) {
+					return Response.json(
+						{
+							error:
+								'Address verification failed. Please resubmit the form to look up your address again.',
+						},
+						{ status: 400 }
+					)
+				}
 
 				// Re-derive h3Index server-side; never trust a client-supplied cell index
 				const h3Index = latLngToCell(lat, lng, H3_RESOLUTIONS.STORAGE)

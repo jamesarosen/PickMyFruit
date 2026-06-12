@@ -1,52 +1,35 @@
 import { test as base } from '@playwright/test'
 
-/** Downtown Napa — anchor point for deterministic test geocoding. */
-const MOCK_ANCHOR = { lat: 38.2975, lng: -122.2869 }
-
-/** Spreads a query string into a deterministic lat/lng around Napa. */
-function hashToLatLng(query: string): { lat: number; lng: number } {
-	let hash = 0
-	for (let i = 0; i < query.length; i++) {
-		hash = (hash * 31 + query.charCodeAt(i)) | 0
-	}
-	return {
-		lat: MOCK_ANCHOR.lat + ((hash & 0xff) - 128) * 0.0001,
-		lng: MOCK_ANCHOR.lng + (((hash >> 8) & 0xff) - 128) * 0.0001,
-	}
-}
+/** Base URL of the local mock served by nominatim-mock-server.mjs (see playwright.config.ts). */
+export const NOMINATIM_MOCK_URL = 'http://127.0.0.1:5175'
 
 export type NominatimMockFixture = {
-	/** Number of intercepted Nominatim requests served by the mock. */
-	callCount: number
+	/** Geocode requests served by the mock server since this test began. */
+	callCount(): Promise<number>
 }
 
-/** Fixture that intercepts all Nominatim requests at the network boundary. */
+/**
+ * Geocoding runs server-side (src/lib/geocoding.server.ts) against the local
+ * mock server, so this fixture's job is bookkeeping (per-test request counts)
+ * plus a tripwire: the browser must never talk to Nominatim directly, so any
+ * such request is aborted and fails its test loudly.
+ */
 export const test = base.extend<{ nominatimMock: NominatimMockFixture }>({
 	nominatimMock: [
-		async ({ context }, use) => {
-			const fixture: NominatimMockFixture = { callCount: 0 }
+		async ({ context, request }, use) => {
+			await context.route('**/nominatim.openstreetmap.org/**', (route) =>
+				route.abort()
+			)
 
-			await context.route('**/nominatim.openstreetmap.org/**', async (route) => {
-				const url = new URL(route.request().url())
-				const q = url.searchParams.get('q') ?? ''
-				const { lat, lng } = hashToLatLng(q)
+			await request.post(`${NOMINATIM_MOCK_URL}/__reset`)
 
-				fixture.callCount++
-
-				await route.fulfill({
-					status: 200,
-					contentType: 'application/json',
-					body: JSON.stringify([
-						{
-							lat: String(lat),
-							lon: String(lng),
-							display_name: q || 'Mock Location, Napa, CA, USA',
-						},
-					]),
-				})
+			await use({
+				async callCount() {
+					const res = await request.get(`${NOMINATIM_MOCK_URL}/__stats`)
+					const stats = (await res.json()) as { count: number }
+					return stats.count
+				},
 			})
-
-			await use(fixture)
 		},
 		{ auto: true },
 	],

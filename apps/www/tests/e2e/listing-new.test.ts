@@ -39,7 +39,7 @@ test.describe('New Listing', () => {
 
 		// The form must geocode before triggering magic-link auth — guards
 		// against a regression where the request bypasses Nominatim entirely.
-		expect(nominatimMock.callCount).toBeGreaterThan(0)
+		expect(await nominatimMock.callCount()).toBeGreaterThan(0)
 
 		// Magic-link waiting UI
 		await expect(
