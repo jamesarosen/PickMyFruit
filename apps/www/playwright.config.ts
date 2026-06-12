@@ -11,7 +11,9 @@ export default defineConfig({
 	globalSetup: './tests/e2e/global-setup.ts',
 	fullyParallel: false,
 	forbidOnly: Boolean(process.env.CI),
-	retries: process.env.CI ? 2 : 0,
+	// One local retry mirrors CI's tolerance for the SQLite write-lock flake
+	// (see Known Issues in CLAUDE.md); genuinely broken tests still fail.
+	retries: process.env.CI ? 2 : 1,
 	workers: 1, // SQLite doesn't support concurrent writes across test files
 	reporter: [
 		['html', { open: 'never' }],

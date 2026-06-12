@@ -126,7 +126,7 @@ We use a monorepo structure
 
 ## Known Issues
 
-(none yet)
+- **E2E SQLite write-lock flake**: occasionally the Vite dev server holds the test DB's write lock for 30–95 s (suspect: kokoto's `BEGIN IMMEDIATE` dispatcher polls wedging behind dev-server load), so `tests/e2e/helpers/test-db.ts` writes (`INSERT INTO user`, `DELETE FROM verification`) fail despite WAL + `busy_timeout`, and magic-link token polls time out. Mitigations: helper pragmas, a 30 s token-poll budget in `getMagicLinkToken`, and one local Playwright retry (`retries: 1`; CI uses 2). A real fix means finding why the dispatcher transaction stalls.
 
 ## Future Plans
 

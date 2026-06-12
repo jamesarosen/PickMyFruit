@@ -94,7 +94,9 @@ export async function getMagicLinkToken(email: string): Promise<string> {
 
 	const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-	// Poll for token using recursion (server creates it async)
+	// Poll for token using recursion (server creates it async). The budget is
+	// generous because the dev server occasionally holds the SQLite write lock
+	// for tens of seconds (see Known Issues in CLAUDE.md), delaying the insert.
 	const poll = async (attempts: number): Promise<string> => {
 		const token = await queryToken()
 		if (token) {
@@ -103,11 +105,11 @@ export async function getMagicLinkToken(email: string): Promise<string> {
 		if (attempts <= 0) {
 			throw new Error(`No token found for ${email}`)
 		}
-		await sleep(100)
+		await sleep(250)
 		return poll(attempts - 1)
 	}
 
-	return poll(50)
+	return poll(120)
 }
 
 export interface TestListing {
