@@ -48,9 +48,17 @@ export const getMyLastAddress = createServerFn({ method: 'GET' })
 		return getUserLastAddress(session.user.id)
 	})
 
+const availableListingsLimitSchema = z
+	.number()
+	.int()
+	.positive()
+	.max(50)
+	.default(3)
+
+/** Fetches the most recently created available listings. */
 export const getAvailableListings = createServerFn({ method: 'GET' })
 	.middleware([errorMiddleware])
-	.inputValidator((limit: number = 3) => limit)
+	.inputValidator((limit?: number) => availableListingsLimitSchema.parse(limit))
 	.handler(async ({ data: limit }) => {
 		const { getAvailableListings: query } = await import('@/data/queries.server')
 		return query(limit)
