@@ -30,6 +30,12 @@ test.describe('New Listing', () => {
 		await page.getByLabel(/When to Pick/i).fill('July–September')
 		await page.getByLabel(/Street Address/i).fill('400 School St')
 
+		// Optional produce details
+		await page.getByLabel(/Variety/i).fill('Hass')
+		await page
+			.getByLabel(/How Much Is There/i)
+			.selectOption({ value: 'abundant' })
+
 		// Submit — should trigger magic-link request, not show "Authentication required"
 		const magicLinkResponse = page.waitForResponse((resp) =>
 			resp.url().includes('/api/auth/sign-in/magic-link')
@@ -56,5 +62,13 @@ test.describe('New Listing', () => {
 
 		// Listing created — navigated to detail page
 		await expect(page).toHaveURL(/\/listings\/\d+/, { timeout: 10_000 })
+
+		// Variety and quantity survived the unauthenticated round-trip. The URL
+		// commits before the detail loader resolves, so allow time for the old
+		// form view to be replaced on a cold dev server.
+		await expect(page.locator('#listing-variety')).toHaveValue('Hass', {
+			timeout: 30_000,
+		})
+		await expect(page.locator('#listing-quantity')).toHaveValue('abundant')
 	})
 })

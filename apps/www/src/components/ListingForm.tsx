@@ -93,6 +93,8 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 
 		const data = {
 			type: selectedType(),
+			variety: formData.get('variety'),
+			quantity: formData.get('quantity'),
 			harvestWindow: formData.get('harvestWindow'),
 			address: formData.get('address'),
 			city: formData.get('city'),
@@ -290,6 +292,29 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 							placeholder="e.g., Now through February"
 							required
 						/>
+					</div>
+					<div class="form-row">
+						<Input
+							errors={fieldErrors().properties?.variety?.errors}
+							label="Variety"
+							name="variety"
+							placeholder="e.g., Black Mission, Gravenstein"
+						/>
+						<div class="form-field">
+							<label class="form-field__label" for="listing-form-quantity">
+								How Much Is There?
+							</label>
+							<select
+								class="form-field__control"
+								id="listing-form-quantity"
+								name="quantity"
+							>
+								<option value="">I'm not sure</option>
+								<option value="abundant">Abundant — more than I can use</option>
+								<option value="moderate">A moderate amount</option>
+								<option value="few">Just a few</option>
+							</select>
+						</div>
 					</div>
 				</fieldset>
 

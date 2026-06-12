@@ -32,6 +32,21 @@ const addressReleasePolicyValues = Object.values(AddressReleasePolicy) as [
 	...AddressReleasePolicyValue[],
 ]
 
+/** Rough how-much-is-there options offered by the listing form. */
+export const ListingQuantity = {
+	abundant: 'abundant',
+	moderate: 'moderate',
+	few: 'few',
+} as const
+
+export type ListingQuantityValue =
+	(typeof ListingQuantity)[keyof typeof ListingQuantity]
+
+const listingQuantityValues = Object.values(ListingQuantity) as [
+	ListingQuantityValue,
+	...ListingQuantityValue[],
+]
+
 // Schema for form input (before geocoding)
 export const listingFormSchema = z.object({
 	type: z.preprocess(
@@ -42,6 +57,22 @@ export const listingFormSchema = z.object({
 				message: 'Please select a produce type',
 			})
 	),
+	variety: z
+		.preprocess(
+			(val) => (val === '' || val === null ? undefined : val),
+			z
+				.string()
+				.trim()
+				.max(100, 'Variety must be 100 characters or fewer')
+				.optional()
+		)
+		.optional(),
+	quantity: z
+		.preprocess(
+			(val) => (val === '' || val === null ? undefined : val),
+			z.enum(listingQuantityValues).optional()
+		)
+		.optional(),
 	harvestWindow: requiredString('Harvest window is required', 50),
 	address: requiredString('Address is required', 200),
 	city: requiredString('City is required', 100),

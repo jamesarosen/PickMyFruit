@@ -74,6 +74,8 @@ export const Route = createFileRoute('/api/listings')({
 							produceTypes.find((p) => p.slug === formData.type)
 								?.nameSingularTitleCase ?? formData.type,
 						type: formData.type,
+						variety: formData.variety || null,
+						quantity: formData.quantity || null,
 						harvestWindow: formData.harvestWindow,
 						address: formData.address,
 						city: formData.city,

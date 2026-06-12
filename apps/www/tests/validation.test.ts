@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+	listingFormSchema,
 	ListingStatus,
 	profileNameSchema,
 	updateListingSchema,
@@ -81,6 +82,60 @@ describe('updateListingSchema', () => {
 
 	it('rejects missing clientUpdatedAt', () => {
 		const result = updateListingSchema.safeParse({ id: 1, name: 'Test' })
+		expect(result.success).toBe(false)
+	})
+})
+
+describe('listingFormSchema variety and quantity', () => {
+	const base = {
+		type: 'fig',
+		harvestWindow: 'June-September',
+		address: '400 School St',
+		city: 'Napa',
+		state: 'CA',
+		zip: '94558',
+	}
+
+	it('accepts a listing without variety or quantity', () => {
+		const result = listingFormSchema.safeParse(base)
+		expect(result.success).toBe(true)
+		expect(result.data?.variety).toBeUndefined()
+		expect(result.data?.quantity).toBeUndefined()
+	})
+
+	it.each([
+		['', undefined],
+		[null, undefined],
+		['Black Mission', 'Black Mission'],
+		['  Gravenstein  ', 'Gravenstein'],
+	])('normalizes variety %j to %j', (variety, expected) => {
+		const result = listingFormSchema.safeParse({ ...base, variety })
+		expect(result.success).toBe(true)
+		expect(result.data?.variety).toBe(expected)
+	})
+
+	it('rejects a variety longer than 100 characters', () => {
+		const result = listingFormSchema.safeParse({
+			...base,
+			variety: 'x'.repeat(101),
+		})
+		expect(result.success).toBe(false)
+	})
+
+	it.each([
+		['', undefined],
+		[null, undefined],
+		['abundant', 'abundant'],
+		['moderate', 'moderate'],
+		['few', 'few'],
+	])('normalizes quantity %j to %j', (quantity, expected) => {
+		const result = listingFormSchema.safeParse({ ...base, quantity })
+		expect(result.success).toBe(true)
+		expect(result.data?.quantity).toBe(expected)
+	})
+
+	it('rejects an unknown quantity value', () => {
+		const result = listingFormSchema.safeParse({ ...base, quantity: 'tons' })
 		expect(result.success).toBe(false)
 	})
 })
