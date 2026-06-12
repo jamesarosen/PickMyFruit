@@ -26,14 +26,26 @@ export const SUGGEST_DEBOUNCE_MS = 300
 /** Queries shorter than this are too ambiguous to be worth a request. */
 const MIN_QUERY_LENGTH = 3
 
-type SuggestStatus = 'idle' | 'loading' | 'empty' | 'error'
+type SuggestStatus = 'idle' | 'loading' | 'empty' | 'error' | 'prepopulated'
 
 export interface AddressAutosuggestProps {
+	/**
+	 * When false, the position-based prepopulation is suppressed — e.g. the
+	 * user already touched the address during a previous mount of this
+	 * component, so the field is theirs even though this instance is fresh.
+	 */
+	allowPrepopulate?: boolean
 	/** Pre-selected suggestion (e.g. rebuilt from the user's last listing). */
 	defaultSelection?: AddressSuggestion | null
 	disabled?: boolean
 	errors?: string[]
 	hint?: string
+	/**
+	 * Fires once, on the user's first focus/edit/pick — never for the
+	 * prepopulation. Lets the parent remember that the field belongs to the
+	 * user across remounts (see `allowPrepopulate`).
+	 */
+	onInteract?: () => void
 	/** Fires with the chosen suggestion, or null when the text is edited. */
 	onSelect: (selection: AddressSuggestion | null) => void
 }
@@ -68,11 +80,17 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 	// still gets deterministic ranking.
 	const [bias, setBias] = createSignal<LocationBias>(NAPA_CITY_HALL)
 
-	// Once the user has typed or picked anything, the field is theirs — the
-	// reverse-geocoded prepopulation must never overwrite it.
+	// Once the user has focused, typed, or picked anything, the field is
+	// theirs — the reverse-geocoded prepopulation must never overwrite it.
 	let userInteracted = false
 	const prepopulateAbort = new AbortController()
 	onCleanup(() => prepopulateAbort.abort())
+
+	function markInteracted() {
+		if (userInteracted) return
+		userInteracted = true
+		props.onInteract?.()
+	}
 
 	onMount(() => void initLocationBias())
 
@@ -87,6 +105,7 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 	// exactly like a picked suggestion. Best-effort: any failure is silent,
 	// and the user's own input always wins.
 	async function prepopulateFrom(position: LocationBias) {
+		if (props.allowPrepopulate === false) return
 		if (userInteracted || query() !== '' || props.defaultSelection) return
 		let suggestion: AddressSuggestion | null
 		try {
@@ -101,9 +120,12 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 			return
 		}
 		if (!suggestion) return
-		// Re-check: the user may have started typing while the request ran.
+		// Re-check: the user may have claimed the field while the request ran.
 		if (userInteracted || query() !== '') return
 		setQuery(suggestion.label)
+		// Announce the change — both for screen readers (the value changed
+		// without any user action) and as a visible nudge to verify the guess.
+		setStatus('prepopulated')
 		props.onSelect(suggestion)
 	}
 
@@ -122,6 +144,8 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 				return 'No matching addresses. Check the spelling, or enter the address manually below.'
 			case 'error':
 				return 'Suggestions are unavailable right now. Enter the address manually below.'
+			case 'prepopulated':
+				return 'Filled in from your current location. Edit if different.'
 			default:
 				return ''
 		}
@@ -189,9 +213,11 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 	}
 
 	function handleInput(event: InputEvent) {
-		userInteracted = true
+		markInteracted()
 		const value = (event.currentTarget as HTMLInputElement).value
 		setQuery(value)
+		// The prepopulation notice describes a value the user just replaced.
+		if (status() === 'prepopulated') setStatus('idle')
 		// Any edit invalidates a previous selection — the text no longer
 		// matches the suggestion's coordinates.
 		props.onSelect(null)
@@ -207,7 +233,7 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 	}
 
 	function select(suggestion: AddressSuggestion) {
-		userInteracted = true
+		markInteracted()
 		cancelPending()
 		setQuery(suggestion.label)
 		setSuggestions([])
@@ -276,6 +302,9 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 				disabled={props.disabled}
 				id={inputId}
 				onBlur={handleBlur}
+				// Focusing claims the field: a prepopulation landing under the
+				// user's caret would corrupt what they're about to type.
+				onFocus={markInteracted}
 				onInput={handleInput}
 				onKeyDown={handleKeyDown}
 				placeholder="Start typing your address…"

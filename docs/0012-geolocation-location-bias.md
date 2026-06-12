@@ -19,7 +19,9 @@ without excluding anything.
     City Hall (`38.2967151, -122.292037`), the project's launch city anchor.
   - **While the prompt is open** → the fallback bias is already in place, so
     a user who types before answering still gets deterministic (Napa-biased)
-    results rather than unbiased ones.
+    results rather than unbiased ones. (A prompt the user never answers
+    fires neither callback — the spec excludes decision time from
+    `timeout` — which simply leaves the fallback bias in place.)
 - Bias is passed as `lat`/`lon` on the suggest request. Photon's defaults for
   the optional tuning knobs (`zoom` 12, `location_bias_scale` 0.4) suit a
   city-scale bias, so they are not sent.
@@ -29,6 +31,13 @@ without excluding anything.
   result is applied exactly like a picked suggestion (label in the input,
   structured address + coordinates reported via `onSelect`). Any failure is
   silent — prepopulation is an optional nicety, never an error.
+  - Because the position is coarse (Wi-Fi/IP fixes can be hundreds of
+    meters off) and `/reverse` snaps to the _nearest_ known address, the
+    guess can be a neighbor's house. The component therefore announces the
+    fill through its status live region — "Filled in from your current
+    location. Edit if different." — which both nudges sighted users to
+    verify the guess and tells screen-reader users why a field they heard
+    as blank is now full.
 
 ### Where the logic lives
 
@@ -63,14 +72,20 @@ New module `src/lib/geolocation.ts` wraps the callback-style
 
 - **User types before the position resolves** → suggest requests fire with
   the fallback bias; later requests pick up the granted coordinates.
-- **User types (or picks) before the reverse geocode resolves** → the
-  prepopulation result is discarded; the user's text is never clobbered and
-  `onSelect` is not called with a stale selection. Guarded by re-checking
-  the "untouched" condition after each `await`.
+- **User focuses, types, or picks before the reverse geocode resolves** →
+  the prepopulation result is discarded; the user's text (or imminent
+  typing — focus alone claims the field) is never clobbered and `onSelect`
+  is not called with a stale selection. Guarded by re-checking the
+  "untouched" condition after each `await`.
 - **Pre-fill from the last listing** (`defaultSelection`) → prepopulation is
   skipped entirely; the reverse request is never made.
 - **Unmount** (e.g. switching to manual entry) → in-flight reverse geocode is
   aborted via the component's existing cleanup.
+- **Remount after interaction** → toggling manual entry and back remounts
+  the component with fresh internal state, which would re-prepopulate a
+  field the user deliberately cleared. `ListingForm` remembers the first
+  interaction (`onInteract`) and suppresses prepopulation on later mounts
+  (`allowPrepopulate={false}`).
 
 ## Security
 
@@ -83,8 +98,12 @@ our own origin may use it; embedded third-party content (none today,
 Privacy: when granted, the user's raw coordinates are sent to Photon
 (komoot's public instance) as bias parameters and once to `/reverse`. This
 matches the privacy posture accepted in doc 0011 — the browser already sends
-full addresses to Photon and Nominatim. Coordinates are not logged or
-breadcrumbed on our side.
+full addresses to Photon and Nominatim. On our side, the Sentry SDK's
+default fetch instrumentation would otherwise record every request URL
+(query string included) in breadcrumbs and tracing spans, so `sentry.ts`
+redacts the query string from Photon and Nominatim URLs in
+`beforeBreadcrumb` and `beforeSendSpan` — coordinates and typed addresses
+never reach Sentry.
 
 ## Testing
 

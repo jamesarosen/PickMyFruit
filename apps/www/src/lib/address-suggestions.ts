@@ -210,7 +210,8 @@ export async function fetchAddressSuggestions(
 ): Promise<AddressSuggestion[]> {
 	// Unlike geocoding.ts this runs per keystroke, so only the length is
 	// breadcrumbed — never the partial address itself (nor the bias point,
-	// which may be the user's position).
+	// which may be the user's position). The SDK's own fetch breadcrumbs and
+	// spans are scrubbed of these URLs' query strings in sentry.ts.
 	Sentry.addBreadcrumb({
 		category: 'address-suggestions',
 		level: 'info',

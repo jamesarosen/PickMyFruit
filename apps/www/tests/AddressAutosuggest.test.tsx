@@ -78,6 +78,8 @@ function renderAutosuggest(
 	props: {
 		onSelect?: (s: AddressSuggestion | null) => void
 		defaultSelection?: AddressSuggestion
+		allowPrepopulate?: boolean
+		onInteract?: () => void
 	} = {}
 ) {
 	const onSelect = props.onSelect ?? vi.fn()
@@ -85,6 +87,8 @@ function renderAutosuggest(
 		<AddressAutosuggest
 			onSelect={onSelect}
 			defaultSelection={props.defaultSelection}
+			allowPrepopulate={props.allowPrepopulate}
+			onInteract={props.onInteract}
 		/>
 	))
 	const input = utils.getByLabelText('Address', {
@@ -389,6 +393,78 @@ describe('AddressAutosuggest — prepopulation from the granted position', () =>
 
 		expect(input.value).toBe('my own query')
 		expect(onSelect).not.toHaveBeenCalledWith(REVERSE_SUGGESTION)
+	})
+
+	it('announces the prepopulation through the status live region', async () => {
+		mockRequestLocation.mockResolvedValue(GRANTED_POSITION)
+		mockFetchReverse.mockResolvedValue(REVERSE_SUGGESTION)
+		const { getByRole } = renderAutosuggest()
+
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(getByRole('status')).toHaveTextContent(
+			/filled in from your current location/i
+		)
+	})
+
+	it('clears the prepopulation notice once the user edits the field', async () => {
+		mockRequestLocation.mockResolvedValue(GRANTED_POSITION)
+		mockFetchReverse.mockResolvedValue(REVERSE_SUGGESTION)
+		mockFetchSuggestions.mockResolvedValue([NAPA])
+		const { input, getByRole } = renderAutosuggest()
+		await vi.advanceTimersByTimeAsync(0)
+
+		fireEvent.input(input, { target: { value: 'something else' } })
+
+		expect(getByRole('status')).not.toHaveTextContent(/current location/i)
+	})
+
+	it('skips prepopulation when the input is focused before the position resolves', async () => {
+		mockRequestLocation.mockResolvedValue(GRANTED_POSITION)
+		mockFetchReverse.mockResolvedValue(REVERSE_SUGGESTION)
+		const { input, onSelect } = renderAutosuggest()
+
+		// The user clicked into the field intending to type — it's theirs now,
+		// even though they haven't typed yet.
+		fireEvent.focus(input)
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(input.value).toBe('')
+		expect(onSelect).not.toHaveBeenCalled()
+	})
+
+	it('skips prepopulation when the parent disallows it', async () => {
+		mockRequestLocation.mockResolvedValue(GRANTED_POSITION)
+		mockFetchReverse.mockResolvedValue(REVERSE_SUGGESTION)
+		const { input, onSelect } = renderAutosuggest({ allowPrepopulate: false })
+
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(mockFetchReverse).not.toHaveBeenCalled()
+		expect(input.value).toBe('')
+		expect(onSelect).not.toHaveBeenCalled()
+	})
+
+	it('reports the first user interaction via onInteract', async () => {
+		const onInteract = vi.fn()
+		mockFetchSuggestions.mockResolvedValue([NAPA])
+		const { input } = renderAutosuggest({ onInteract })
+
+		await typeAndSettle(input, 'school')
+		await typeAndSettle(input, 'school street')
+
+		expect(onInteract).toHaveBeenCalledTimes(1)
+	})
+
+	it('does not report the prepopulation itself as an interaction', async () => {
+		const onInteract = vi.fn()
+		mockRequestLocation.mockResolvedValue(GRANTED_POSITION)
+		mockFetchReverse.mockResolvedValue(REVERSE_SUGGESTION)
+		renderAutosuggest({ onInteract })
+
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(onInteract).not.toHaveBeenCalled()
 	})
 
 	it('stays silent when the reverse geocode fails', async () => {

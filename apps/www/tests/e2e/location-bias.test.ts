@@ -31,6 +31,11 @@ test.describe('Address suggestions — geolocation granted', () => {
 		expect(photonMock.lastReverse!.lat).toBeCloseTo(GRANTED_POSITION.latitude, 5)
 		expect(photonMock.lastReverse!.lng).toBeCloseTo(GRANTED_POSITION.longitude, 5)
 
+		// The guess is announced and visibly flagged for verification.
+		await expect(
+			page.getByText(/Filled in from your current location/i)
+		).toBeVisible()
+
 		// The prepopulated address behaves like a picked suggestion: it already
 		// carries coordinates, so submitting needs no search and no geocoding.
 		await page.locator('.combobox__trigger').click()
@@ -115,6 +120,23 @@ test.describe('Address suggestions — geolocation denied', () => {
 		testUser,
 		photonMock,
 	}) => {
+		// Surface the denial on `window` — otherwise "the field stays empty"
+		// could be asserted while the geolocation outcome is still pending,
+		// proving nothing.
+		await page.addInitScript(() => {
+			const geolocation = navigator.geolocation
+			const original = geolocation.getCurrentPosition.bind(geolocation)
+			geolocation.getCurrentPosition = (onSuccess, onError, options) =>
+				original(
+					onSuccess,
+					(error) => {
+						;(window as { __geolocationDenied?: boolean }).__geolocationDenied = true
+						onError?.(error)
+					},
+					options
+				)
+		})
+
 		await loginViaUI(page, testUser)
 		await page.goto('/listings/new')
 
@@ -123,8 +145,11 @@ test.describe('Address suggestions — geolocation denied', () => {
 		await page.locator('.combobox__trigger').click()
 		await page.locator('.combobox__item').filter({ hasText: 'Avocado' }).click()
 
+		await page.waitForFunction(
+			() => (window as { __geolocationDenied?: boolean }).__geolocationDenied
+		)
 		const address = page.getByLabel('Address', { exact: true })
-		await expect(address).toHaveValue('', { timeout: 10_000 })
+		await expect(address).toHaveValue('')
 
 		await address.fill('400 School St')
 		await page.getByRole('option', { name: /School Street/ }).click()
