@@ -127,9 +127,13 @@ export const listings = sqliteTable(
 
 		// Location fields
 		address: text('address').notNull(),
-		city: text('city').notNull().default('Napa'),
-		state: text('state').notNull().default('CA'),
+		city: text('city').notNull(),
+		// Region line — many jurisdictions have none, hence nullable.
+		state: text('state'),
+		// Postal code, free-form — formats vary by country.
 		zip: text('zip'),
+		// ISO 3166-1 alpha-2; 'US' backfills rows from before international support.
+		country: text('country').notNull().default('US'),
 		lat: real('lat').notNull(),
 		lng: real('lng').notNull(),
 		h3Index: text('h3_index').notNull(), // H3 index at H3_RES_STORAGE (resolution 13)
@@ -170,8 +174,14 @@ export const listings = sqliteTable(
 export type Listing = typeof listings.$inferSelect
 export type NewListing = typeof listings.$inferInsert
 
-/** Subset of listing fields used for address pre-fill. */
-export type AddressFields = Pick<Listing, 'address' | 'city' | 'state' | 'zip'>
+/**
+ * Subset of listing fields used for address pre-fill. Includes the stored
+ * coordinates so an untouched pre-fill can submit without a new lookup.
+ */
+export type AddressFields = Pick<
+	Listing,
+	'address' | 'city' | 'state' | 'zip' | 'country' | 'lat' | 'lng'
+>
 
 // ============================================================================
 // Inquiries Table

@@ -20,6 +20,7 @@ function makeListing(overrides: Partial<Listing> = {}): Listing {
 		city: 'Napa',
 		state: 'CA',
 		zip: '94558',
+		country: 'US',
 		lat: NAPA.lat,
 		lng: NAPA.lng,
 		h3Index,
@@ -129,6 +130,7 @@ describe('listingShapeFor', () => {
 				city: 'Napa',
 				state: 'CA',
 				zip: '94558',
+				country: 'US',
 				lat: 38.31,
 				lng: -122.31,
 			})

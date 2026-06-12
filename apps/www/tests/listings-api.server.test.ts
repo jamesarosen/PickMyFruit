@@ -38,6 +38,7 @@ function makeListing(id: number): OwnerListingView {
 		city: 'Napa',
 		state: 'CA',
 		zip: null,
+		country: 'US',
 		lat: 0,
 		lng: 0,
 		h3Index: '8928308280fffff',

@@ -611,6 +611,9 @@ export async function getUserLastAddress(
 					city: listings.city,
 					state: listings.state,
 					zip: listings.zip,
+					country: listings.country,
+					lat: listings.lat,
+					lng: listings.lng,
 				})
 				.from(listings)
 				.where(and(eq(listings.userId, userId), isNull(listings.deletedAt)))

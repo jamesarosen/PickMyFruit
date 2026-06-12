@@ -117,7 +117,7 @@ export interface TestListing {
 	variety: string | null
 	status: string
 	city: string
-	state: string
+	state: string | null
 	userId: string
 }
 

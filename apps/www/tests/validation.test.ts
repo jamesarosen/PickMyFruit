@@ -55,6 +55,76 @@ describe('listingFormSchema — produce-stand preset', () => {
 	})
 })
 
+describe('listingFormSchema — international addresses', () => {
+	it('accepts the legacy US shape and defaults the country to US', () => {
+		const data = listingFormSchema.parse({ ...baseForm, zip: '94558' })
+		expect(data.state).toBe('CA')
+		expect(data.zip).toBe('94558')
+		expect(data.country).toBe('US')
+	})
+
+	it.each([
+		[
+			'a French address',
+			{ city: 'Paris', state: 'Île-de-France', zip: '75002', country: 'FR' },
+		],
+		[
+			'a UK address with an alphanumeric postcode',
+			{ city: 'London', state: undefined, zip: 'EC1A 1BB', country: 'GB' },
+		],
+		[
+			'an address with no region line',
+			{ city: 'Singapore', state: '', zip: '049145', country: 'SG' },
+		],
+		[
+			'a full region name instead of a 2-letter abbreviation',
+			{ state: 'California', country: 'US' },
+		],
+	])('accepts %s', (_, fields) => {
+		const result = listingFormSchema.safeParse({ ...baseForm, ...fields })
+		expect(result.success).toBe(true)
+	})
+
+	it('treats an empty region line as absent', () => {
+		const data = listingFormSchema.parse({
+			...baseForm,
+			state: '',
+			country: 'FR',
+		})
+		expect(data.state).toBeUndefined()
+	})
+
+	it('uppercases the country code', () => {
+		const data = listingFormSchema.parse({ ...baseForm, country: 'fr' })
+		expect(data.country).toBe('FR')
+	})
+
+	it.each([
+		['a 3-letter country code', 'FRA'],
+		['digits', '12'],
+		['a country name', 'France'],
+	])('rejects %s as a country', (_, country) => {
+		const result = listingFormSchema.safeParse({ ...baseForm, country })
+		expect(result.success).toBe(false)
+	})
+
+	it('rejects postal codes over 20 characters', () => {
+		const result = listingFormSchema.safeParse({
+			...baseForm,
+			zip: '1'.repeat(21),
+		})
+		expect(result.success).toBe(false)
+	})
+
+	it('rejects region lines over 100 characters', () => {
+		const result = listingFormSchema.safeParse({
+			...baseForm,
+			state: 'a'.repeat(101),
+		})
+		expect(result.success).toBe(false)
+	})
+})
+
 describe('profileNameSchema', () => {
 	it.each([
 		['empty string (skip path)', ''],
