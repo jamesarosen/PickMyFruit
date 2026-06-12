@@ -76,7 +76,7 @@ function preprocessEnv(raw: unknown): unknown {
 const outputSchema = z
 	.object({
 		BETTER_AUTH_SECRET: z.string().min(32),
-		BETTER_AUTH_URL: z.string(),
+		BETTER_AUTH_URL: z.url(),
 		DATABASE_AUTH_TOKEN: z.string().optional(),
 		DATABASE_URL: z.string().min(1),
 		EMAIL_FROM: z

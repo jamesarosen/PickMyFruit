@@ -7,12 +7,20 @@ import {
 
 describe('profileNameSchema', () => {
 	it.each([
-		['empty string (skip path)', ''],
 		['normal name', 'Jane Gleaner'],
 		['exactly 100 chars', 'a'.repeat(100)],
-		['whitespace only', '   '],
+		['name with surrounding whitespace', '  Jane Gleaner  '],
 	])('accepts %s', (_, name) => {
 		expect(profileNameSchema.safeParse(name).success).toBe(true)
+	})
+
+	it.each([
+		['empty string', ''],
+		['whitespace only', '   '],
+	])('rejects %s', (_, name) => {
+		const result = profileNameSchema.safeParse(name)
+		expect(result.success).toBe(false)
+		expect(result.error?.issues[0]?.message).toBe('Name is required')
 	})
 
 	it('rejects names over 100 characters', () => {

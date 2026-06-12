@@ -15,16 +15,20 @@ vi.mock('../src/lib/storage.server', () => ({
 	storage: { publicUrl: (path: string) => `https://cdn.example.com/${path}` },
 }))
 
-vi.mock('../src/data/db.server', () => ({
-	db: {
+vi.mock('../src/data/db.server', () => {
+	// The transaction callback receives the same mock so `tx.update`/`tx.delete`
+	// hit the chains wired below, and assertions on `db.update` etc. still work.
+	const mockDb: Record<string, unknown> = {
 		update: vi.fn(() => ({ set: mockUpdateSet })),
 		delete: vi.fn(() => ({ where: mockDeleteWhere })),
 		select: (...args: unknown[]) => {
 			mockSelect(...args)
 			return { from: mockSelectFrom }
 		},
-	},
-}))
+		transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn(mockDb)),
+	}
+	return { db: mockDb }
+})
 
 vi.mock('../src/lib/sentry', () => ({
 	Sentry: {

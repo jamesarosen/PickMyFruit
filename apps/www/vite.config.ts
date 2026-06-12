@@ -108,8 +108,8 @@ export default defineConfig(({ command, mode }) => {
 						specifiers: [
 							'@libsql/client',
 							/^@libsql\/client\//,
-							'@pickmyfruit/kokoto/runtime.server',
-							'@pickmyfruit/kokoto/schema.server',
+							'@pickmyfruit/kokoto', // workflow defs are server-only
+							/^@pickmyfruit\/kokoto\//,
 							'@aws-sdk/client-s3',
 							'@aws-sdk/lib-storage',
 							'better-auth', // subpaths like better-auth/solid are client-safe

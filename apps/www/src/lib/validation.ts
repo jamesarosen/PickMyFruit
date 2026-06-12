@@ -90,6 +90,8 @@ export type InquiryFormData = z.infer<typeof inquiryFormSchema>
 /** Validates the user's display name as set via the profile page or inquiry interstitial. */
 export const profileNameSchema = z
 	.string()
+	.trim()
+	.min(1, 'Name is required')
 	.max(100, 'Name must be 100 characters or fewer')
 
 export const ListingStatus = {

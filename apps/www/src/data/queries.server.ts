@@ -135,6 +135,11 @@ export async function getNearbyListings(
 	return Sentry.startSpan(
 		{ name: 'getNearbyListings', op: 'db.query', attributes: { limit } },
 		async (span) => {
+			// Equirectangular approximation: a degree of longitude shrinks by
+			// cos(latitude), so scale the longitude delta or east-west neighbors
+			// rank ~22% too far at Napa's latitude. Fine at city scale; revisit
+			// with Haversine or H3 prefiltering if coverage ever spans regions.
+			const lngScale = Math.cos((lat * Math.PI) / 180)
 			const rows = await db
 				.select()
 				.from(listings)
@@ -145,7 +150,7 @@ export async function getNearbyListings(
 					)
 				)
 				.orderBy(
-					sql`(${listings.lat} - ${lat}) * (${listings.lat} - ${lat}) + (${listings.lng} - ${lng}) * (${listings.lng} - ${lng})`
+					sql`(${listings.lat} - ${lat}) * (${listings.lat} - ${lat}) + ((${listings.lng} - ${lng}) * ${lngScale}) * ((${listings.lng} - ${lng}) * ${lngScale})`
 				)
 				.limit(limit)
 			const photoMap = await fetchPhotosByListingIds(rows.map((r) => r.id))
@@ -254,23 +259,27 @@ export async function deleteListingById(
 	return Sentry.startSpan(
 		{ name: 'deleteListingById', op: 'db.query', attributes: { id } },
 		async () => {
-			const result = await db
-				.update(listings)
-				.set({ deletedAt: new Date() })
-				.where(
-					and(
-						eq(listings.id, id),
-						eq(listings.userId, userId),
-						isNull(listings.deletedAt)
+			// Transactional so a crash can't leave the listing soft-deleted while
+			// its inquiries survive (the FK cascade only fires on hard deletes).
+			return db.transaction(async (tx) => {
+				const result = await tx
+					.update(listings)
+					.set({ deletedAt: new Date() })
+					.where(
+						and(
+							eq(listings.id, id),
+							eq(listings.userId, userId),
+							isNull(listings.deletedAt)
+						)
 					)
-				)
-				.returning({ id: listings.id })
+					.returning({ id: listings.id })
 
-			if (result.length > 0) {
-				await db.delete(inquiries).where(eq(inquiries.listingId, id))
-			}
+				if (result.length > 0) {
+					await tx.delete(inquiries).where(eq(inquiries.listingId, id))
+				}
 
-			return result.length > 0
+				return result.length > 0
+			})
 		}
 	)
 }

@@ -27,7 +27,6 @@ services:
       BETTER_AUTH_URL: http://localhost:3000
       NODE_ENV: development
       DATABASE_URL: file:/app/data/development.db
-      INTERNAL_API_URL: http://localhost:3000
       # V8 heap capped at ~75% of the VM so GC fires before the OS OOM-kills,
       # leaving headroom for libvips native allocations.
       NODE_OPTIONS: --max-old-space-size=384
@@ -61,8 +60,7 @@ services:
       retries: 3
     restart: unless-stopped
 
-  # The resend-sync worker is no longer a separate compose service. In prod
-  # (and in this dev image when RESEND_SYNC_WORKER_ENABLED=true), www's
-  # start.ts spawns it as a child process via Node's child_process. To exercise
-  # the worker against this stack, set RESEND_SYNC_WORKER_ENABLED=true and
-  # supply a real RESEND_API_KEY via .env / .env.development.local.
+  # Resend contact syncing runs as a durable kokoto workflow inside the www
+  # process (see apps/www/src/workflows/sync-user-to-resend.workflow.server.ts).
+  # To exercise it against this stack, set EMAIL_PROVIDER=resend and supply a
+  # real RESEND_API_KEY via .env / .env.development.local.
