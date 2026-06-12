@@ -53,7 +53,9 @@ export function applySecurityHeaders(
 	headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
 	headers.set(
 		'Permissions-Policy',
-		['camera=()', 'microphone=()', 'geolocation=()', 'payment=()'].join(', ')
+		// geolocation=(self): the home page's "near me" button asks for the
+		// visitor's location; everything else stays denied.
+		['camera=()', 'microphone=()', 'geolocation=(self)', 'payment=()'].join(', ')
 	)
 }
 

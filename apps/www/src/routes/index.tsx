@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/solid-router'
-import { For, Show } from 'solid-js'
+import { createSignal, For, Show } from 'solid-js'
 import { z } from 'zod'
 import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
@@ -14,20 +14,33 @@ import {
 } from '@/lib/listing-filters'
 import '@/routes/index.css'
 
-// Napa City Hall — will be replaced with geolocation later
+// Napa City Hall — the default center until the visitor shares their location
 const DEFAULT_CENTER = { lat: 38.2966234, lng: -122.2893688 }
+
+// ~110 m precision: fine enough to sort by distance, coarse enough that the
+// shareable URL doesn't expose an exact location.
+function roundCoord(value: number): number {
+	return Math.round(value * 1000) / 1000
+}
 
 const homeSearchSchema = z.object({
 	area: z.string().optional(),
 	type: z.string().optional(),
+	lat: z.number().gte(-90).lte(90).optional().catch(undefined),
+	lng: z.number().gte(-180).lte(180).optional().catch(undefined),
 })
 
 export const Route = createFileRoute('/')({
 	validateSearch: homeSearchSchema,
-	loader: () =>
-		getNearbyListings({
-			data: { lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng },
-		}),
+	loaderDeps: ({ search }) => ({ lat: search.lat, lng: search.lng }),
+	loader: ({ deps }) => {
+		// Both coordinates must be present to override the default center.
+		const center =
+			deps.lat !== undefined && deps.lng !== undefined
+				? { lat: deps.lat, lng: deps.lng }
+				: DEFAULT_CENTER
+		return getNearbyListings({ data: center })
+	},
 	component: HomePage,
 })
 
@@ -51,6 +64,52 @@ function HomePage() {
 	const typeChips = () => presentTypes(listings())
 	const visibleListings = () =>
 		filterListings(listings(), selectedH3(), selectedType())
+
+	const [locating, setLocating] = createSignal(false)
+	const [geoError, setGeoError] = createSignal<string | null>(null)
+	const usingMyLocation = () =>
+		search().lat !== undefined && search().lng !== undefined
+
+	function locateMe() {
+		if (!('geolocation' in navigator)) {
+			setGeoError("Your browser doesn't support location.")
+			return
+		}
+		setLocating(true)
+		setGeoError(null)
+		navigator.geolocation.getCurrentPosition(
+			(position) => {
+				setLocating(false)
+				navigate({
+					to: '/',
+					search: (prev) => ({
+						...prev,
+						lat: roundCoord(position.coords.latitude),
+						lng: roundCoord(position.coords.longitude),
+					}),
+					replace: true,
+					resetScroll: false,
+				})
+			},
+			() => {
+				setLocating(false)
+				setGeoError(
+					"We couldn't get your location. Check your browser's location permission and try again."
+				)
+			},
+			{ maximumAge: 300_000, timeout: 10_000 }
+		)
+	}
+
+	function resetLocation() {
+		setGeoError(null)
+		navigate({
+			to: '/',
+			search: (prev) => ({ ...prev, lat: undefined, lng: undefined }),
+			replace: true,
+			resetScroll: false,
+		})
+	}
 
 	return (
 		<Layout title="Pick My Fruit - Turn your backyard abundance into community food">
@@ -103,6 +162,30 @@ function HomePage() {
 					<section class="available-listings">
 						<div class="container">
 							<h2>Available Now</h2>
+							<div class="locate-row">
+								<button
+									type="button"
+									class="locate-button"
+									disabled={locating()}
+									onClick={locateMe}
+								>
+									{locating()
+										? 'Locating…'
+										: usingMyLocation()
+											? 'Update my location'
+											: 'Show listings near me'}
+								</button>
+								<Show when={usingMyLocation()}>
+									<button type="button" class="locate-reset" onClick={resetLocation}>
+										Reset to Napa
+									</button>
+								</Show>
+							</div>
+							<Show when={geoError()}>
+								<p class="locate-error" role="alert">
+									{geoError()}
+								</p>
+							</Show>
 							<Show
 								when={listings().length > 0}
 								fallback={<p>No listings available right now.</p>}
