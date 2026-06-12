@@ -9,14 +9,17 @@ name: CI/CD Pipeline
 # attacker-supplied content with full secret access.
 #
 # To prevent this:
-#   1. Only the `destroy` job runs on `pull_request` events.  It does NOT
-#      install npm/pnpm dependencies, does NOT run any script from the
-#      checked-out PR, and does NOT read or write any shared cache.
+#   1. Jobs that run on `pull_request` events are limited to:
+#        - `destroy` (cleanup only): does NOT install dependencies, does NOT
+#          run any script from the checked-out PR, does NOT touch any cache.
+#        - `test-fork-pr` (baseline CI for fork PRs): runs PR code, so it has
+#          an explicit read-only `permissions` block and must NEVER read or
+#          write a shared cache (note the absence of `cache:` on setup-node).
 #   2. Every job that uses a cache (pnpm via setup-node, Playwright browsers)
 #      is gated with `if: github.event_name != 'pull_request'`.  This guard
 #      is a security boundary, not just a logic filter — do not remove it.
-#   3. Do not add `actions/cache`, `setup-node --cache`, or dependency-install
-#      steps to `destroy` (or any other future `pull_request`-triggered job).
+#   3. Do not add `actions/cache` or a `setup-node` `cache:` option to
+#      `destroy`, `test-fork-pr`, or any other `pull_request`-triggered job.
 #   4. Do not change the trigger to `pull_request_target`; that event runs in
 #      the base-branch context with full secret access even for fork PRs.
 #   5. Third-party actions are pinned to immutable commit SHAs to prevent
@@ -26,7 +29,7 @@ on:
   push:
     branches: ["**"]
   pull_request:
-    types: [closed]
+    types: [opened, synchronize, reopened, closed]
   workflow_dispatch:
 
 # Prevent concurrent runs on the same ref+event (include event_name so that a
@@ -36,6 +39,58 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Baseline CI for fork PRs, which the push trigger cannot cover (pushes to
+  # forks run in the fork's account, not here). Same-repo branches already get
+  # the full `test` job via push, so this only fires for forks. E2E is
+  # intentionally omitted: without the (forbidden) browser cache it is slow,
+  # and the full pipeline runs on push once a maintainer adopts the branch.
+  test-fork-pr:
+    name: Test Fork PR
+    runs-on: ubuntu-latest
+    # SECURITY: pull_request-triggered job running untrusted PR code — keep
+    # the read-only permissions and the no-cache rule from the contract above.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name != github.repository
+    permissions:
+      contents: read
+    env:
+      VITE_SENTRY_DSN: https://test@test.ingest.sentry.io/123
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # pnpm version comes from package.json "packageManager" (currently pnpm@11.2.2).
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          # SECURITY: no `cache:` here — see the contract at the top of this file.
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run format check
+        run: pnpm format:check
+
+      - name: Run lint
+        run: pnpm lint:ci
+
+      - name: Run typecheck
+        run: pnpm typecheck
+
+      - name: Run tests
+        run: pnpm test:ci
+
+      - name: Build application
+        run: pnpm build
+
   test:
     name: Test and Lint
     runs-on: ubuntu-latest
