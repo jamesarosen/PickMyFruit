@@ -35,5 +35,12 @@
 		color: var(--color-quiet);
 		font-size: 14px;
 		margin: 0;
+
+		/* The live region stays mounted while empty so screen readers announce
+		   later changes; cancel the .form-field flex gap it would otherwise
+		   add (6px, see FormField.css) so empty state costs no space. */
+		&:empty {
+			margin-block-start: -6px;
+		}
 	}
 }

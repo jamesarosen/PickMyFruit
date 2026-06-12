@@ -1,6 +1,10 @@
 import { countryName } from '@/lib/format-location'
 
-/** All ISO 3166-1 alpha-2 country codes (officially assigned). */
+/**
+ * All ISO 3166-1 alpha-2 country codes (officially assigned), plus `XK` —
+ * user-assigned, but OSM (and therefore Photon suggestions) and CLDR use it
+ * for Kosovo, so rejecting it would block Kosovo addresses entirely.
+ */
 export const ISO_COUNTRY_CODES = [
 	'AD',
 	'AE',
@@ -246,6 +250,7 @@ export const ISO_COUNTRY_CODES = [
 	'VU',
 	'WF',
 	'WS',
+	'XK',
 	'YE',
 	'YT',
 	'ZA',

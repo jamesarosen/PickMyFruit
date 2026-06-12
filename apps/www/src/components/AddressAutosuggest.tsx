@@ -90,6 +90,11 @@ export default function AddressAutosuggest(props: AddressAutosuggestProps) {
 
 	function handleBlur() {
 		cancelPending()
+		// Drop cached results too: after refocus they could belong to an older
+		// query than the visible text, and ArrowDown would reopen them. The
+		// status message intentionally stays — collapsing it mid-click shifts
+		// the layout under the pointer (e.g. the manual-entry button).
+		setSuggestions([])
 		closeListbox()
 	}
 

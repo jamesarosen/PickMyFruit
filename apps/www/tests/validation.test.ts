@@ -80,6 +80,11 @@ describe('listingFormSchema — international addresses', () => {
 			'a full region name instead of a 2-letter abbreviation',
 			{ state: 'California', country: 'US' },
 		],
+		[
+			// OSM/Photon tag Kosovo with the user-assigned code XK.
+			'a Kosovo address (XK)',
+			{ city: 'Pristina', state: '', zip: '10000', country: 'XK' },
+		],
 	])('accepts %s', (_, fields) => {
 		const result = listingFormSchema.safeParse({ ...baseForm, ...fields })
 		expect(result.success).toBe(true)
