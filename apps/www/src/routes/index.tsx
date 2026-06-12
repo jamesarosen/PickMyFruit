@@ -6,7 +6,12 @@ import PageHeader from '@/components/PageHeader'
 import ListingsMap from '@/components/ListingsMap'
 import ListingCard from '@/components/ListingCard'
 import { getNearbyListings } from '@/api/listings'
-import { normalizeArea, listingMatchesArea } from '@/lib/h3-area'
+import { normalizeArea } from '@/lib/h3-area'
+import {
+	filterListings,
+	normalizeTypeFilter,
+	presentTypes,
+} from '@/lib/listing-filters'
 import '@/routes/index.css'
 
 // Napa City Hall — will be replaced with geolocation later
@@ -14,6 +19,7 @@ const DEFAULT_CENTER = { lat: 38.2966234, lng: -122.2893688 }
 
 const homeSearchSchema = z.object({
 	area: z.string().optional(),
+	type: z.string().optional(),
 })
 
 export const Route = createFileRoute('/')({
@@ -31,23 +37,20 @@ function HomePage() {
 	const search = Route.useSearch()
 
 	const selectedH3 = () => normalizeArea(search().area ?? null)
+	const selectedType = () => normalizeTypeFilter(search().type)
 
 	function setSelectedH3(h3: string | null) {
 		navigate({
 			to: '/',
-			search: h3 ? { area: h3 } : {},
+			search: (prev) => ({ ...prev, area: h3 ?? undefined }),
 			replace: true,
 			resetScroll: false,
 		})
 	}
 
-	const visibleListings = () => {
-		const area = selectedH3()
-		if (!area) return listings()
-		return listings().filter((l) =>
-			listingMatchesArea(l.approximateH3Index, area)
-		)
-	}
+	const typeChips = () => presentTypes(listings())
+	const visibleListings = () =>
+		filterListings(listings(), selectedH3(), selectedType())
 
 	return (
 		<Layout title="Pick My Fruit - Turn your backyard abundance into community food">
@@ -109,17 +112,60 @@ function HomePage() {
 									onGroupSelect={setSelectedH3}
 									selectedH3={selectedH3()}
 								/>
+								<Show when={typeChips().length > 1}>
+									<div
+										class="type-filter"
+										role="group"
+										aria-label="Filter by produce type"
+									>
+										{/* Links (not buttons) so the filter works before hydration. */}
+										<Link
+											to="/"
+											search={(prev) => ({ ...prev, type: undefined })}
+											replace
+											resetScroll={false}
+											class={`chip${!selectedType() ? ' chip--active' : ''}`}
+											aria-current={!selectedType() ? 'true' : undefined}
+										>
+											All
+										</Link>
+										<For each={typeChips()}>
+											{(chip) => (
+												<Link
+													to="/"
+													search={(prev) => ({ ...prev, type: chip.slug })}
+													replace
+													resetScroll={false}
+													class={`chip${selectedType() === chip.slug ? ' chip--active' : ''}`}
+													aria-current={selectedType() === chip.slug ? 'true' : undefined}
+												>
+													{chip.label}
+												</Link>
+											)}
+										</For>
+									</div>
+								</Show>
 								<Show when={selectedH3()}>
 									<button
 										type="button"
 										class="clear-filter"
-										onClick={() => setSelectedH3(null)}
+										onClick={() => {
+											setSelectedH3(null)
+										}}
 									>
 										Show all listings
 									</button>
 								</Show>
-								<Show when={selectedH3() && visibleListings().length === 0}>
-									<p class="no-filtered-listings">No listings in this area.</p>
+								<Show
+									when={
+										(selectedH3() || selectedType()) && visibleListings().length === 0
+									}
+								>
+									<p class="no-filtered-listings">
+										{selectedType()
+											? 'No listings match your filters.'
+											: 'No listings in this area.'}
+									</p>
 								</Show>
 								<div class="listings-grid">
 									<For each={visibleListings()}>

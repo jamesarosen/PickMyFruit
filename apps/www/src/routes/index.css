@@ -110,6 +110,42 @@
 			text-align: center;
 		}
 
+		& .type-filter {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 8px;
+			margin-top: 24px;
+		}
+
+		& .chip {
+			display: inline-block;
+			text-decoration: none;
+			padding: 6px 16px;
+			font-size: 14px;
+			font-weight: 500;
+			color: var(--color-foreground);
+			background: none;
+			border: 1px solid var(--color-border);
+			border-radius: 999px;
+			cursor: pointer;
+			transition: background-color 0.15s;
+		}
+
+		& .chip:hover {
+			background: oklch(from var(--color-primary) l c h / 0.08);
+		}
+
+		& .chip--active {
+			color: var(--color-background);
+			background: var(--color-primary);
+			border-color: var(--color-primary);
+		}
+
+		& .chip--active:hover {
+			background: oklch(from var(--color-primary) calc(l * 0.9) c h);
+		}
+
 		& .clear-filter {
 			display: block;
 			margin: 16px auto 0;

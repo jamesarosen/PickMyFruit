@@ -1,4 +1,5 @@
 import { test, expect } from './helpers/fixtures'
+import { createTestListing } from './helpers/test-db'
 
 test.describe('Home page area filter', () => {
 	test.describe.configure({ mode: 'serial' })
@@ -45,5 +46,67 @@ test.describe('Home page area filter', () => {
 		await expect(card).toBeVisible()
 		// No filter UI should be shown
 		await expect(page.getByText('Show all listings')).not.toBeVisible()
+	})
+})
+
+test.describe('Home page type filter', () => {
+	test.describe.configure({ mode: 'serial' })
+
+	test('type param shows only matching listings and chips toggle it', async ({
+		page,
+		testUser,
+		testListing: figListing,
+	}) => {
+		const appleListing = await createTestListing(testUser.id, {
+			type: 'apple',
+			variety: 'Gravenstein',
+		})
+		const figCard = page.locator(`a[href="/listings/${figListing.id}"]`)
+		const appleCard = page.locator(`a[href="/listings/${appleListing.id}"]`)
+
+		await page.goto('/?type=fig')
+		await expect(figCard).toBeVisible()
+		await expect(appleCard).not.toBeVisible()
+
+		// Chips: switch the filter to apples
+		const chips = page.getByRole('group', { name: 'Filter by produce type' })
+		await chips.getByRole('link', { name: 'Apples' }).click()
+		await expect(page).toHaveURL(/\?type=apple$/)
+		await expect(appleCard).toBeVisible()
+		await expect(figCard).not.toBeVisible()
+
+		// "All" clears the filter
+		await chips.getByRole('link', { name: 'All' }).click()
+		await expect(figCard).toBeVisible()
+		await expect(appleCard).toBeVisible()
+	})
+
+	test('invalid type param is ignored', async ({ page, testListing }) => {
+		await page.goto('/?type=not-a-real-type')
+		const card = page.locator(`a[href="/listings/${testListing.id}"]`)
+		await expect(card).toBeVisible()
+	})
+
+	test('type and area filters combine', async ({
+		page,
+		testUser,
+		testListing: figListing,
+	}) => {
+		const appleListing = await createTestListing(testUser.id, {
+			type: 'apple',
+		})
+
+		// Area containing both listings + type=apple → only the apple listing
+		await page.goto('/?area=872830053ffffff&type=apple')
+		await expect(
+			page.locator(`a[href="/listings/${appleListing.id}"]`)
+		).toBeVisible()
+		await expect(
+			page.locator(`a[href="/listings/${figListing.id}"]`)
+		).not.toBeVisible()
+
+		// Matching area but no apples there → filter-combination empty state
+		await page.goto('/?area=872816903ffffff&type=apple')
+		await expect(page.getByText('No listings match your filters.')).toBeVisible()
 	})
 })
