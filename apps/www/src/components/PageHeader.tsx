@@ -9,16 +9,18 @@ import {
 import { clsx } from 'clsx'
 import Bell from 'lucide-solid/icons/bell'
 import HeartPlus from 'lucide-solid/icons/heart-plus'
+import LogIn from 'lucide-solid/icons/log-in'
 import LogOut from 'lucide-solid/icons/log-out'
 import Sprout from 'lucide-solid/icons/sprout'
 import UserPen from 'lucide-solid/icons/user-pen'
+import { type LucideProps } from 'lucide-solid'
 import {
 	For,
+	JSX,
 	Show,
 	createEffect,
 	createSignal,
 	on,
-	type JSX,
 	type ParentProps,
 } from 'solid-js'
 import { authClient } from '@/lib/auth-client'
@@ -81,8 +83,14 @@ function getInitials(name: string): string {
  * reactive effect once the route changes.
  */
 function DropdownMenuLink(
-	props: ParentProps<{ to: string; class?: string; icon?: JSX.Element }>
+	props: ParentProps<{
+		to: string
+		class?: string
+		icon?: (props: LucideProps) => JSX.Element
+	}>
 ) {
+	const Icon = props.icon ?? (() => <></>)
+
 	return (
 		<DropdownMenu.Item
 			as={Link}
@@ -90,7 +98,7 @@ function DropdownMenuLink(
 			closeOnSelect={false}
 			class={clsx('page-header__menu-item', props.class)}
 		>
-			{props.icon}
+			<Icon size={16} aria-hidden="true" />
 			{props.children}
 		</DropdownMenu.Item>
 	)
@@ -163,22 +171,13 @@ export default function PageHeader(props: PageHeaderProps) {
 						<DropdownMenu.Portal>
 							<DropdownMenu.Content class="page-header__menu-content">
 								<Show when={user()}>
-									<DropdownMenuLink
-										to="/listings/mine"
-										icon={<Sprout size={16} aria-hidden="true" />}
-									>
+									<DropdownMenuLink to="/listings/mine" icon={Sprout}>
 										My Garden
 									</DropdownMenuLink>
-									<DropdownMenuLink
-										to="/profile"
-										icon={<UserPen size={16} aria-hidden="true" />}
-									>
+									<DropdownMenuLink to="/profile" icon={UserPen}>
 										Profile
 									</DropdownMenuLink>
-									<DropdownMenuLink
-										to="/notifications"
-										icon={<Bell size={16} aria-hidden="true" />}
-									>
+									<DropdownMenuLink to="/notifications" icon={Bell}>
 										Notifications
 									</DropdownMenuLink>
 									<DropdownMenu.Item
@@ -200,7 +199,9 @@ export default function PageHeader(props: PageHeaderProps) {
 									</DropdownMenu.Item>
 								</Show>
 								<Show when={!user()}>
-									<DropdownMenuLink to="/login">Sign In</DropdownMenuLink>
+									<DropdownMenuLink to="/login" icon={LogIn}>
+										Sign In
+									</DropdownMenuLink>
 									<DropdownMenu.Item
 										as="a"
 										href="/support?from=header"
