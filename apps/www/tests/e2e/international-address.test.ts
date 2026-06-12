@@ -1,5 +1,6 @@
 import { test, expect } from './helpers/fixtures'
 import { loginViaUI } from './helpers/login'
+import { getMagicLinkToken, getListingLocation } from './helpers/test-db'
 
 /**
  * Outer-loop coverage for docs/0011-international-address-entry.md:
@@ -32,9 +33,11 @@ test.describe('International address entry', () => {
 		await page.getByRole('button', { name: 'Share my produce' }).click()
 
 		await expect(page).toHaveURL(/\/listings\/\d+/, { timeout: 10_000 })
+		// Generous timeout: the dev server may still be compiling the detail
+		// route while the SPA transition is pending.
 		await expect(
 			page.getByText('Paris, Île-de-France, France').first()
-		).toBeVisible()
+		).toBeVisible({ timeout: 10_000 })
 
 		// The selection carried its own coordinates — no geocoding round-trip.
 		expect(nominatimMock.callCount).toBe(0)
@@ -66,10 +69,59 @@ test.describe('International address entry', () => {
 		await expect(page).toHaveURL(/\/listings\/\d+/, { timeout: 10_000 })
 		await expect(
 			page.getByText('Smallville, Otago, New Zealand').first()
-		).toBeVisible()
+		).toBeVisible({ timeout: 10_000 })
 
 		// Manual entry falls back to submit-time geocoding.
 		expect(nominatimMock.callCount).toBeGreaterThan(0)
+	})
+
+	test('unauthenticated user creates a listing via manual entry and magic link', async ({
+		page,
+		testUser,
+		nominatimMock,
+	}) => {
+		// Arrive unauthenticated — cookies cleared by context fixture
+		await page.goto('/listings/new')
+
+		await page.getByLabel(/Your email/i).fill(testUser.email)
+		await page.locator('.combobox__trigger').click()
+		await page.locator('.combobox__item').filter({ hasText: 'Avocado' }).click()
+		await page.getByLabel(/When to Pick/i).fill('July–September')
+
+		await page.getByRole('button', { name: /enter it manually/i }).click()
+		await page.getByLabel(/Street Address/i).fill('1 Rural Lane')
+		await page.getByLabel('City').fill('Smallville')
+		await page.getByLabel(/State \/ Province \/ Region/i).fill('Otago')
+		await page.getByLabel(/Postal code/i).fill('9376')
+		await page.getByLabel('Country', { exact: true }).selectOption('NZ')
+
+		const magicLinkResponse = page.waitForResponse((resp) =>
+			resp.url().includes('/api/auth/sign-in/magic-link')
+		)
+		await page.getByRole('button', { name: 'Share my produce' }).click()
+		await magicLinkResponse
+
+		// Manual fields must geocode before magic-link auth so the pending
+		// listing in sessionStorage already carries coordinates.
+		expect(nominatimMock.callCount).toBeGreaterThan(0)
+
+		await expect(
+			page.getByRole('heading', { name: 'Check your email' })
+		).toBeVisible({ timeout: 10_000 })
+
+		const token = await getMagicLinkToken(testUser.email)
+		await page
+			.locator('input#magic-link-token')
+			.pressSequentially(token, { delay: 20 })
+		await page.getByRole('button', { name: 'Verify' }).click()
+
+		// The pending listing auto-submits with the manual address intact.
+		await expect(page).toHaveURL(/\/listings\/\d+/, { timeout: 10_000 })
+		const listingId = Number(page.url().match(/\/listings\/(\d+)/)![1])
+		const stored = await getListingLocation(listingId)
+		expect(stored).toBeDefined()
+		expect(stored!.city).toBe('Smallville')
+		expect(stored!.country).toBe('NZ')
 	})
 
 	test('offers manual entry when no suggestions match', async ({
