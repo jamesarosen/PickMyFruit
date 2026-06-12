@@ -1,6 +1,7 @@
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig, devices } from '@playwright/test'
+import { loadTestEnv } from './tests/helpers/test-env'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const testDbPath = resolve(__dirname, 'data/test.db')
@@ -33,22 +34,15 @@ export default defineConfig({
 		timeout: 120000,
 		stdout: 'pipe',
 		stderr: 'pipe',
-		// Must stay in sync with baseSchema in env.server.ts and test.env in
-		// vitest.config.ts
-		env: {
-			RUN_MIGRATIONS_ON_BOOT: 'false',
-			BETTER_AUTH_SECRET: 'test-secret-for-e2e-minimum-32-characters',
-			BETTER_AUTH_URL: 'http://localhost:5174',
+		// Shared values come from .env.test via loadTestEnv; only
+		// runner-specific paths, the port, and E2E feature flags are overridden.
+		env: loadTestEnv({
 			DATABASE_URL: `file:${testDbPath}`,
 			DATA_DIR: resolve(__dirname, 'test-uploads'),
-			EMAIL_FROM: 'Test <test@example.com>',
-			EMAIL_PROVIDER: 'silent',
-			HMAC_SECRET: 'test-secret-for-e2e-minimum-32-characters',
 			NODE_ENV: 'test',
 			PORT: '5174',
-			STORAGE_PROVIDER: 'local',
 			/** Enables `/root-error` loader to throw into the root error boundary (see `api/e2e-root-error.ts`). */
 			E2E_THROW_ROOT_ERROR: '1',
-		},
+		}),
 	},
 })

@@ -10,6 +10,11 @@ import { sql } from 'drizzle-orm'
 // ============================================================================
 // Better Auth Tables
 // ============================================================================
+// Timestamps here use `timestamp_ms` (epoch milliseconds) because Better Auth
+// writes Date values that way. Application tables below use `timestamp` (epoch
+// seconds, matching SQLite's `unixepoch()` defaults). Drizzle converts both to
+// Date in TypeScript, but raw SQL must not compare integer timestamps across
+// the two sections without scaling.
 
 export const user = sqliteTable(
 	'user',
@@ -113,6 +118,8 @@ export const verification = sqliteTable(
 // ============================================================================
 // Application Tables
 // ============================================================================
+// Timestamps from here down use `timestamp` (epoch seconds) — see the note on
+// the Better Auth section above before comparing across sections in raw SQL.
 
 export const listings = sqliteTable(
 	'listings',

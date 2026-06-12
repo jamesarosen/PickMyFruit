@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config'
 import solid from 'vite-plugin-solid'
 import path from 'node:path'
+import { loadTestEnv } from './tests/helpers/test-env'
 
 const dbPath = path.resolve(__dirname, 'data', 'test.db')
 
@@ -37,22 +38,13 @@ export default defineConfig({
 						'!tests/vitest-global-setup.ts',
 					],
 					environment: 'node',
-					// loadEnv doesn't work in vitest's jsdom environment, so we
-					// duplicate .env.test values here for test-time injection.
-					// Must stay in sync with baseSchema in env.server.ts and webserver.env in
-					// playwright.config.ts
-					env: {
-						RUN_MIGRATIONS_ON_BOOT: 'false',
-						BETTER_AUTH_SECRET: 'test-secret-do-not-use-in-production-min32chars',
-						BETTER_AUTH_URL: 'http://localhost:5174',
-						DATA_DIR: '/tmp/pmf-test',
+					// Shared values come from .env.test via loadTestEnv; only
+					// runner-specific paths are overridden here.
+					env: loadTestEnv({
 						DATABASE_URL: `file:${dbPath}`,
-						EMAIL_FROM: 'Test <test@example.com>',
-						EMAIL_PROVIDER: 'silent',
-						HMAC_SECRET: 'test-secret-do-not-use-in-production-min32chars',
+						DATA_DIR: '/tmp/pmf-test',
 						NODE_ENV: 'test',
-						STORAGE_PROVIDER: 'local',
-					},
+					}),
 				},
 			},
 			{

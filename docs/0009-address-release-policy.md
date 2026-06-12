@@ -76,8 +76,12 @@ type VerifiedPublicListing = PublicListing & { address; city; state; zip };
 type PrivateListing = OwnerListingView; // full listing + photos
 ```
 
-`listingShapeFor(listing, viewer, photos)` lives in
-`src/data/listing.ts` and returns the right one. The page loader
+`toPublicListing` and `toVerifiedPublicListing` live in
+`src/data/listing.ts`; the loader and the reveal server function branch
+between them explicitly. (An earlier revision of this design called for
+a combined `listingShapeFor(listing, viewer, photos)` dispatcher; it was
+removed once the explicit branching shipped and left it unused.) The
+page loader
 (`getListingForViewer`) keeps its existing behavior — it returns a
 `PublicListing` for `on_verified_request` listings to non-owners, and
 the reveal happens through a separate server function so the address

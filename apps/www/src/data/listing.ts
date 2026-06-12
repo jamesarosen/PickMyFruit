@@ -51,20 +51,6 @@ export type OwnerListingView = Listing & {
 	photos: PublicPhoto[]
 }
 
-/** Owner / steward view of a listing — the most permissive shape. */
-export type PrivateListing = OwnerListingView
-
-/** The minimum viewer information needed to decide which shape to present. */
-export type ListingViewer = {
-	userId: string | null
-	emailVerified: boolean
-}
-
-export type ListingShape =
-	| PublicListing
-	| VerifiedPublicListing
-	| PrivateListing
-
 /**
  * Strips sensitive location fields and coarsens h3Index to neighborhood precision.
  * Returns null if the h3Index is invalid so callers can skip bad rows.
@@ -105,39 +91,4 @@ export function toVerifiedPublicListing(
 	address: RevealedAddress
 ): VerifiedPublicListing {
 	return { ...publicListing, ...address }
-}
-
-/**
- * Picks the listing shape to present to a viewer. Owners always see the
- * private (full) shape. For non-owners, `on_owner_approval` listings stay
- * public (the existing inquiry flow gates address release); verified members
- * looking at `on_verified_request` listings see the address.
- *
- * Returns `null` when the listing cannot be projected (invalid h3 index).
- */
-export function listingShapeFor(
-	listing: Listing,
-	viewer: ListingViewer,
-	photos: PublicPhoto[] = [],
-	onError?: (listingId: number, error: unknown) => void
-): ListingShape | null {
-	if (viewer.userId && viewer.userId === listing.userId) {
-		return { ...listing, photos }
-	}
-	const pub = toPublicListing(listing, photos, onError)
-	if (!pub) return null
-	if (
-		listing.addressReleasePolicy === 'on_verified_request' &&
-		viewer.emailVerified
-	) {
-		return toVerifiedPublicListing(pub, {
-			address: listing.address,
-			city: listing.city,
-			state: listing.state,
-			zip: listing.zip,
-			lat: listing.lat,
-			lng: listing.lng,
-		})
-	}
-	return pub
 }

@@ -29,10 +29,39 @@ We may ask for donations or pursue other revenue streams, but only to further th
 - [SQLite](https://sqlite.org/index.html), running on [Turso](https://turso.tech/) in deployed environments
 - [GitHub Actions](https://docs.github.com/en/actions) for CI/CD
 
+## Development
+
+Prerequisites:
+
+- [Node.js](https://nodejs.org) 24 (e.g. `nvm install 24`; pnpm scripts then use the exact version pinned in `.npmrc`)
+- [pnpm](https://pnpm.io), version pinned in the root `package.json` `packageManager` field — `corepack enable` activates it
+
+First-time setup and running the app:
+
+```sh
+pnpm install
+cd apps/www
+pnpm db:migrate   # create and migrate the local SQLite database
+pnpm dev          # serves http://localhost:5173
+```
+
+Signing in during development uses magic links: with the default `EMAIL_PROVIDER=console`, the link is logged to the dev-server console — look for the log line containing `token:`.
+
+Checks, run from the repo root:
+
+```sh
+pnpm lint
+pnpm typecheck
+pnpm test:run               # unit tests
+bash bin/quality-gate.sh    # everything CI runs (format, lint, typecheck, tests)
+```
+
+E2E tests run with `pnpm test:e2e` from `apps/www`. See [CLAUDE.md](./CLAUDE.md) for the full list of conventions and commands.
+
 ## Credits
 
 - [Jake Trimble](http://jaketrimble.com) for the domain
 
 ## Further Reading
 
-- The [./docs/project-vision.md](Project Vision) has deeper context on goals, values, and operating principles.
+- The [Project Vision](./docs/project-vision.md) has deeper context on goals, values, and operating principles.
