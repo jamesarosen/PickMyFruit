@@ -34,9 +34,7 @@ const GEOCODE_URL =
 /** Nominatim returned an empty result set — user input issue, not a bug. */
 export class GeocodingNotFoundError extends Error {
 	constructor() {
-		super(
-			'Address not found. Please check the address and try again, or enter coordinates manually.'
-		)
+		super('Address not found. Please check the address and try again.')
 		this.name = 'GeocodingNotFoundError'
 	}
 }

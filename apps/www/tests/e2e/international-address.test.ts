@@ -32,7 +32,9 @@ test.describe('International address entry', () => {
 		await page.getByRole('button', { name: 'Share my produce' }).click()
 
 		await expect(page).toHaveURL(/\/listings\/\d+/, { timeout: 10_000 })
-		await expect(page.getByText('Paris, France').first()).toBeVisible()
+		await expect(
+			page.getByText('Paris, Île-de-France, France').first()
+		).toBeVisible()
 
 		// The selection carried its own coordinates — no geocoding round-trip.
 		expect(nominatimMock.callCount).toBe(0)
@@ -53,7 +55,8 @@ test.describe('International address entry', () => {
 		await page.getByRole('button', { name: /enter it manually/i }).click()
 
 		await page.getByLabel(/Street Address/i).fill('1 Rural Lane')
-		await page.getByLabel('City', { exact: true }).fill('Smallville')
+		// Kobalte renders required labels as "City *", so substring-match.
+		await page.getByLabel('City').fill('Smallville')
 		await page.getByLabel(/State \/ Province \/ Region/i).fill('Otago')
 		await page.getByLabel(/Postal code/i).fill('9376')
 		await page.getByLabel('Country', { exact: true }).selectOption('NZ')
@@ -76,6 +79,10 @@ test.describe('International address entry', () => {
 		await loginViaUI(page, testUser)
 		await page.goto('/listings/new')
 
+		// The produce-type combobox renders client-side only; its appearance
+		// signals hydration is complete and the address field's handlers are
+		// attached.
+		await expect(page.locator('.combobox__trigger')).toBeVisible()
 		await page.getByLabel('Address', { exact: true }).fill('Road to Nowhere')
 
 		// The empty result set surfaces the manual-entry affordance inline.

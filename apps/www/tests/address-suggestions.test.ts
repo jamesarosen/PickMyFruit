@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+	addressFieldsToSuggestion,
 	fetchAddressSuggestions,
 	SuggestionsUnavailableError,
 } from '../src/lib/address-suggestions'
@@ -239,6 +240,45 @@ describe('fetchAddressSuggestions — unusable features', () => {
 		const suggestions = await fetchAddressSuggestions('paris')
 		expect(suggestions).toHaveLength(1)
 		expect(suggestions[0].address).toBe('12 Rue de la Paix')
+	})
+})
+
+describe('addressFieldsToSuggestion', () => {
+	it('rebuilds a suggestion from stored listing fields', () => {
+		const suggestion = addressFieldsToSuggestion({
+			address: '456 Oak Avenue',
+			city: 'St. Helena',
+			state: 'CA',
+			zip: '94574',
+			country: 'US',
+			lat: 38.5,
+			lng: -122.47,
+		})
+
+		expect(suggestion).toEqual({
+			label: '456 Oak Avenue, St. Helena, CA, 94574, United States',
+			address: '456 Oak Avenue',
+			city: 'St. Helena',
+			state: 'CA',
+			postcode: '94574',
+			countryCode: 'US',
+			lat: 38.5,
+			lng: -122.47,
+		})
+	})
+
+	it('omits missing region and postal code from the label', () => {
+		const suggestion = addressFieldsToSuggestion({
+			address: '12 Rue de la Paix',
+			city: 'Paris',
+			state: null,
+			zip: null,
+			country: 'FR',
+			lat: 48.8693,
+			lng: 2.3312,
+		})
+
+		expect(suggestion.label).toBe('12 Rue de la Paix, Paris, France')
 	})
 })
 

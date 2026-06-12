@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import type { AddressFields } from '@/data/schema.server'
+import { countryName } from '@/lib/format-location'
 import { Sentry } from '@/lib/sentry'
 
 /** A structured address suggestion with its coordinates. */
@@ -79,14 +81,9 @@ function toSuggestion(feature: PhotonFeature): AddressSuggestion | null {
 
 	if (!p.countrycode) return null
 
-	const labelParts: string[] = []
-	for (const part of [streetLine, locality, p.state, p.postcode, p.country]) {
-		if (part && !labelParts.includes(part)) labelParts.push(part)
-	}
-
 	const [lng, lat] = feature.geometry.coordinates
 	return {
-		label: labelParts.join(', '),
+		label: composeLabel([streetLine, locality, p.state, p.postcode, p.country]),
 		address: streetLine,
 		city: locality,
 		state: p.state ?? null,
@@ -94,6 +91,40 @@ function toSuggestion(feature: PhotonFeature): AddressSuggestion | null {
 		countryCode: p.countrycode.toUpperCase(),
 		lat,
 		lng,
+	}
+}
+
+function composeLabel(parts: Array<string | null | undefined>): string {
+	const labelParts: string[] = []
+	for (const part of parts) {
+		if (part && !labelParts.includes(part)) labelParts.push(part)
+	}
+	return labelParts.join(', ')
+}
+
+/**
+ * Rebuilds a suggestion from a listing's stored address fields, so a
+ * pre-filled address (with its stored coordinates) behaves exactly like a
+ * fresh selection — no new lookup needed.
+ */
+export function addressFieldsToSuggestion(
+	fields: AddressFields
+): AddressSuggestion {
+	return {
+		label: composeLabel([
+			fields.address,
+			fields.city,
+			fields.state,
+			fields.zip,
+			countryName(fields.country),
+		]),
+		address: fields.address,
+		city: fields.city,
+		state: fields.state,
+		postcode: fields.zip,
+		countryCode: fields.country,
+		lat: fields.lat,
+		lng: fields.lng,
 	}
 }
 
