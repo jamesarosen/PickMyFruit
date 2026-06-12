@@ -17,6 +17,7 @@ function makeListing(overrides: Partial<PublicListing> = {}): PublicListing {
 		harvestWindow: 'September-October',
 		city: 'Napa',
 		state: 'CA',
+		country: 'US',
 		approximateH3Index: '872830828ffffff',
 		notes: null,
 		photos: [],

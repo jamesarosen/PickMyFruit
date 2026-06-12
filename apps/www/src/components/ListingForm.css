@@ -54,6 +54,22 @@
 		gap: 16px;
 	}
 
+	/* Link-styled toggle between address autosuggest and manual entry. */
+	.address-mode-toggle {
+		align-self: flex-start;
+		background: none;
+		border: none;
+		color: var(--color-accent);
+		cursor: pointer;
+		font-size: 14px;
+		padding: 0;
+		text-decoration: underline;
+
+		&:hover {
+			color: oklch(from var(--color-accent) 0.65 c h);
+		}
+	}
+
 	/* Readonly input styling */
 	.form-field input[readonly] {
 		background: oklch(from var(--color-quiet) l c h / 0.1);

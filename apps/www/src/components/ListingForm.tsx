@@ -1,12 +1,18 @@
-import { createEffect, createSignal, on, onMount, Show } from 'solid-js'
+import { createEffect, createSignal, For, on, onMount, Show } from 'solid-js'
 import { Link, useNavigate, useRouteContext } from '@tanstack/solid-router'
 import { z } from 'zod'
 import { Input, Textarea } from '@/components/FormField'
 import { createErrorSignal, ErrorMessage } from '@/components/ErrorMessage'
+import AddressAutosuggest from '@/components/AddressAutosuggest'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import ProduceTypeSelector from '@/components/ProduceTypeSelector'
 import type { AddressFields } from '@/data/schema.server'
+import {
+	addressFieldsToSuggestion,
+	type AddressSuggestion,
+} from '@/lib/address-suggestions'
 import { authClient } from '@/lib/auth-client'
+import { countryOptions } from '@/lib/countries'
 import { Sentry } from '@/lib/sentry'
 import { geocodeAddress, GeocodingNotFoundError } from '@/lib/geocoding'
 import { listingFormSchema } from '@/lib/validation'
@@ -40,6 +46,39 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 	const [selectedType, setSelectedType] = createSignal<string>('')
 	const [email, setEmail] = createSignal('')
 	const [emailError, setEmailError] = createSignal<string | null>(null)
+	// A pre-filled address behaves exactly like a fresh selection: it carries
+	// the stored coordinates, so an untouched pre-fill submits without lookup.
+	const [selectedAddress, setSelectedAddress] =
+		createSignal<AddressSuggestion | null>(
+			props.defaultAddress ? addressFieldsToSuggestion(props.defaultAddress) : null
+		)
+	const [manualEntry, setManualEntry] = createSignal(false)
+	const [addressSelectionError, setAddressSelectionError] = createSignal<
+		string | null
+	>(null)
+
+	// Manual entry starts from the picked suggestion when there is one (the
+	// user is likely correcting it), else from the last listing's address.
+	const manualDefaults = () => {
+		const s = selectedAddress()
+		if (s) {
+			return {
+				address: s.address,
+				city: s.city,
+				state: s.state ?? '',
+				zip: s.postcode ?? '',
+				country: s.countryCode,
+			}
+		}
+		const d = props.defaultAddress
+		return {
+			address: d?.address ?? '',
+			city: d?.city ?? '',
+			state: d?.state ?? '',
+			zip: d?.zip ?? '',
+			country: d?.country ?? 'US',
+		}
+	}
 
 	// A produce stand is simply the `produce-stand` produce type. It unlocks the
 	// drop-off option; the address-release policy stays an independent choice.
@@ -92,17 +131,39 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 		if (isSubmitting()) return
 		setSubmitError(null)
 		setFieldErrors({ errors: [] })
+		setAddressSelectionError(null)
 
 		const form = event.target as HTMLFormElement
 		const formData = new FormData(form)
 
+		const selection = manualEntry() ? null : selectedAddress()
+		if (!manualEntry() && !selection) {
+			setAddressSelectionError('Choose a suggested address, or enter it manually.')
+			return
+		}
+
+		// A suggestion carries structured fields and coordinates; manual entry
+		// supplies the fields and is geocoded below.
+		const addressParts = selection
+			? {
+					address: selection.address,
+					city: selection.city,
+					state: selection.state ?? '',
+					zip: selection.postcode ?? '',
+					country: selection.countryCode,
+				}
+			: {
+					address: formData.get('address'),
+					city: formData.get('city'),
+					state: formData.get('state'),
+					zip: formData.get('zip'),
+					country: formData.get('country'),
+				}
+
 		const data = {
 			type: selectedType(),
 			harvestWindow: formData.get('harvestWindow'),
-			address: formData.get('address'),
-			city: formData.get('city'),
-			state: formData.get('state'),
-			zip: formData.get('zip'),
+			...addressParts,
 			notes: formData.get('notes'),
 			addressReleasePolicy: formData.get('addressReleasePolicy') ?? undefined,
 			// Drop-offs only apply to the produce-stand type.
@@ -114,29 +175,44 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 		if (!parsed.success) {
 			const tree = z.treeifyError(parsed.error)
 			setFieldErrors(tree)
-			if (tree.errors.length > 0) setSubmitError(tree.errors.join(' '))
+			const messages = [...tree.errors]
+			if (selection) {
+				// In autosuggest mode these fields have no visible input, so
+				// their errors must surface at the form level or the submit
+				// fails silently.
+				for (const key of ['city', 'state', 'zip', 'country'] as const) {
+					messages.push(...(tree.properties?.[key]?.errors ?? []))
+				}
+			}
+			if (messages.length > 0) setSubmitError(messages.join(' '))
 			return
 		}
 
-		// Geocode before any auth check so failures surface immediately and
-		// the coords are stored in sessionStorage for the unauth round-trip.
+		// Resolve coordinates before any auth check so failures surface
+		// immediately and the coords are stored in sessionStorage for the
+		// unauth round-trip. Manual entry needs a geocoding round-trip; a
+		// suggestion already has its coordinates.
 		setFormState('submitting')
 		let geocoded: { lat: number; lng: number }
-		try {
-			const result = await geocodeAddress(parsed.data)
-			geocoded = {
-				lat: result.lat,
-				lng: result.lng,
+		if (selection) {
+			geocoded = { lat: selection.lat, lng: selection.lng }
+		} else {
+			try {
+				const result = await geocodeAddress(parsed.data)
+				geocoded = {
+					lat: result.lat,
+					lng: result.lng,
+				}
+			} catch (err) {
+				if (err instanceof GeocodingNotFoundError) {
+					setSubmitError(err.message)
+				} else {
+					Sentry.captureException(err)
+					setSubmitError('Could not look up your address. Please try again.')
+				}
+				setFormState('error')
+				return
 			}
-		} catch (err) {
-			if (err instanceof GeocodingNotFoundError) {
-				setSubmitError(err.message)
-			} else {
-				Sentry.captureException(err)
-				setSubmitError('Could not look up your address. Please try again.')
-			}
-			setFormState('error')
-			return
 		}
 
 		const listingData = { ...parsed.data, ...geocoded }
@@ -340,49 +416,101 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 				<fieldset>
 					<legend>Where is it?</legend>
 
-					<Show when={props.defaultAddress?.address}>
+					<Show when={props.defaultAddress?.address && !manualEntry()}>
 						<p class="form-prefill-notice" id="address-prefill-notice">
 							Pre-filled from your last listing. Edit if different.
 						</p>
 					</Show>
 
-					<Input
-						aria-describedby={
-							props.defaultAddress?.address ? 'address-prefill-notice' : undefined
+					<Show
+						when={!manualEntry()}
+						fallback={
+							<>
+								<Input
+									defaultValue={manualDefaults().address}
+									errors={fieldErrors().properties?.address?.errors}
+									hint="Others will see your neighborhood, but not your exact address."
+									label="Street Address"
+									name="address"
+									placeholder="123 Main Street"
+									required
+								/>
+								<Input
+									defaultValue={manualDefaults().city}
+									errors={fieldErrors().properties?.city?.errors}
+									label="City"
+									name="city"
+									required
+								/>
+								<div class="form-row-3">
+									<Input
+										defaultValue={manualDefaults().state}
+										errors={fieldErrors().properties?.state?.errors}
+										label="State / Province / Region"
+										name="state"
+									/>
+									<Input
+										defaultValue={manualDefaults().zip}
+										errors={fieldErrors().properties?.zip?.errors}
+										label="Postal code"
+										name="zip"
+									/>
+									<div class="form-field">
+										<span class="form-field__label">
+											<label for="listing-country">Country</label>
+											&nbsp;
+											<span class="form-field__required" aria-hidden="true">
+												*
+											</span>
+										</span>
+										<select
+											class="form-field__control"
+											id="listing-country"
+											name="country"
+											required
+										>
+											<For each={countryOptions}>
+												{(option) => (
+													<option
+														selected={option.code === manualDefaults().country}
+														value={option.code}
+													>
+														{option.name}
+													</option>
+												)}
+											</For>
+										</select>
+									</div>
+								</div>
+								<button
+									class="address-mode-toggle"
+									onClick={() => setManualEntry(false)}
+									type="button"
+								>
+									Search for the address instead
+								</button>
+							</>
 						}
-						defaultValue={props.defaultAddress?.address ?? ''}
-						errors={fieldErrors().properties?.address?.errors}
-						hint="Others will see your neighborhood, but not your exact address."
-						label="Street Address"
-						name="address"
-						placeholder="123 Main Street"
-						required
-					/>
-
-					<div class="form-row-3">
-						<Input
-							defaultValue={props.defaultAddress?.city ?? 'Napa'}
-							errors={fieldErrors().properties?.city?.errors}
-							label="City"
-							name="city"
-							required
+					>
+						<AddressAutosuggest
+							defaultSelection={selectedAddress()}
+							disabled={isSubmitting()}
+							errors={
+								addressSelectionError()
+									? [addressSelectionError()!]
+									: fieldErrors().properties?.address?.errors
+							}
+							hint="Others will see your neighborhood, but not your exact address."
+							onSelect={setSelectedAddress}
 						/>
-						<Input
-							defaultValue={props.defaultAddress?.state ?? 'CA'}
-							errors={fieldErrors().properties?.state?.errors}
-							label="State"
-							maxlength={2}
-							name="state"
-							required
-						/>
-						<Input
-							defaultValue={props.defaultAddress?.zip ?? ''}
-							errors={fieldErrors().properties?.zip?.errors}
-							label="ZIP"
-							name="zip"
-							placeholder="94558"
-						/>
-					</div>
+						<button
+							class="address-mode-toggle"
+							onClick={() => setManualEntry(true)}
+							type="button"
+						>
+							Can’t find your address? Enter it manually
+						</button>
+					</Show>
 				</fieldset>
 
 				<fieldset class="address-release-fieldset">

@@ -1,15 +1,33 @@
 import { z } from 'zod'
+import { ISO_COUNTRY_CODES } from '@/lib/countries'
 import { produceTypeSlugs, PRODUCE_STAND_SLUG } from '@/lib/produce-types'
 
-const optionalZip = z
+// Postal code formats vary by country — only bound the length.
+const optionalPostalCode = z
 	.preprocess(
 		(val) => (val === '' || val === null ? undefined : val),
-		z
-			.string()
-			.regex(/^\d{5}(-\d{4})?$/, 'Invalid ZIP code')
-			.optional()
+		z.string().max(20, 'Invalid postal code').optional()
 	)
 	.optional()
+
+// Region/state/province line — many jurisdictions have none.
+const optionalRegion = z
+	.preprocess(
+		(val) => (val === '' || val === null ? undefined : val),
+		z.string().max(100).optional()
+	)
+	.optional()
+
+// ISO 3166-1 alpha-2 country code, case-insensitive on input. Checked
+// against the officially assigned codes, not just the two-letter shape.
+const assignedCountryCodes = new Set<string>(ISO_COUNTRY_CODES)
+const countryCode = z.preprocess(
+	(val) => (val === '' || val == null ? undefined : String(val).toUpperCase()),
+	z
+		.string()
+		.refine((code) => assignedCountryCodes.has(code), 'Invalid country')
+		.default('US')
+)
 
 // Coerce null to empty string for required string fields (triggers min(1) error)
 const requiredString = (message: string, max: number = 200) =>
@@ -83,11 +101,9 @@ const listingFormBase = z.object({
 	harvestWindow: requiredString('Harvest window is required', 50),
 	address: requiredString('Address is required', 200),
 	city: requiredString('City is required', 100),
-	state: z.preprocess(
-		(val) => (val === null ? '' : val),
-		z.string().length(2, 'State must be 2 characters')
-	),
-	zip: optionalZip,
+	state: optionalRegion,
+	zip: optionalPostalCode,
+	country: countryCode,
 	notes: z
 		.preprocess(
 			(val) => (val === '' || val === null ? undefined : val),

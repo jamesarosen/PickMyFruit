@@ -2,6 +2,7 @@ import { Link } from '@tanstack/solid-router'
 import { Apple } from 'lucide-solid'
 import { Show } from 'solid-js'
 import { getStatusVariant } from '@/lib/listing-status'
+import { formatListingLocation } from '@/lib/format-location'
 import { PRODUCE_STAND_SLUG } from '@/lib/produce-types'
 import DropOffIndicator from '@/components/DropOffIndicator'
 import '@/components/ListingCard.css'
@@ -10,7 +11,8 @@ export type ListingCardData = {
 	id: number
 	name: string
 	city: string
-	state: string
+	state: string | null
+	country: string
 	photos: { pubUrl: string }[]
 	type?: string | null
 	variety?: string | null
@@ -78,9 +80,7 @@ export default function ListingCard(props: { listing: ListingCardData }) {
 				<Show when={l().quantity}>
 					<p class="listing-card-quantity">Quantity: {l().quantity}</p>
 				</Show>
-				<p class="listing-card-location">
-					{l().city}, {l().state}
-				</p>
+				<p class="listing-card-location">{formatListingLocation(l())}</p>
 				<Show when={l().harvestWindow}>
 					<p class="listing-card-harvest">Harvest: {l().harvestWindow}</p>
 				</Show>

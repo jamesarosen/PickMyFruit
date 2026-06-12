@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { Sentry } from '@/lib/sentry'
+import { countryName } from '@/lib/format-location'
 
 export const geocodingResultSchema = z.object({
 	lat: z.number().gte(-90).lte(90),
@@ -18,22 +19,22 @@ const nominatimResponseSchema = z.object({
 export interface GeocodingInput {
 	address: string
 	city: string
-	state: string
+	state?: string
 	zip?: string
+	/** ISO 3166-1 alpha-2 country code. */
+	country?: string
 }
 
 // Browsers cannot set User-Agent (forbidden header); Nominatim accepts the
 // page Referer for identification (sent automatically) and the email param
 // as an additional contact point per their ToS.
 const GEOCODE_URL =
-	'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&email=help@pickmyfruit.com'
+	'https://nominatim.openstreetmap.org/search?format=json&limit=1&email=help@pickmyfruit.com'
 
 /** Nominatim returned an empty result set — user input issue, not a bug. */
 export class GeocodingNotFoundError extends Error {
 	constructor() {
-		super(
-			'Address not found. Please check the address and try again, or enter coordinates manually.'
-		)
+		super('Address not found. Please check the address and try again.')
 		this.name = 'GeocodingNotFoundError'
 	}
 }
@@ -58,7 +59,10 @@ export class GeocodingResponseError extends Error {
 }
 
 function buildQuery(input: GeocodingInput): string {
-	return [input.address, input.city, input.state, input.zip]
+	// The country goes into the free-form query as a display name —
+	// Nominatim matches "New Zealand" more reliably than "NZ".
+	const country = input.country ? countryName(input.country) : undefined
+	return [input.address, input.city, input.state, input.zip, country]
 		.filter(Boolean)
 		.join(', ')
 }

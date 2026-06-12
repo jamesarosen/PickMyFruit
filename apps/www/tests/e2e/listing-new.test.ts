@@ -1,5 +1,5 @@
 import { test, expect } from './helpers/fixtures'
-import { getMagicLinkToken } from './helpers/test-db'
+import { getMagicLinkToken, getListingLocation } from './helpers/test-db'
 
 test.describe('New Listing', () => {
 	test.describe.configure({ mode: 'serial' })
@@ -7,7 +7,7 @@ test.describe('New Listing', () => {
 	test('unauthenticated user can create a listing via magic-link (token entry)', async ({
 		page,
 		testUser,
-		nominatimMock,
+		photonMock,
 	}) => {
 		// Arrive unauthenticated — cookies cleared by context fixture
 		await page.goto('/listings/new')
@@ -26,9 +26,12 @@ test.describe('New Listing', () => {
 		await page.locator('.combobox__trigger').click()
 		await page.locator('.combobox__item').filter({ hasText: 'Avocado' }).click()
 
-		// Other required fields (City and State default to 'Napa' / 'CA')
 		await page.getByLabel(/When to Pick/i).fill('July–September')
-		await page.getByLabel(/Street Address/i).fill('400 School St')
+
+		// Pick an address from the autosuggest — the selection carries the
+		// coordinates that previously came from a submit-time geocode.
+		await page.getByLabel('Address', { exact: true }).fill('400 School St')
+		await page.getByRole('option', { name: /School Street/ }).click()
 
 		// Submit — should trigger magic-link request, not show "Authentication required"
 		const magicLinkResponse = page.waitForResponse((resp) =>
@@ -37,9 +40,9 @@ test.describe('New Listing', () => {
 		await page.getByRole('button', { name: 'Share my produce' }).click()
 		await magicLinkResponse
 
-		// The form must geocode before triggering magic-link auth — guards
-		// against a regression where the request bypasses Nominatim entirely.
-		expect(nominatimMock.callCount).toBeGreaterThan(0)
+		// The address must resolve to coordinates before magic-link auth —
+		// guards against a regression where the request bypasses the lookup.
+		expect(photonMock.callCount).toBeGreaterThan(0)
 
 		// Magic-link waiting UI
 		await expect(
@@ -56,5 +59,17 @@ test.describe('New Listing', () => {
 
 		// Listing created — navigated to detail page
 		await expect(page).toHaveURL(/\/listings\/\d+/, { timeout: 10_000 })
+
+		// The stored coordinates must be the ones the suggestion supplied —
+		// guards against submit ignoring the selection and sending garbage.
+		const listingId = Number(page.url().match(/\/listings\/(\d+)/)![1])
+		const stored = await getListingLocation(listingId)
+		const served = photonMock.resultFor('400 School St')
+		expect(stored).toBeDefined()
+		expect(served).toBeDefined()
+		expect(stored!.lat).toBeCloseTo(served!.lat, 5)
+		expect(stored!.lng).toBeCloseTo(served!.lng, 5)
+		expect(stored!.city).toBe('Napa')
+		expect(stored!.country).toBe('US')
 	})
 })

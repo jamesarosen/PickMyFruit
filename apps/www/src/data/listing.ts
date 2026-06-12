@@ -29,8 +29,10 @@ export type PublicListing = Omit<
 export type RevealedAddress = {
 	address: string
 	city: string
-	state: string
+	state: string | null
 	zip: string | null
+	/** ISO 3166-1 alpha-2 country code. */
+	country: string
 	lat: number
 	lng: number
 }
@@ -177,6 +179,7 @@ export function listingShapeFor(
 				city: listing.city,
 				state: listing.state,
 				zip: listing.zip,
+				country: listing.country,
 				lat: listing.lat,
 				lng: listing.lng,
 			},

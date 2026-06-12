@@ -309,6 +309,7 @@ export const revealListingAddress = createServerFn({ method: 'POST' })
 					city: listing.city,
 					state: listing.state,
 					zip: listing.zip,
+					country: listing.country,
 					lat: listing.lat,
 					lng: listing.lng,
 				},

@@ -35,8 +35,8 @@ function makeNominatimResponse(lat: number, lng: number): string {
 	return JSON.stringify([{ lat: String(lat), lon: String(lng) }])
 }
 
-function mockFetch(body: string, status = 200): void {
-	vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+function mockFetch(body: string, status = 200): ReturnType<typeof vi.spyOn> {
+	return vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
 		new Response(body, {
 			status,
 			headers: { 'Content-Type': 'application/json' },
@@ -68,6 +68,49 @@ describe('geocodeAddress — happy path', () => {
 
 		expect(result.lat).toBeCloseTo(lat)
 		expect(result.lng).toBeCloseTo(lng)
+	})
+})
+
+describe('geocodeAddress — international queries', () => {
+	it('does not restrict results to a fixed country', async () => {
+		const spy = mockFetch(makeNominatimResponse(48.8693, 2.3312))
+
+		await geocodeAddress({ address: '12 Rue de la Paix', city: 'Paris' })
+
+		const url = new URL(spy.mock.calls[0][0] as string)
+		expect(url.searchParams.get('countrycodes')).toBeNull()
+	})
+
+	it('includes the country name in the free-form query', async () => {
+		const spy = mockFetch(makeNominatimResponse(-45.0302, 168.6626))
+
+		await geocodeAddress({
+			address: '1 Rural Lane',
+			city: 'Smallville',
+			state: 'Otago',
+			zip: '9376',
+			country: 'NZ',
+		})
+
+		const url = new URL(spy.mock.calls[0][0] as string)
+		expect(url.searchParams.get('q')).toBe(
+			'1 Rural Lane, Smallville, Otago, 9376, New Zealand'
+		)
+	})
+
+	it('omits the state and zip parts when absent', async () => {
+		const spy = mockFetch(makeNominatimResponse(1.29, 103.85))
+
+		await geocodeAddress({
+			address: '10 Bayfront Ave',
+			city: 'Singapore',
+			country: 'SG',
+		})
+
+		const url = new URL(spy.mock.calls[0][0] as string)
+		expect(url.searchParams.get('q')).toBe(
+			'10 Bayfront Ave, Singapore, Singapore'
+		)
 	})
 })
 

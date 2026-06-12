@@ -27,6 +27,7 @@ import {
 	type AddressReleasePolicyValue,
 	type ListingStatusValue,
 } from '@/lib/validation'
+import { countryName, formatListingLocation } from '@/lib/format-location'
 import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
 import { PRODUCE_STAND_SLUG } from '@/lib/produce-types'
 import { buildListingMeta } from '@/lib/listing-meta'
@@ -751,9 +752,7 @@ function OwnerEditableFields(props: {
 			{/* TODO: changing location requires re-geocoding the address; leave as
 			    read-only until we build that flow. */}
 			<ListingDetailField label="Location">
-				<span>
-					{props.listing.city}, {props.listing.state}
-				</span>
+				<span>{formatListingLocation(props.listing)}</span>
 			</ListingDetailField>
 
 			<div class="listing-detail-field listing-detail-field--visibility">
@@ -899,9 +898,12 @@ function AddressRevealSection(props: {
 						<address class="address-reveal__address" data-testid="revealed-address">
 							<div>{revealed().address}</div>
 							<div>
-								{revealed().city}, {revealed().state}{' '}
-								<Show when={revealed().zip}>{revealed().zip}</Show>
+								{[revealed().city, revealed().state].filter(Boolean).join(', ')}
+								<Show when={revealed().zip}> {revealed().zip}</Show>
 							</div>
+							<Show when={revealed().country !== 'US'}>
+								<div>{countryName(revealed().country)}</div>
+							</Show>
 						</address>
 						<Show when={revealed().stewardName}>
 							{(name) => (
@@ -1101,9 +1103,7 @@ function ListingDetailPage() {
 									</Show>
 
 									<ListingDetailField label="Location">
-										<span>
-											{l().city}, {l().state}
-										</span>
+										<span>{formatListingLocation(l())}</span>
 									</ListingDetailField>
 
 									<Show when={l().type === PRODUCE_STAND_SLUG}>

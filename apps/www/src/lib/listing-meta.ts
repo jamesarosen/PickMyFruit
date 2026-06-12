@@ -1,4 +1,5 @@
 import { produceTypes } from '@/lib/produce-types'
+import { formatListingLocation } from '@/lib/format-location'
 
 /**
  * Open Graph / Twitter title and description for a listing detail page. Kept
@@ -15,7 +16,9 @@ export interface ListingMeta {
 export interface ListingMetaInput {
 	type: string
 	city: string
-	state: string
+	state: string | null
+	/** ISO 3166-1 alpha-2 country code. */
+	country: string
 	variety?: string | null
 }
 
@@ -33,8 +36,8 @@ export function buildListingMeta(
 	const title = `Pick My ${produce.namePluralTitleCase}`
 
 	const varietyPhrase = listing.variety ? `${listing.variety} ` : ''
-	const location =
-		listing.city && listing.state ? ` in ${listing.city}, ${listing.state}` : ''
+	const locationLine = listing.city ? formatListingLocation(listing) : ''
+	const location = locationLine ? ` in ${locationLine}` : ''
 	const description = `Fresh ${varietyPhrase}${produce.namePluralSentenceCase} ready to share${location}. Claim them before they go to waste.`
 
 	return { title, description }

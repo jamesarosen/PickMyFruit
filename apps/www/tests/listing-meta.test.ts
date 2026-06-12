@@ -16,12 +16,22 @@ describe('buildListingMeta', () => {
 
 	it('returns undefined for an unknown produce slug', () => {
 		expect(
-			buildListingMeta({ type: 'unicorn-fruit', city: 'Napa', state: 'CA' })
+			buildListingMeta({
+				type: 'unicorn-fruit',
+				city: 'Napa',
+				state: 'CA',
+				country: 'US',
+			})
 		).toBeUndefined()
 	})
 
 	it('titlecases the plural form in the title', () => {
-		const meta = buildListingMeta({ type: 'apple', city: 'Napa', state: 'CA' })
+		const meta = buildListingMeta({
+			type: 'apple',
+			city: 'Napa',
+			state: 'CA',
+			country: 'US',
+		})
 		expect(meta?.title).toBe('Pick My Apples')
 	})
 
@@ -30,13 +40,19 @@ describe('buildListingMeta', () => {
 			type: 'raspberry',
 			city: 'Napa',
 			state: 'CA',
+			country: 'US',
 		})
 		expect(meta?.description).toContain('raspberries')
 		expect(meta?.description).toContain('Napa, CA')
 	})
 
 	it('handles produce whose plural equals singular (mass nouns)', () => {
-		const meta = buildListingMeta({ type: 'garlic', city: 'Napa', state: 'CA' })
+		const meta = buildListingMeta({
+			type: 'garlic',
+			city: 'Napa',
+			state: 'CA',
+			country: 'US',
+		})
 		expect(meta?.title).toBe('Pick My Garlic')
 		expect(meta?.description).toMatch(/^Fresh garlic ready to share/)
 	})
@@ -47,6 +63,7 @@ describe('buildListingMeta', () => {
 			variety: 'Honeycrisp',
 			city: 'Napa',
 			state: 'CA',
+			country: 'US',
 		})
 		expect(meta?.description).toContain('Honeycrisp apples')
 	})
@@ -57,6 +74,7 @@ describe('buildListingMeta', () => {
 			variety: null,
 			city: 'Napa',
 			state: 'CA',
+			country: 'US',
 		})
 		expect(meta?.description).not.toMatch(/null|undefined/)
 		expect(meta?.description).toMatch(/^Fresh apples/)
@@ -69,6 +87,7 @@ describe('buildListingMeta', () => {
 				type: slug,
 				city: 'Napa',
 				state: 'CA',
+				country: 'US',
 			})
 			expect(meta).toBeDefined()
 			expect(meta!.title.length).toBeLessThanOrEqual(TITLE_MAX)

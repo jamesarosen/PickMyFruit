@@ -20,6 +20,7 @@ function buildCspDirectives(extraImgSrc: string[]): string[] {
 			"connect-src 'self'",
 			'https://*.openfreemap.org',
 			'https://nominatim.openstreetmap.org',
+			'https://photon.komoot.io',
 			'https://*.sentry.io',
 		].join(' '),
 		// MapLibre GL uses blob: URLs for web workers
