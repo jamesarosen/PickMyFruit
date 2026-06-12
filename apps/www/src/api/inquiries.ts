@@ -3,6 +3,13 @@ import { inquiryFormSchema, ListingStatus } from '@/lib/validation'
 import { errorMiddleware, UserError } from '@/lib/server-error-middleware'
 import { displayName } from '@/lib/display-name'
 
+/**
+ * Cap on inquiries per user per trailing 24h, across all listings. The
+ * per-listing gate (hasRecentInquiry) cannot stop one account from spamming
+ * every listing in an area; each inquiry emails a real person.
+ */
+export const MAX_INQUIRIES_PER_DAY = 10
+
 export const submitInquiry = createServerFn({ method: 'POST' })
 	.middleware([errorMiddleware])
 	.inputValidator((data: { listingId: number; note?: string }) =>
@@ -18,8 +25,12 @@ export const submitInquiry = createServerFn({ method: 'POST' })
 			throw new UserError('AUTH_REQUIRED', 'Authentication required')
 		}
 
-		const { hasRecentInquiry, getListingWithOwner, getUserById } =
-			await import('@/data/queries.server')
+		const {
+			countRecentInquiriesByUser,
+			hasRecentInquiry,
+			getListingWithOwner,
+			getUserById,
+		} = await import('@/data/queries.server')
 
 		const result = await getListingWithOwner(listingId)
 		if (!result) {
@@ -47,6 +58,14 @@ export const submitInquiry = createServerFn({ method: 'POST' })
 			throw new UserError(
 				'RATE_LIMITED',
 				'You have already contacted this owner recently. Please wait 24 hours before trying again.'
+			)
+		}
+
+		const recentCount = await countRecentInquiriesByUser(session.user.id)
+		if (recentCount >= MAX_INQUIRIES_PER_DAY) {
+			throw new UserError(
+				'RATE_LIMITED',
+				'You have reached the daily limit for produce requests. Please try again tomorrow.'
 			)
 		}
 

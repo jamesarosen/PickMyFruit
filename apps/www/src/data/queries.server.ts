@@ -474,6 +474,28 @@ export async function hasRecentInquiry(
 	)
 }
 
+/** Counts inquiries this user submitted across all listings in the trailing 24 hours. */
+export async function countRecentInquiriesByUser(
+	gleanerId: string
+): Promise<number> {
+	return Sentry.startSpan(
+		{ name: 'countRecentInquiriesByUser', op: 'db.query' },
+		async () => {
+			const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+			const result = await db
+				.select({ count: sql<number>`COUNT(*)` })
+				.from(inquiries)
+				.where(
+					and(
+						eq(inquiries.gleanerId, gleanerId),
+						gt(inquiries.createdAt, twentyFourHoursAgo)
+					)
+				)
+			return result[0]?.count ?? 0
+		}
+	)
+}
+
 export async function getListingWithOwner(id: number): Promise<
 	| {
 			listing: Listing

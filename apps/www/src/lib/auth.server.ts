@@ -9,6 +9,18 @@ import { logger } from './logger.server'
 import { escapeHtml } from './html-escape.server'
 import { profileNameSchema } from './validation'
 import { Sentry } from './sentry'
+import { createSlidingWindowLimiter } from './rate-limit.server'
+
+/**
+ * Per-address cap on magic-link emails. IP throttling alone cannot stop a
+ * distributed attacker from flooding one inbox and draining the Resend
+ * quota. Enforced only on the resend path so local and E2E sign-ins (which
+ * use the console/silent providers) stay unthrottled.
+ */
+const magicLinkEmailLimiter = createSlidingWindowLimiter({
+	windowMs: 15 * 60 * 1000,
+	max: 5,
+})
 
 const sendMagicLinkEmail = async ({
 	email,
@@ -27,6 +39,14 @@ const sendMagicLinkEmail = async ({
 	}
 
 	if (serverEnv.email.PROVIDER === 'resend') {
+		if (!magicLinkEmailLimiter.attempt(email.toLowerCase())) {
+			logger.warn({ email }, 'Magic link send throttled for address')
+			throw new APIError('TOO_MANY_REQUESTS', {
+				message:
+					'Too many sign-in links have been requested for this address. Please try again later.',
+			})
+		}
+
 		const { Resend } = await import('resend')
 		const resend = new Resend(serverEnv.email.RESEND_API_KEY)
 
@@ -156,6 +176,29 @@ export const auth = betterAuth({
 	session: {
 		expiresIn: 60 * 60 * 24 * 7, // 7 days
 		updateAge: 60 * 60 * 24, // Update session every 24 hours
+	},
+	rateLimit: {
+		// Better Auth enables rate limiting in production only, so local and
+		// E2E sign-ins stay unthrottled. Counters are in-memory, matching the
+		// single-VM deployment. These per-path rules tighten the
+		// abuse-sensitive magic-link endpoints; every other path keeps the
+		// library default (100 requests per 10s per IP).
+		customRules: {
+			// Each request dispatches an email — throttle hard per IP. The
+			// per-address limiter in sendMagicLinkEmail covers distributed
+			// senders targeting one inbox.
+			'/sign-in/magic-link': { window: 60, max: 3 },
+			// Throttles token guessing; legitimate users verify once per sign-in.
+			'/magic-link/verify': { window: 60, max: 10 },
+		},
+	},
+	advanced: {
+		ipAddress: {
+			// Behind Fly's proxy every socket peer is the proxy itself;
+			// fly-client-ip carries the real client. x-forwarded-for covers
+			// other reverse proxies (e.g. local docker).
+			ipAddressHeaders: ['fly-client-ip', 'x-forwarded-for'],
+		},
 	},
 })
 
