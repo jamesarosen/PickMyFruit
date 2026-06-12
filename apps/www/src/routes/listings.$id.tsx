@@ -17,6 +17,7 @@ import { ListingDetailField } from '@/components/ListingDetailField'
 import {
 	ADDRESS_RELEASE_OPTIONS,
 	addressReleaseSemanticColor,
+	getStatusLabel,
 	getStatusVariant,
 	VISIBILITY_OPTIONS,
 	statusSemanticColor,
@@ -1023,7 +1024,7 @@ function ListingDetailPage() {
 								<header class="listing-detail-header">
 									<h1>{displayTitle()}</h1>
 									<span class={`badge badge--${getStatusVariant(l().status)}`}>
-										{l().status}
+										{getStatusLabel(l().status)}
 									</span>
 								</header>
 							</Show>

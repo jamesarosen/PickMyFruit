@@ -15,7 +15,7 @@ function PrivacyPage() {
 			<main id="main-content">
 				<div class="container privacy-policy">
 					<h1>Privacy Policy</h1>
-					<p class="effective-date">Effective date: March 7, 2026</p>
+					<p class="effective-date">Effective date: June 12, 2026</p>
 
 					<p>
 						Pick My Fruit ("we", "us", or "our") operates pickmyfruit.com. This policy
@@ -56,11 +56,22 @@ function PrivacyPage() {
 							</strong>
 						</p>
 						<p>
-							Your precise address is shared with another user only if you explicitly
-							choose to share it — for example, when you agree to a pick-up and decide
-							to reveal your door-step location. We will always ask for your permission
-							before disclosing anything more specific than your approximate area.
+							When and how your precise address is shared depends on the sharing
+							setting you choose for each listing:
 						</p>
+						<ul>
+							<li>
+								<strong>Approve each request</strong> (the default) — your address is
+								shared with a requester only after you approve their request.
+							</li>
+							<li>
+								<strong>Share with verified members</strong> — any signed-in member with
+								a verified email address can view the address without asking you first.
+								Choose this only if you are comfortable treating the location as
+								effectively public. We keep a record of each time the address is viewed
+								this way.
+							</li>
+						</ul>
 					</section>
 
 					<section>

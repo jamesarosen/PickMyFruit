@@ -85,7 +85,7 @@ CREATE INDEX inquiry_gleaner_id_idx ON inquiries(gleaner_id);
 | File | Changes |
 |------|---------|
 | `src/data/schema.ts` | Add `inquiries` table, add `deletedAt` to plants, export types |
-| `src/data/queries.ts` | Add inquiry queries, update status filter to `active`, add soft delete check |
+| `src/data/queries.server.ts` | Add inquiry queries, update status filter to `active`, add soft delete check |
 | `src/lib/validation.ts` | Add `inquiryFormSchema`, `updateListingStatusSchema` |
 | `src/routes/garden/mine.tsx` | Add status toggle button, update status badge classes |
 | `src/routes/garden/mine.css` | Add styles for new status values and toggle button |
@@ -94,7 +94,7 @@ CREATE INDEX inquiry_gleaner_id_idx ON inquiries(gleaner_id);
 
 ---
 
-## Query Functions (`src/data/queries.ts`)
+## Query Functions (`src/data/queries.server.ts`)
 
 ### New Functions
 
@@ -484,7 +484,7 @@ Make plant cards clickable:
 ### Phase 1: Database Layer (atomic - deploy together)
 1. Update `src/data/schema.ts` - add inquiries table, add deletedAt to plants
 2. Create migration `drizzle/0003_add_inquiries.sql`
-3. Update `src/data/queries.ts` - all query changes (status filter, soft delete, new functions)
+3. Update `src/data/queries.server.ts` - all query changes (status filter, soft delete, new functions)
 4. Run migration, then deploy code
 
 ### Phase 2: Utilities

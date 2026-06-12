@@ -35,5 +35,13 @@ export const migrationsReady = runMigrations().then(async () => {
 		registerShutdown()
 	} catch (err) {
 		Sentry.captureException(err)
+		// Rethrow so bootReadyMiddleware fails every request (including the Fly
+		// health check) with a 503 instead of serving traffic with a dead
+		// workflow runtime that would enqueue inquiries nobody processes.
+		throw err
 	}
 })
+
+// Pre-attach a handler so a boot failure before the first request doesn't
+// crash the process as an unhandled rejection; awaiters still see the error.
+void migrationsReady.catch(() => {})

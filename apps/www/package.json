@@ -26,7 +26,7 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:push": "drizzle-kit push",
-		"db:seed": "vite-node src/data/seed.ts",
+		"db:seed": "vite-node src/data/seed.server.ts",
 		"deploy": "fly deploy",
 		"deploy:setup": "fly launch --no-deploy",
 		"logs": "fly logs",
