@@ -80,8 +80,24 @@
 		outline-offset: 2px;
 	}
 
-	.address-release-option input[type='radio'] {
+	.address-release-option input[type='radio'],
+	.address-release-option input[type='checkbox'] {
 		margin-top: 4px;
+	}
+
+	.stand-fieldset {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.stand-restriction {
+		font-size: 14px;
+		color: var(--color-quiet);
+		margin: 0;
+		padding: 12px 16px;
+		border-radius: 8px;
+		background: oklch(from var(--color-accent) l c h / 0.06);
 	}
 
 	/* The label-level focus-within ring (above) replaces the native one. */

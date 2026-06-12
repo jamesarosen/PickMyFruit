@@ -546,6 +546,7 @@ export async function updateListingById(
 		quantity?: string | null
 		notes?: string | null
 		addressReleasePolicy?: AddressReleasePolicyValue
+		acceptsDropOffs?: boolean
 	}
 ): Promise<UpdateListingResult> {
 	return Sentry.startSpan(

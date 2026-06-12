@@ -159,15 +159,21 @@ broader reveal-path errors.
   Anonymous and unverified-email viewers see a gated message instead of
   the address.
 
+## Follow-up
+
+The Community Produce Stand built on this mechanism ships in
+[0010](./0010-community-produce-stands.md): the `produce-stand` produce type,
+two-way drop-offs, and the gated steward identity. The address-release policy
+is **orthogonal** to the stand type — a stand may use either policy.
+
 ## Future work (held in the Community Produce Stand plan)
 
 - `community-produce-stand` listing kind + preset
   (`on_verified_request` + drop-offs + steward).
-- `accepts_drop_offs` column + `intent` (`take` / `dropoff`) on
-  `address_reveals`.
+- `accepts_drop_offs` column on `listings`.
 - Raw-whole-produce restriction + ToS clause; steward-required
   validation.
 - Same-map "instant vs. owner responds" expectation cue.
-- `last_stocked_at` liquidity signal — kokoto workflow seeded by
-  reveals/intent.
+- `last_stocked_at` liquidity signal — seeded by a confirmed-drop-off
+  signal, not a reveal click.
 - Drop-off suggestion N days after a non-stand listing is created.

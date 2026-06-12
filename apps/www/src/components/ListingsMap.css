@@ -7,6 +7,21 @@
 		border: 1px solid oklch(from var(--color-quiet) l calc(c * 0.2) h);
 	}
 
+	/* Distinct marker for community produce stands (Lucide Store icon). */
+	.stand-marker {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 30px;
+		height: 30px;
+		border-radius: 50%;
+		background: var(--color-fig, #8b5a8e);
+		color: #ffffff;
+		border: 2px solid #ffffff;
+		box-shadow: 0 1px 3px oklch(0 0 0 / 0.3);
+		cursor: pointer;
+	}
+
 	@media (max-width: 768px) {
 		.listings-map {
 			height: 250px;

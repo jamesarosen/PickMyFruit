@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { produceTypeSlugs } from '@/lib/produce-types'
+import { produceTypeSlugs, PRODUCE_STAND_SLUG } from '@/lib/produce-types'
 
 const optionalZip = z
 	.preprocess(
@@ -32,8 +32,46 @@ const addressReleasePolicyValues = Object.values(AddressReleasePolicy) as [
 	...AddressReleasePolicyValue[],
 ]
 
+// Coerce checkbox/string/number inputs into a boolean.
+const coercedBoolean = z.preprocess((val) => {
+	if (typeof val === 'boolean') return val
+	if (val === 'true' || val === 'on' || val === 1 || val === '1') return true
+	if (
+		val === 'false' ||
+		val === 'off' ||
+		val === 0 ||
+		val === '0' ||
+		val == null
+	)
+		return false
+	return val
+}, z.boolean())
+
+/**
+ * Cross-field rule for the produce-stand type: because anyone can drop produce
+ * at a stand, the steward must acknowledge the raw-whole-produce restriction.
+ * Keyed on the `produce-stand` produce type — the address-release policy is
+ * orthogonal and not involved.
+ *
+ * Shared by the form and the API schemas so both boundaries enforce the same
+ * invariant.
+ */
+function refineStandPreset(
+	data: { type: string; acceptsDropOffs: boolean; tosAcknowledged: boolean },
+	ctx: z.RefinementCtx
+) {
+	if (data.type !== PRODUCE_STAND_SLUG) return
+	if (data.acceptsDropOffs && !data.tosAcknowledged) {
+		ctx.addIssue({
+			code: 'custom',
+			path: ['tosAcknowledged'],
+			message: 'Please acknowledge the produce-stand restrictions to continue.',
+		})
+	}
+}
+
 // Schema for form input (before geocoding)
-export const listingFormSchema = z.object({
+const listingFormBase = z.object({
 	type: z.preprocess(
 		(val) => (val === null ? '' : val),
 		z
@@ -59,15 +97,21 @@ export const listingFormSchema = z.object({
 	addressReleasePolicy: z
 		.enum(addressReleasePolicyValues)
 		.default(AddressReleasePolicy.onOwnerApproval),
+	acceptsDropOffs: coercedBoolean.default(false),
+	tosAcknowledged: coercedBoolean.default(false),
 })
+
+export const listingFormSchema = listingFormBase.superRefine(refineStandPreset)
 
 export type ListingFormData = z.infer<typeof listingFormSchema>
 
 // Schema for API input (with geocoded data)
-export const createListingSchema = listingFormSchema.extend({
-	lat: z.number().gte(-90).lte(90),
-	lng: z.number().gte(-180).lte(180),
-})
+export const createListingSchema = listingFormBase
+	.extend({
+		lat: z.number().gte(-90).lte(90),
+		lng: z.number().gte(-180).lte(180),
+	})
+	.superRefine(refineStandPreset)
 
 export type CreateListingData = z.infer<typeof createListingSchema>
 
@@ -123,6 +167,7 @@ export const updateListingSchema = z
 		quantity: z.string().max(100).nullable().optional(),
 		notes: z.string().max(1000).nullable().optional(),
 		addressReleasePolicy: z.enum(addressReleasePolicyValues).optional(),
+		acceptsDropOffs: coercedBoolean.optional(),
 	})
 	.refine(
 		(d) =>
@@ -134,6 +179,7 @@ export const updateListingSchema = z
 				d.quantity,
 				d.notes,
 				d.addressReleasePolicy,
+				d.acceptsDropOffs,
 			].some((v) => v !== undefined),
 		{ message: 'At least one field must be updated' }
 	)

@@ -27,6 +27,7 @@ function makeListing(overrides: Partial<Listing> = {}): Listing {
 		notes: null,
 		accessInstructions: 'Ring doorbell',
 		addressReleasePolicy: 'on_owner_approval',
+		acceptsDropOffs: false,
 		deletedAt: null,
 		createdAt: new Date(),
 		updatedAt: new Date(),
@@ -164,5 +165,66 @@ describe('listingShapeFor', () => {
 		const listing = makeListing({ h3Index: 'not-a-real-h3' })
 		const shape = listingShapeFor(listing, ANON)
 		expect(shape).toBeNull()
+	})
+
+	describe('community produce stand — drop-off fields and gated steward name', () => {
+		function makeStand(overrides: Partial<Listing> = {}): Listing {
+			return makeListing({
+				type: 'produce-stand',
+				acceptsDropOffs: true,
+				addressReleasePolicy: 'on_verified_request',
+				...overrides,
+			})
+		}
+
+		it('verified viewer sees acceptsDropOffs, dropOffGuidance, and stewardName', () => {
+			const stand = makeStand()
+			const shape = listingShapeFor(stand, VERIFIED, [], undefined, 'Pat Steward')!
+
+			expect(shape).toHaveProperty('acceptsDropOffs', true)
+			expect(shape).toHaveProperty('dropOffGuidance')
+			expect((shape as { dropOffGuidance?: string }).dropOffGuidance).toMatch(
+				/raw, whole, uncut/i
+			)
+			expect(shape).toHaveProperty('stewardName', 'Pat Steward')
+		})
+
+		it('stewardName is absent from the Public shape (anonymous viewer)', () => {
+			const stand = makeStand()
+			const shape = listingShapeFor(stand, ANON, [], undefined, 'Pat Steward')!
+
+			// Security boundary: the steward's name must never reach an
+			// unauthorized payload — this is a data-shape guarantee, not CSS.
+			expect(shape).not.toHaveProperty('stewardName')
+			expect(shape).not.toHaveProperty('address')
+			// type / acceptsDropOffs are public so the stand is discoverable as one.
+			expect(shape).toHaveProperty('type', 'produce-stand')
+			expect(shape).toHaveProperty('acceptsDropOffs', true)
+		})
+
+		it('stewardName is absent for an unverified member', () => {
+			const stand = makeStand()
+			const shape = listingShapeFor(
+				stand,
+				UNVERIFIED,
+				[],
+				undefined,
+				'Pat Steward'
+			)!
+			expect(shape).not.toHaveProperty('stewardName')
+		})
+
+		it('owner sees their own stewardName when supplied', () => {
+			const stand = makeStand()
+			const shape = listingShapeFor(stand, OWNER, [], undefined, 'Pat Steward')!
+			expect(shape).toHaveProperty('stewardName', 'Pat Steward')
+		})
+
+		it('omits dropOffGuidance for a take-only stand', () => {
+			const stand = makeStand({ acceptsDropOffs: false })
+			const shape = listingShapeFor(stand, VERIFIED, [], undefined, 'Pat Steward')!
+			expect(shape).not.toHaveProperty('dropOffGuidance')
+			expect(shape).toHaveProperty('acceptsDropOffs', false)
+		})
 	})
 })

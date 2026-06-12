@@ -5,6 +5,7 @@ import { errorMiddleware, UserError } from '@/lib/server-error-middleware'
 import { NotFoundError } from '@/lib/user-error'
 import { Sentry } from '@/lib/sentry'
 import { updateListingSchema } from '@/lib/validation'
+import { PRODUCE_STAND_SLUG } from '@/lib/produce-types'
 import type { AddressFields, Listing } from '@/data/schema.server'
 import type { OwnerListingView, VerifiedPublicListing } from '@/data/listing'
 
@@ -139,7 +140,7 @@ export type RevealAddressResult =
  */
 export const revealListingAddress = createServerFn({ method: 'POST' })
 	.middleware([errorMiddleware])
-	.inputValidator((id: unknown) => listingIdParamSchema.parse(id))
+	.inputValidator((data: unknown) => listingIdParamSchema.parse(data))
 	.handler(async ({ data: id }): Promise<RevealAddressResult> => {
 		const headers = getRequestHeaders()
 		const { auth } = await import('@/lib/auth.server')
@@ -147,13 +148,14 @@ export const revealListingAddress = createServerFn({ method: 'POST' })
 
 		const session = await auth.api.getSession({ headers })
 
-		const { getListingById, getPhotosForListing, recordAddressReveal } =
+		const { getListingWithOwner, getPhotosForListing, recordAddressReveal } =
 			await import('@/data/queries.server')
 		const { toPublicListing, toVerifiedPublicListing } =
 			await import('@/data/listing')
 
-		const listing = await getListingById(id)
-		if (!listing) throw new NotFoundError('Listing not found')
+		const withOwner = await getListingWithOwner(id)
+		if (!withOwner) throw new NotFoundError('Listing not found')
+		const { listing, owner } = withOwner
 
 		// Owners would never hit this path from the UI, but if they do, do not
 		// record a reveal for themselves — return the address directly via the
@@ -293,16 +295,25 @@ export const revealListingAddress = createServerFn({ method: 'POST' })
 			'address reveal: address released'
 		)
 
+		// Steward identity is gated exactly like the address: only stands carry
+		// the "Maintained by {name}" trust signal, and only verified/owner
+		// viewers reach this branch.
+		const isStand = listing.type === PRODUCE_STAND_SLUG
+
 		return {
 			tag: 'revealed',
-			listing: toVerifiedPublicListing(pub, {
-				address: listing.address,
-				city: listing.city,
-				state: listing.state,
-				zip: listing.zip,
-				lat: listing.lat,
-				lng: listing.lng,
-			}),
+			listing: toVerifiedPublicListing(
+				pub,
+				{
+					address: listing.address,
+					city: listing.city,
+					state: listing.state,
+					zip: listing.zip,
+					lat: listing.lat,
+					lng: listing.lng,
+				},
+				isStand ? { stewardName: owner.name } : {}
+			),
 		}
 	})
 

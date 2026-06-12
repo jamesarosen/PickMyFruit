@@ -5,7 +5,11 @@ import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import { authClient } from '@/lib/auth-client'
 import { displayName } from '@/lib/display-name'
 import { Sentry } from '@/lib/sentry'
-import { produceTypes } from '@/lib/produce-types'
+import {
+	produceTypeBySlug,
+	inquiryDesire,
+	PRODUCE_STAND_SLUG,
+} from '@/lib/produce-types'
 import { Input, Textarea } from './FormField'
 import '@/components/InquiryForm.css'
 import { createErrorSignal, ErrorMessage } from './ErrorMessage'
@@ -28,9 +32,18 @@ type FormState =
 const PENDING_INQUIRY_KEY = 'pendingInquiry'
 
 export default function InquiryForm(props: InquiryFormProps) {
+	const isStand = () => props.listingType === PRODUCE_STAND_SLUG
 	const plural = () =>
-		produceTypes.find((t) => t.slug === props.listingType)
-			?.namePluralSentenceCase ?? props.listingType
+		produceTypeBySlug(props.listingType)?.namePluralSentenceCase ??
+		props.listingType
+	// Inquiry predicate after the visitor's name — e.g. "wants your apples",
+	// or "wants to visit your produce stand" for a stand.
+	const desire = () => inquiryDesire(props.listingType)
+	// First-person note placeholder, stand-aware for the same reason.
+	const notePlaceholder = () =>
+		isStand()
+			? `Hi! I'd love to visit your ${produceTypeBySlug(props.listingType)?.nameSingularSentenceCase ?? props.listingType}…`
+			: `Hi! I'd love to pick some of your ${plural()}…`
 
 	const router = useRouter()
 	const context = useRouteContext({ from: '__root__' })
@@ -230,7 +243,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 								<p class="name-interstitial-preview">
 									The owner will receive:{' '}
 									<strong>
-										"{previewName()} wants your {props.listingType}"
+										"{previewName()} {desire()}"
 									</strong>
 									. Do you want to customize your name?
 								</p>
@@ -311,7 +324,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 						}
 						maxLength={500}
 						onChange={setNote}
-						placeholder={`Hi! I'd love to pick some of your ${plural()}…`}
+						placeholder={notePlaceholder()}
 						rows={3}
 						value={note()}
 					/>

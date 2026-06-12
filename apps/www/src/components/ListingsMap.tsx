@@ -2,6 +2,7 @@ import { createEffect, on } from 'solid-js'
 import type { PublicListing } from '@/data/queries.server'
 import { cellToLatLng, cellToBoundary, cellToParent } from 'h3-js'
 import { H3_RESOLUTIONS, zoomToH3Resolution } from '@/lib/h3-resolutions'
+import { PRODUCE_STAND_SLUG } from '@/lib/produce-types'
 import { Sentry } from '@/lib/sentry'
 import MapLibreGL, {
 	MapLibreGLReadyArgs,
@@ -22,6 +23,16 @@ const COLOR_DEFAULT = '#10b981' // --color-fresh-green
 const COLOR_LABEL = '#ffffff'
 const COLOR_REGION_FILL = '#10b981' // --color-fresh-green
 const COLOR_REGION_STROKE = '#10b981'
+
+// Lucide `Store` icon, inlined so it can be dropped into a MapLibre HTML marker
+// without rendering a Solid component into a detached node. Placeholder pick —
+// see docs/0010; `ShoppingBasket` is the non-commercial alternative.
+const STORE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"/></svg>`
+
+/** True when a listing is a community produce stand. */
+function isStand(listing: PublicListing): boolean {
+	return listing.type === PRODUCE_STAND_SLUG
+}
 
 /** Groups public listings by their H3 parent cell at the given resolution. */
 export function groupByH3(
@@ -63,10 +74,43 @@ interface Props {
 /** Map showing nearby listings grouped by H3 cell. */
 export default function ListingsMap(props: Props) {
 	let map: import('maplibre-gl').Map | undefined
+	let maplibreglRef: typeof import('maplibre-gl') | undefined
 	let layersReady = false
 	let currentRes: number = H3_RESOLUTIONS.HOME_GROUPING
+	let standMarkers: import('maplibre-gl').Marker[] = []
+
+	/**
+	 * Renders a distinct Store marker for each produce stand so stands are
+	 * discoverable *as* stands, on top of the numeric cluster circles.
+	 */
+	function refreshStandMarkers() {
+		for (const marker of standMarkers) marker.remove()
+		standMarkers = []
+		const maplibregl = maplibreglRef
+		if (!map || !maplibregl) return
+		for (const listing of props.listings) {
+			if (!isStand(listing)) continue
+			let lat: number
+			let lng: number
+			try {
+				;[lat, lng] = cellToLatLng(listing.approximateH3Index)
+			} catch (err) {
+				Sentry.captureException(err)
+				continue
+			}
+			const el = document.createElement('div')
+			el.className = 'stand-marker'
+			el.setAttribute('role', 'img')
+			el.setAttribute('aria-label', 'Community produce stand')
+			el.innerHTML = STORE_ICON_SVG
+			standMarkers.push(
+				new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map)
+			)
+		}
+	}
 
 	function setupMap({ container, maplibregl, onMapLoad }: MapLibreGLReadyArgs) {
+		maplibreglRef = maplibregl
 		const groups = groupByH3(props.listings)
 		const bounds = new maplibregl.LngLatBounds()
 		for (const group of groups) {
@@ -88,6 +132,11 @@ export default function ListingsMap(props: Props) {
 			'bottom-right'
 		)
 		map.addControl(new maplibregl.NavigationControl({ showCompass: false }))
+
+		// Markers are DOM overlays positioned by the map; they don't need the
+		// tile style or any layers, so render them immediately rather than waiting
+		// for the (network-dependent) `load` event.
+		refreshStandMarkers()
 
 		reportMapLoadedOnce(map, onMapLoad, () => {
 			addGroupLayers(groups)
@@ -119,6 +168,9 @@ export default function ListingsMap(props: Props) {
 		})
 
 		return () => {
+			for (const marker of standMarkers) marker.remove()
+			standMarkers = []
+			maplibreglRef = undefined
 			map?.remove()
 			map = undefined
 		}
@@ -295,9 +347,13 @@ export default function ListingsMap(props: Props) {
 		])
 	}
 
-	// react to listing array changes; keep the visible groups up to date
+	// react to listing array changes; keep the visible groups and stand markers
+	// up to date. Markers refresh as soon as the map exists; the grouped
+	// circles need the layers (and thus the loaded style) first.
 	createEffect(() => {
-		if (!map || !layersReady) return
+		if (!map) return
+		refreshStandMarkers()
+		if (!layersReady) return
 		updateGroupSource(groupByH3(props.listings, currentRes))
 	})
 

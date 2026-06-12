@@ -3,7 +3,57 @@ import {
 	ListingStatus,
 	profileNameSchema,
 	updateListingSchema,
+	listingFormSchema,
 } from '../src/lib/validation'
+
+const baseForm = {
+	type: 'apple',
+	harvestWindow: 'September',
+	address: '1 Main St',
+	city: 'Napa',
+	state: 'CA',
+}
+
+describe('listingFormSchema — produce-stand preset', () => {
+	it('parses an ordinary listing without requiring a ToS acknowledgment', () => {
+		const data = listingFormSchema.parse(baseForm)
+		expect(data.acceptsDropOffs).toBe(false)
+	})
+
+	it('does not lock the address policy for a produce stand (orthogonal)', () => {
+		const data = listingFormSchema.parse({
+			...baseForm,
+			type: 'produce-stand',
+			addressReleasePolicy: 'on_owner_approval',
+			acceptsDropOffs: false,
+		})
+		expect(data.addressReleasePolicy).toBe('on_owner_approval')
+	})
+
+	it('requires a ToS acknowledgment when a stand accepts drop-offs', () => {
+		const result = listingFormSchema.safeParse({
+			...baseForm,
+			type: 'produce-stand',
+			acceptsDropOffs: true,
+			tosAcknowledged: false,
+		})
+		const issuePaths = result.success
+			? []
+			: result.error.issues.flatMap((i) => i.path)
+		expect(result.success).toBe(false)
+		expect(issuePaths).toContain('tosAcknowledged')
+	})
+
+	it('accepts a drop-off stand once the ToS is acknowledged', () => {
+		const data = listingFormSchema.parse({
+			...baseForm,
+			type: 'produce-stand',
+			acceptsDropOffs: true,
+			tosAcknowledged: true,
+		})
+		expect(data.acceptsDropOffs).toBe(true)
+	})
+})
 
 describe('profileNameSchema', () => {
 	it.each([

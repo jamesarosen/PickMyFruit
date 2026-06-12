@@ -2,6 +2,8 @@ import { Link } from '@tanstack/solid-router'
 import { Apple } from 'lucide-solid'
 import { Show } from 'solid-js'
 import { getStatusVariant } from '@/lib/listing-status'
+import { PRODUCE_STAND_SLUG } from '@/lib/produce-types'
+import DropOffIndicator from '@/components/DropOffIndicator'
 import '@/components/ListingCard.css'
 
 export type ListingCardData = {
@@ -16,6 +18,7 @@ export type ListingCardData = {
 	harvestWindow?: string | null
 	notes?: string | null
 	status?: string | null
+	acceptsDropOffs?: boolean
 }
 
 /** A card linking to a listing detail page, with cover photo or Apple placeholder. */
@@ -23,6 +26,12 @@ export default function ListingCard(props: { listing: ListingCardData }) {
 	const l = () => props.listing
 	return (
 		<article class="listing-card surface-subtle">
+			<Show when={l().type === PRODUCE_STAND_SLUG}>
+				<DropOffIndicator
+					class="listing-card-dropoff"
+					acceptsDropOffs={l().acceptsDropOffs ?? false}
+				/>
+			</Show>
 			<Link
 				to="/listings/$id"
 				params={{ id: String(l().id) }}

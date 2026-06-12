@@ -3,6 +3,7 @@
 		border: 1px solid var(--color-border);
 		border-radius: 12px;
 		container-type: inline-size;
+		position: relative;
 		transition:
 			transform 0.15s ease,
 			box-shadow 0.15s ease;
@@ -11,6 +12,21 @@
 			transform: translateY(-2px);
 			box-shadow: 0 4px 12px oklch(from var(--color-quiet) l c h / 0.15);
 		}
+	}
+
+	/* Narrow chip overlaid on the card corner — collapses the indicator to its
+	   icon (the label stays available as a tooltip / accessible name). */
+	.drop-off-indicator.listing-card-dropoff {
+		position: absolute;
+		top: 12px;
+		right: 12px;
+		z-index: 1;
+		width: 2rem;
+		height: 2rem;
+		justify-content: center;
+		border-radius: 50%;
+		background: var(--color-background);
+		border: 1px solid var(--color-border);
 	}
 
 	.listing-card-link {

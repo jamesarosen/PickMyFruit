@@ -4,7 +4,7 @@ import { latLngToCell } from 'h3-js'
 import type { Listing } from '../src/data/schema.server'
 
 const mockGetSession = vi.fn()
-const mockGetListingById = vi.fn()
+const mockGetListingWithOwner = vi.fn()
 const mockGetPhotosForListing = vi.fn()
 const mockRecordAddressReveal = vi.fn()
 const mockMetricsCount = vi.fn()
@@ -23,7 +23,7 @@ vi.mock('../src/lib/auth.server', () => ({
 }))
 
 vi.mock('../src/data/queries.server', () => ({
-	getListingById: (...args: unknown[]) => mockGetListingById(...args),
+	getListingWithOwner: (...args: unknown[]) => mockGetListingWithOwner(...args),
 	getPhotosForListing: (...args: unknown[]) => mockGetPhotosForListing(...args),
 	recordAddressReveal: (...args: unknown[]) => mockRecordAddressReveal(...args),
 }))
@@ -77,11 +77,24 @@ function makeListing(overrides: Partial<Listing> = {}): Listing {
 		notes: null,
 		accessInstructions: null,
 		addressReleasePolicy: 'on_verified_request',
+		acceptsDropOffs: false,
 		deletedAt: null,
 		createdAt: new Date(),
 		updatedAt: new Date(),
 		...overrides,
 	}
+}
+
+/** Wires getListingWithOwner to return the listing plus a default owner. */
+function resolveListing(
+	listing: Listing,
+	owner: { id: string; name: string; email: string } = {
+		id: listing.userId,
+		name: 'Pat Owner',
+		email: 'owner@example.com',
+	}
+) {
+	mockGetListingWithOwner.mockResolvedValue({ listing, owner })
 }
 
 describe('revealListingAddress', () => {
@@ -99,7 +112,7 @@ describe('revealListingAddress', () => {
 	it('gates an unauthenticated viewer without writing a reveal row', async () => {
 		const listing = makeListing()
 		mockGetSession.mockResolvedValue(null)
-		mockGetListingById.mockResolvedValue(listing)
+		resolveListing(listing)
 
 		const result = await revealListingAddress({ data: listing.id })
 
@@ -126,7 +139,7 @@ describe('revealListingAddress', () => {
 		mockGetSession.mockResolvedValue({
 			user: { id: 'visitor-1', emailVerified: false },
 		})
-		mockGetListingById.mockResolvedValue(listing)
+		resolveListing(listing)
 
 		const result = await revealListingAddress({ data: listing.id })
 
@@ -150,7 +163,7 @@ describe('revealListingAddress', () => {
 		mockGetSession.mockResolvedValue({
 			user: { id: 'visitor-1', emailVerified: true },
 		})
-		mockGetListingById.mockResolvedValue(listing)
+		resolveListing(listing)
 
 		const result = await revealListingAddress({ data: listing.id })
 
@@ -186,7 +199,7 @@ describe('revealListingAddress', () => {
 		mockGetSession.mockResolvedValue({
 			user: { id: 'visitor-1', emailVerified: true },
 		})
-		mockGetListingById.mockResolvedValue(listing)
+		resolveListing(listing)
 
 		await revealListingAddress({ data: listing.id })
 		await revealListingAddress({ data: listing.id })
@@ -200,7 +213,7 @@ describe('revealListingAddress', () => {
 		mockGetSession.mockResolvedValue({
 			user: { id: 'owner-1', emailVerified: true },
 		})
-		mockGetListingById.mockResolvedValue(listing)
+		resolveListing(listing)
 
 		const result = await revealListingAddress({ data: listing.id })
 
@@ -213,7 +226,7 @@ describe('revealListingAddress', () => {
 		mockGetSession.mockResolvedValue({
 			user: { id: 'visitor-1', emailVerified: true },
 		})
-		mockGetListingById.mockResolvedValue(listing)
+		resolveListing(listing)
 		mockRecordAddressReveal.mockRejectedValue(new Error('disk full'))
 
 		const result = await revealListingAddress({ data: listing.id })
@@ -234,11 +247,52 @@ describe('revealListingAddress', () => {
 		mockGetSession.mockResolvedValue({
 			user: { id: 'visitor-1', emailVerified: true },
 		})
-		mockGetListingById.mockResolvedValue(listing)
+		resolveListing(listing)
 
 		await expect(revealListingAddress({ data: listing.id })).rejects.toThrow(
 			/does not release its address automatically/i
 		)
 		expect(mockRecordAddressReveal).not.toHaveBeenCalled()
+	})
+
+	describe('produce stand', () => {
+		it('surfaces stewardName and dropOffGuidance for a verified stand viewer', async () => {
+			const listing = makeListing({
+				type: 'produce-stand',
+				acceptsDropOffs: true,
+			})
+			mockGetSession.mockResolvedValue({
+				user: { id: 'visitor-1', emailVerified: true },
+			})
+			resolveListing(listing, {
+				id: 'owner-1',
+				name: 'Casey Steward',
+				email: 'casey@example.com',
+			})
+
+			const result = await revealListingAddress({ data: listing.id })
+
+			expect(result.tag).toBe('revealed')
+			if (result.tag !== 'revealed') return
+			expect(result.listing.stewardName).toBe('Casey Steward')
+			expect(result.listing.dropOffGuidance).toMatch(/raw, whole, uncut/i)
+		})
+
+		it('omits dropOffGuidance for a stand that does not accept drop-offs', async () => {
+			const listing = makeListing({
+				type: 'produce-stand',
+				acceptsDropOffs: false,
+			})
+			mockGetSession.mockResolvedValue({
+				user: { id: 'visitor-1', emailVerified: true },
+			})
+			resolveListing(listing)
+
+			const result = await revealListingAddress({ data: listing.id })
+
+			expect(result.tag).toBe('revealed')
+			if (result.tag !== 'revealed') return
+			expect(result.listing.dropOffGuidance).toBeUndefined()
+		})
 	})
 })
