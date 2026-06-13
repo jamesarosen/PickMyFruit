@@ -4,10 +4,7 @@ import { cellToLatLng, cellToBoundary, cellToParent } from 'h3-js'
 import { H3_RESOLUTIONS, zoomToH3Resolution } from '@/lib/h3-resolutions'
 import { PRODUCE_STAND_SLUG } from '@/lib/produce-types'
 import type { LocationBias } from '@/lib/geolocation'
-import {
-	DEFAULT_MAP_ZOOM,
-	planListingsMapCamera,
-} from '@/lib/listings-map-camera'
+import { planListingsMapCamera } from '@/lib/listings-map-camera'
 import { Sentry } from '@/lib/sentry'
 import MapLibreGL, {
 	MapLibreGLReadyArgs,
@@ -120,13 +117,15 @@ export default function ListingsMap(props: Props) {
 	}
 
 	/**
-	 * Mirrors the live map center onto `data-map-center` (`lng,lat`) — non-secret
-	 * observability the end-to-end tests assert against.
+	 * Mirrors the live camera onto `data-map-center` (`lng,lat`) and
+	 * `data-map-zoom` — non-secret observability the end-to-end tests assert
+	 * against.
 	 */
 	function reportCenter(container: HTMLDivElement) {
 		if (!map) return
 		const center = map.getCenter()
 		container.dataset.mapCenter = `${center.lng.toFixed(5)},${center.lat.toFixed(5)}`
+		container.dataset.mapZoom = map.getZoom().toFixed(2)
 	}
 
 	function setupMap({ container, maplibregl, onMapLoad }: MapLibreGLReadyArgs) {
@@ -396,14 +395,17 @@ export default function ListingsMap(props: Props) {
 	)
 
 	// Geolocation resolves asynchronously and may arrive after the map is built;
-	// re-center on the user's position when it does. Deferred so it never fights
-	// the initial camera, which already reads `props.center` at setup.
+	// pan to the user's position when it does. Deferred so it never fights the
+	// initial camera, which already reads `props.center` at setup. We keep the
+	// current zoom rather than forcing one: changing zoom here would trip the
+	// `zoomend` handler, which re-buckets the H3 resolution and clears any area
+	// the user has selected — a background event must not discard that state.
 	createEffect(
 		on(
 			() => props.center,
 			(center) => {
 				if (!center || !map) return
-				map.flyTo({ center: [center.lng, center.lat], zoom: DEFAULT_MAP_ZOOM })
+				map.flyTo({ center: [center.lng, center.lat] })
 			},
 			{ defer: true }
 		)

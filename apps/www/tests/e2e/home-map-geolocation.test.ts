@@ -94,7 +94,14 @@ test.describe('Home map — position arrives after the map loads', () => {
 				)
 				.toBe(true)
 
-			// Release the position; the deferred effect must fly to it.
+			// Capture the fit-to-bounds zoom so we can prove the recenter pans
+			// without forcing a zoom (a forced zoom would clear an area selection
+			// via the zoomend re-bucket).
+			const fitZoom = Number(
+				await page.locator('.listings-map').getAttribute('data-map-zoom')
+			)
+
+			// Release the position; the deferred effect must pan to it.
 			await page.evaluate(() =>
 				(window as { __releaseGeolocation?: () => void }).__releaseGeolocation?.()
 			)
@@ -112,6 +119,12 @@ test.describe('Home map — position arrives after the map loads', () => {
 					{ timeout: 15_000 }
 				)
 				.toBe(true)
+
+			// The pan preserved the zoom — it was not forced to a fixed value.
+			const afterZoom = Number(
+				await page.locator('.listings-map').getAttribute('data-map-zoom')
+			)
+			expect(afterZoom).toBeCloseTo(fitZoom, 1)
 		} finally {
 			await cleanupTestUser(owner)
 		}

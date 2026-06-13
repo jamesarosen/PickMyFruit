@@ -25,8 +25,12 @@ permission prompt).
 
 The position resolves asynchronously and may arrive before or after the map
 finishes loading. Both orders are handled: the initial camera reads whatever
-position is known at setup time, and a reactive effect re-centers the map
-(`flyTo`) if the position resolves later.
+position is known at setup time, and a reactive effect pans the map (`flyTo`)
+if the position resolves later. The late pan keeps the current zoom rather
+than forcing one — a zoom change would trip the `zoomend` handler, which
+re-buckets the H3 grouping resolution and clears any area the user has
+selected, so a background geolocation event would otherwise silently discard
+that selection and its `?area` URL state.
 
 ### Prompting on the home page
 
