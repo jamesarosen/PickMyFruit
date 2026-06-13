@@ -45,6 +45,13 @@ export function getStatusVariant(status: string): StatusVariant {
 	return statusVariantMap[status as ListingStatusValue] ?? 'private'
 }
 
+/** Maps a listing status string to its user-facing label. */
+export function getStatusLabel(status: string): string {
+	return (
+		VISIBILITY_OPTIONS.find((option) => option.value === status)?.label ?? status
+	)
+}
+
 /** The two address-release policies, with the same shape as VISIBILITY_OPTIONS. */
 export const ADDRESS_RELEASE_OPTIONS = [
 	{

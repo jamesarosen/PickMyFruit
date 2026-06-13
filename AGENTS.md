@@ -31,7 +31,7 @@ A site for gardeners to share surplus produce with their community.
 - Use idiomatic Solid JS, TanStack Router, TypeScript, SQLite.
 - Use context7
 - When handling exceptions, import Sentry from `@/lib/sentry` and use `Sentry.captureException`. Do not separately log errors — `src/lib/sentry.ts` is the designated exception handler and manages console output itself. (Exception: `sentry.ts` itself uses `console.error` because it runs on both client and server and cannot depend on Pino.)
-- For server-side informational/debug logging, import `logger` from `@/lib/logger.server` (Pino). Always pass structured data as the first argument: `logger.info(fields, msg)`, `logger.debug(fields, msg)`, `logger.warn(fields, msg)`. Use `logger.error(fields, msg)` only in CLI scripts (e.g. `seed.ts`) where Sentry is not initialized — in all other server code, use `Sentry.captureException` for errors. Do **not** use `console.log` or `console.error` in application code. (Exception: test infrastructure files such as `vitest-global-setup.ts` may use `console.log`.)
+- For server-side informational/debug logging, import `logger` from `@/lib/logger.server` (Pino). Always pass structured data as the first argument: `logger.info(fields, msg)`, `logger.debug(fields, msg)`, `logger.warn(fields, msg)`. Use `logger.error(fields, msg)` only in CLI scripts (e.g. `seed.server.ts`) where Sentry is not initialized — in all other server code, use `Sentry.captureException` for errors. Do **not** use `console.log` or `console.error` in application code. (Exception: test infrastructure files such as `vitest-global-setup.ts` may use `console.log`.)
 
 ### Solid JS
 
@@ -167,4 +167,3 @@ The only service is the **Solid JS web application** in `apps/www`. It uses an e
 - **Magic link auth in dev**: `EMAIL_PROVIDER=console` (default) logs the magic link token to the Vite dev server stdout. Look for the Pino log line with `token:` to extract it for manual testing.
 - **E2E test server**: Playwright starts its own Vite dev server on port 5174 with test-specific env vars (`reuseExistingServer: false`). The port-5173 dev server does not interfere.
 - **pnpm build script warnings**: `pnpm install` may show "Ignored build scripts" for `esbuild`, `sharp`, `@parcel/watcher`, `@sentry/cli`. The platform-specific binaries are still installed correctly via optional dependencies; these warnings are safe to ignore.
-- **`pnpm db:seed` script reference**: The `package.json` `db:seed` script references `src/data/seed.ts` but the actual file is `src/data/seed.server.ts`. The seed script will fail; this is a known discrepancy in the repo.
