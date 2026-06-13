@@ -26,15 +26,31 @@ vi.mock('../src/lib/env', () => ({
 vi.mock('../src/lib/address-suggestions', async (importOriginal) => {
 	const actual =
 		await importOriginal<typeof import('../src/lib/address-suggestions')>()
-	return { ...actual, fetchAddressSuggestions: vi.fn() }
+	return {
+		...actual,
+		fetchAddressSuggestions: vi.fn(),
+		fetchReverseGeocodedAddress: vi.fn(),
+	}
 })
 
-const { fetchAddressSuggestions, SuggestionsUnavailableError } =
-	await import('../src/lib/address-suggestions')
+vi.mock('../src/lib/geolocation', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('../src/lib/geolocation')>()
+	return { ...actual, requestCurrentLocation: vi.fn() }
+})
+
+const {
+	fetchAddressSuggestions,
+	fetchReverseGeocodedAddress,
+	SuggestionsUnavailableError,
+} = await import('../src/lib/address-suggestions')
+const { NAPA_CITY_HALL, requestCurrentLocation } =
+	await import('../src/lib/geolocation')
 const { default: AddressAutosuggest, SUGGEST_DEBOUNCE_MS } =
 	await import('../src/components/AddressAutosuggest')
 
 const mockFetchSuggestions = vi.mocked(fetchAddressSuggestions)
+const mockFetchReverse = vi.mocked(fetchReverseGeocodedAddress)
+const mockRequestLocation = vi.mocked(requestCurrentLocation)
 
 const PARIS: AddressSuggestion = {
 	label: '12 Rue de la Paix, Paris, Île-de-France, 75002, France',
@@ -62,6 +78,8 @@ function renderAutosuggest(
 	props: {
 		onSelect?: (s: AddressSuggestion | null) => void
 		defaultSelection?: AddressSuggestion
+		allowPrepopulate?: boolean
+		onInteract?: () => void
 	} = {}
 ) {
 	const onSelect = props.onSelect ?? vi.fn()
@@ -69,6 +87,8 @@ function renderAutosuggest(
 		<AddressAutosuggest
 			onSelect={onSelect}
 			defaultSelection={props.defaultSelection}
+			allowPrepopulate={props.allowPrepopulate}
+			onInteract={props.onInteract}
 		/>
 	))
 	const input = utils.getByLabelText('Address', {
@@ -86,6 +106,11 @@ async function typeAndSettle(input: HTMLInputElement, value: string) {
 beforeEach(() => {
 	vi.useFakeTimers()
 	mockFetchSuggestions.mockReset()
+	mockFetchReverse.mockReset()
+	mockFetchReverse.mockResolvedValue(null)
+	mockRequestLocation.mockReset()
+	// Most tests don't care about geolocation — behave as if unavailable.
+	mockRequestLocation.mockResolvedValue(null)
 })
 
 afterEach(() => {
@@ -233,6 +258,236 @@ describe('AddressAutosuggest — pending work is cancelled', () => {
 
 		expect(input.value).toBe(PARIS.label)
 		expect(queryByRole('listbox')).not.toBeInTheDocument()
+	})
+})
+
+const GRANTED_POSITION = { lat: 38.291859, lng: -122.458036 }
+
+const REVERSE_SUGGESTION: AddressSuggestion = {
+	label: '1600 Reverse Road, Sonoma, California, 95476, United States',
+	address: '1600 Reverse Road',
+	city: 'Sonoma',
+	state: 'California',
+	postcode: '95476',
+	countryCode: 'US',
+	lat: GRANTED_POSITION.lat,
+	lng: GRANTED_POSITION.lng,
+}
+
+describe('AddressAutosuggest — location bias', () => {
+	it('passes the granted position as the suggest bias', async () => {
+		mockRequestLocation.mockResolvedValue(GRANTED_POSITION)
+		mockFetchSuggestions.mockResolvedValue([NAPA])
+		const { input } = renderAutosuggest()
+		// Let the position promise resolve before typing.
+		await vi.advanceTimersByTimeAsync(0)
+
+		await typeAndSettle(input, 'school')
+
+		expect(mockFetchSuggestions).toHaveBeenCalledWith(
+			'school',
+			expect.objectContaining({ bias: GRANTED_POSITION })
+		)
+	})
+
+	it('falls back to the Napa City Hall bias when the position is unavailable', async () => {
+		mockRequestLocation.mockResolvedValue(null)
+		mockFetchSuggestions.mockResolvedValue([NAPA])
+		const { input } = renderAutosuggest()
+		await vi.advanceTimersByTimeAsync(0)
+
+		await typeAndSettle(input, 'school')
+
+		expect(mockFetchSuggestions).toHaveBeenCalledWith(
+			'school',
+			expect.objectContaining({ bias: NAPA_CITY_HALL })
+		)
+	})
+
+	it('uses the fallback bias while the position request is still pending', async () => {
+		// A user can type before answering the permission prompt.
+		mockRequestLocation.mockReturnValue(new Promise(() => {}))
+		mockFetchSuggestions.mockResolvedValue([NAPA])
+		const { input } = renderAutosuggest()
+
+		await typeAndSettle(input, 'school')
+
+		expect(mockFetchSuggestions).toHaveBeenCalledWith(
+			'school',
+			expect.objectContaining({ bias: NAPA_CITY_HALL })
+		)
+	})
+})
+
+describe('AddressAutosuggest — prepopulation from the granted position', () => {
+	it('prepopulates the empty field from the reverse geocode and reports the selection', async () => {
+		mockRequestLocation.mockResolvedValue(GRANTED_POSITION)
+		mockFetchReverse.mockResolvedValue(REVERSE_SUGGESTION)
+		const { input, onSelect } = renderAutosuggest()
+
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(mockFetchReverse).toHaveBeenCalledWith(
+			GRANTED_POSITION,
+			expect.anything()
+		)
+		expect(input.value).toBe(REVERSE_SUGGESTION.label)
+		expect(onSelect).toHaveBeenCalledWith(REVERSE_SUGGESTION)
+	})
+
+	it('skips the reverse geocode when a pre-filled selection exists', async () => {
+		mockRequestLocation.mockResolvedValue(GRANTED_POSITION)
+		mockFetchReverse.mockResolvedValue(REVERSE_SUGGESTION)
+		const { input } = renderAutosuggest({ defaultSelection: NAPA })
+
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(mockFetchReverse).not.toHaveBeenCalled()
+		expect(input.value).toBe(NAPA.label)
+	})
+
+	it('skips the reverse geocode when the position is unavailable', async () => {
+		mockRequestLocation.mockResolvedValue(null)
+		renderAutosuggest()
+
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(mockFetchReverse).not.toHaveBeenCalled()
+	})
+
+	it('does not clobber text typed while the reverse geocode is in flight', async () => {
+		mockRequestLocation.mockResolvedValue(GRANTED_POSITION)
+		let resolveReverse!: (s: AddressSuggestion | null) => void
+		mockFetchReverse.mockReturnValue(
+			new Promise((r) => {
+				resolveReverse = r
+			})
+		)
+		mockFetchSuggestions.mockResolvedValue([NAPA])
+		const { input, onSelect } = renderAutosuggest()
+		// Position resolves; the reverse geocode is now in flight.
+		await vi.advanceTimersByTimeAsync(0)
+
+		fireEvent.input(input, { target: { value: 'my own query' } })
+		resolveReverse(REVERSE_SUGGESTION)
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(input.value).toBe('my own query')
+		expect(onSelect).not.toHaveBeenCalledWith(REVERSE_SUGGESTION)
+	})
+
+	it('does not clobber text typed before the position resolves', async () => {
+		let resolvePosition!: (p: { lat: number; lng: number } | null) => void
+		mockRequestLocation.mockReturnValue(
+			new Promise((r) => {
+				resolvePosition = r
+			})
+		)
+		mockFetchReverse.mockResolvedValue(REVERSE_SUGGESTION)
+		mockFetchSuggestions.mockResolvedValue([NAPA])
+		const { input, onSelect } = renderAutosuggest()
+
+		fireEvent.input(input, { target: { value: 'my own query' } })
+		resolvePosition(GRANTED_POSITION)
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(input.value).toBe('my own query')
+		expect(onSelect).not.toHaveBeenCalledWith(REVERSE_SUGGESTION)
+	})
+
+	it('announces the prepopulation through the status live region', async () => {
+		mockRequestLocation.mockResolvedValue(GRANTED_POSITION)
+		mockFetchReverse.mockResolvedValue(REVERSE_SUGGESTION)
+		const { getByRole } = renderAutosuggest()
+
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(getByRole('status')).toHaveTextContent(
+			/filled in from your current location/i
+		)
+		// A value change on an unfocused input is not announced, so the live
+		// region must speak the filled-in address itself.
+		expect(getByRole('status')).toHaveTextContent('1600 Reverse Road')
+	})
+
+	it('clears the prepopulation notice once the user edits the field', async () => {
+		mockRequestLocation.mockResolvedValue(GRANTED_POSITION)
+		mockFetchReverse.mockResolvedValue(REVERSE_SUGGESTION)
+		mockFetchSuggestions.mockResolvedValue([NAPA])
+		const { input, getByRole } = renderAutosuggest()
+		await vi.advanceTimersByTimeAsync(0)
+
+		fireEvent.input(input, { target: { value: 'something else' } })
+
+		expect(getByRole('status')).not.toHaveTextContent(/current location/i)
+	})
+
+	it('skips prepopulation when the input is focused before the position resolves', async () => {
+		mockRequestLocation.mockResolvedValue(GRANTED_POSITION)
+		mockFetchReverse.mockResolvedValue(REVERSE_SUGGESTION)
+		const { input, onSelect } = renderAutosuggest()
+
+		// The user clicked into the field intending to type — it's theirs now,
+		// even though they haven't typed yet.
+		fireEvent.focus(input)
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(input.value).toBe('')
+		expect(onSelect).not.toHaveBeenCalled()
+	})
+
+	it('skips prepopulation when the parent disallows it', async () => {
+		mockRequestLocation.mockResolvedValue(GRANTED_POSITION)
+		mockFetchReverse.mockResolvedValue(REVERSE_SUGGESTION)
+		const { input, onSelect } = renderAutosuggest({ allowPrepopulate: false })
+
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(mockFetchReverse).not.toHaveBeenCalled()
+		expect(input.value).toBe('')
+		expect(onSelect).not.toHaveBeenCalled()
+	})
+
+	it('reports the first user interaction via onInteract', async () => {
+		const onInteract = vi.fn()
+		mockFetchSuggestions.mockResolvedValue([NAPA])
+		const { input } = renderAutosuggest({ onInteract })
+
+		await typeAndSettle(input, 'school')
+		await typeAndSettle(input, 'school street')
+
+		expect(onInteract).toHaveBeenCalledTimes(1)
+	})
+
+	it('reports focus via onInteract so the claim survives remounts', async () => {
+		const onInteract = vi.fn()
+		const { input } = renderAutosuggest({ onInteract })
+
+		fireEvent.focus(input)
+
+		expect(onInteract).toHaveBeenCalledTimes(1)
+	})
+
+	it('does not report the prepopulation itself as an interaction', async () => {
+		const onInteract = vi.fn()
+		mockRequestLocation.mockResolvedValue(GRANTED_POSITION)
+		mockFetchReverse.mockResolvedValue(REVERSE_SUGGESTION)
+		renderAutosuggest({ onInteract })
+
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(onInteract).not.toHaveBeenCalled()
+	})
+
+	it('stays silent when the reverse geocode fails', async () => {
+		mockRequestLocation.mockResolvedValue(GRANTED_POSITION)
+		mockFetchReverse.mockRejectedValue(new SuggestionsUnavailableError('boom'))
+		const { input, queryByText } = renderAutosuggest()
+
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(input.value).toBe('')
+		expect(queryByText(/unavailable/i)).not.toBeInTheDocument()
 	})
 })
 

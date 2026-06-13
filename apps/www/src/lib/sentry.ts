@@ -11,9 +11,90 @@ import {
 	startSpan,
 	withScope,
 } from '@sentry/solidstart'
-import type { CaptureContext, SeverityLevel } from '@sentry/solidstart'
+import type {
+	Breadcrumb,
+	CaptureContext,
+	SeverityLevel,
+} from '@sentry/solidstart'
 import { clientEnv } from './env'
 import isNetworkError from 'is-network-error'
+
+// The serialized span shape `beforeSendSpan` receives; the SDK does not
+// re-export its `SpanJSON` type, so derive it from the option's signature.
+type SpanJSON = Parameters<
+	NonNullable<NonNullable<Parameters<typeof init>[0]>['beforeSendSpan']>
+>[0]
+
+// Query strings on these hosts carry user-typed addresses or the user's raw
+// coordinates (geocoding, suggestions, reverse geocoding). They must never
+// reach Sentry, where they would ride along on error events and traces.
+const GEO_SERVICE_HOSTS = new Set([
+	'photon.komoot.io',
+	'nominatim.openstreetmap.org',
+])
+
+/**
+ * Strips the query string from geocoding-service URLs; all other strings are
+ * returned untouched.
+ */
+export function redactGeoServiceUrl(url: string): string {
+	try {
+		const parsed = new URL(url)
+		if (GEO_SERVICE_HOSTS.has(parsed.hostname)) {
+			return parsed.origin + parsed.pathname
+		}
+	} catch {
+		// Relative URL or not a URL at all — nothing to redact.
+	}
+	return url
+}
+
+/**
+ * Redacts geocoding-service URLs in a breadcrumb. The SDK's default fetch
+ * instrumentation records every request's full URL in `data.url`.
+ */
+export function redactGeoBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb {
+	if (typeof breadcrumb.data?.url === 'string') {
+		breadcrumb.data.url = redactGeoServiceUrl(breadcrumb.data.url)
+	}
+	return breadcrumb
+}
+
+/**
+ * Redacts geocoding-service URLs in a span. Browser tracing's fetch
+ * instrumentation stores the full URL in the span name/description and in
+ * the `http.url`/`url.full`/`http.query` attributes.
+ */
+export function redactGeoSpan(span: SpanJSON): SpanJSON {
+	let touchesGeoService = false
+	if (span.data) {
+		// Browser fetch spans carry the full URL in `url` and `http.url`
+		// (see @sentry/core's getFetchSpanAttributes); server-side HTTP
+		// instrumentation uses `url.full`.
+		for (const key of ['url', 'http.url', 'url.full'] as const) {
+			const value = span.data[key]
+			if (typeof value !== 'string') continue
+			const redacted = redactGeoServiceUrl(value)
+			if (redacted !== value) {
+				span.data[key] = redacted
+				touchesGeoService = true
+			}
+		}
+		// The standalone query/fragment attributes would undo the redaction.
+		if (touchesGeoService) {
+			delete span.data['http.query']
+			delete span.data['url.query']
+			delete span.data['http.fragment']
+		}
+	}
+	if (typeof span.description === 'string') {
+		span.description = span.description.replace(
+			/https?:\/\/\S+/g,
+			(url: string) => redactGeoServiceUrl(url)
+		)
+	}
+	return span
+}
 
 const isServer = typeof window === 'undefined'
 const environment = isServer ? 'server' : 'client'
@@ -88,8 +169,9 @@ if (clientEnv.sentryDsn) {
 					}
 				}
 			}
-			return breadcrumb
+			return redactGeoBreadcrumb(breadcrumb)
 		},
+		beforeSendSpan: redactGeoSpan,
 		beforeSend(event, hint) {
 			const err = hint.originalException
 			if (isControlFlow(err)) return null

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
 	addressFieldsToSuggestion,
 	fetchAddressSuggestions,
+	fetchReverseGeocodedAddress,
 	SuggestionsUnavailableError,
 } from '../src/lib/address-suggestions'
 
@@ -115,6 +116,119 @@ describe('fetchAddressSuggestions — happy path', () => {
 		mockFetch(makePhotonResponse([]))
 
 		await expect(fetchAddressSuggestions('road to nowhere')).resolves.toEqual([])
+	})
+})
+
+describe('fetchAddressSuggestions — location bias', () => {
+	it('sends the bias as lat/lon parameters', async () => {
+		const spy = mockFetch(makePhotonResponse([]))
+
+		await fetchAddressSuggestions('school st', {
+			bias: { lat: 38.2967151, lng: -122.292037 },
+		})
+
+		const url = new URL(spy.mock.calls[0][0] as string)
+		expect(url.searchParams.get('lat')).toBe('38.2967151')
+		expect(url.searchParams.get('lon')).toBe('-122.292037')
+	})
+
+	it('sends no lat/lon parameters when no bias is given', async () => {
+		const spy = mockFetch(makePhotonResponse([]))
+
+		await fetchAddressSuggestions('school st')
+
+		const url = new URL(spy.mock.calls[0][0] as string)
+		expect(url.searchParams.get('lat')).toBeNull()
+		expect(url.searchParams.get('lon')).toBeNull()
+	})
+})
+
+describe('fetchReverseGeocodedAddress', () => {
+	const SONOMA = { lat: 38.291859, lng: -122.458036 }
+
+	it('requests the reverse endpoint with the position', async () => {
+		const spy = mockFetch(makePhotonResponse([makeFeature(PARIS_PROPERTIES)]))
+
+		await fetchReverseGeocodedAddress(SONOMA)
+
+		const url = new URL(spy.mock.calls[0][0] as string)
+		expect(url.hostname).toBe('photon.komoot.io')
+		expect(url.pathname).toBe('/reverse')
+		expect(url.searchParams.get('lat')).toBe('38.291859')
+		expect(url.searchParams.get('lon')).toBe('-122.458036')
+		expect(url.searchParams.get('limit')).toBe('1')
+		expect(url.searchParams.get('lang')).toBe('en')
+	})
+
+	it('maps the feature to a suggestion', async () => {
+		mockFetch(makePhotonResponse([makeFeature(PARIS_PROPERTIES)]))
+
+		const suggestion = await fetchReverseGeocodedAddress(SONOMA)
+
+		expect(suggestion).toEqual({
+			label: '12 Rue de la Paix, Paris, Île-de-France, 75002, France',
+			address: '12 Rue de la Paix',
+			city: 'Paris',
+			state: 'Île-de-France',
+			postcode: '75002',
+			countryCode: 'FR',
+			lat: 48.8693,
+			lng: 2.3312,
+		})
+	})
+
+	it('resolves null when Photon has no result', async () => {
+		mockFetch(makePhotonResponse([]))
+
+		await expect(fetchReverseGeocodedAddress(SONOMA)).resolves.toBeNull()
+	})
+
+	it('resolves null when the feature is unusable for a listing', async () => {
+		// No street line or name — cannot prepopulate an address from it.
+		mockFetch(
+			makePhotonResponse([
+				makeFeature({ city: 'Paris', country: 'France', countrycode: 'FR' }),
+			])
+		)
+
+		await expect(fetchReverseGeocodedAddress(SONOMA)).resolves.toBeNull()
+	})
+
+	it('throws SuggestionsUnavailableError on non-2xx responses', async () => {
+		mockFetch('Bad Gateway', 502)
+
+		await expect(fetchReverseGeocodedAddress(SONOMA)).rejects.toThrow(
+			SuggestionsUnavailableError
+		)
+	})
+
+	it('throws SuggestionsUnavailableError on fetch rejection', async () => {
+		vi
+			.spyOn(globalThis, 'fetch')
+			.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+
+		await expect(fetchReverseGeocodedAddress(SONOMA)).rejects.toThrow(
+			SuggestionsUnavailableError
+		)
+	})
+
+	it('throws SuggestionsUnavailableError when the shape is unexpected', async () => {
+		mockFetch(JSON.stringify({ results: [] }))
+
+		await expect(fetchReverseGeocodedAddress(SONOMA)).rejects.toThrow(
+			SuggestionsUnavailableError
+		)
+	})
+
+	it('lets aborts propagate untouched', async () => {
+		const abortError = new DOMException('Aborted', 'AbortError')
+		vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(abortError)
+
+		await expect(
+			fetchReverseGeocodedAddress(SONOMA, {
+				signal: new AbortController().signal,
+			})
+		).rejects.toBe(abortError)
 	})
 })
 

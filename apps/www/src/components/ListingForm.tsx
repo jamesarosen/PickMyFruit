@@ -56,6 +56,10 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 	const [addressSelectionError, setAddressSelectionError] = createSignal<
 		string | null
 	>(null)
+	// Once the user touches the address, it stays theirs: the autosuggest
+	// remounts when manual entry is toggled, and a fresh mount would otherwise
+	// re-prepopulate a field the user deliberately cleared.
+	const [addressInteracted, setAddressInteracted] = createSignal(false)
 
 	// Manual entry starts from the picked suggestion when there is one (the
 	// user is likely correcting it), else from the last listing's address.
@@ -493,6 +497,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 						}
 					>
 						<AddressAutosuggest
+							allowPrepopulate={!addressInteracted()}
 							defaultSelection={selectedAddress()}
 							disabled={isSubmitting()}
 							errors={
@@ -501,6 +506,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 									: fieldErrors().properties?.address?.errors
 							}
 							hint="Others will see your neighborhood, but not your exact address."
+							onInteract={() => setAddressInteracted(true)}
 							onSelect={setSelectedAddress}
 						/>
 						<button

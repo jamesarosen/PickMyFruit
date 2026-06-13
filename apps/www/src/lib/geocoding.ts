@@ -88,10 +88,12 @@ export async function geocodeAddress(
 ): Promise<GeocodingResult> {
 	const query = buildQuery(input)
 
+	// Only the length: the query is the user's full street address, which
+	// must not ride along on Sentry events (see redaction in sentry.ts).
 	Sentry.addBreadcrumb({
 		category: 'geocoding',
 		level: 'info',
-		data: { query },
+		data: { queryLength: query.length },
 	})
 
 	return Sentry.startSpan(
