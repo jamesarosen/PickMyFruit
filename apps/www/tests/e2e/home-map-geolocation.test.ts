@@ -82,7 +82,8 @@ test.describe('Home map — position arrives after the map loads', () => {
 			await page.goto('/')
 			await expect(page.locator('.listings-map')).toBeVisible({ timeout: 15_000 })
 
-			// The map frames the held-back fallback (central Napa) first.
+			// With the position held back, the map first frames the listing
+			// itself (fit-to-bounds), which sits in central Napa.
 			await expect
 				.poll(
 					async () => {
