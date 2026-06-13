@@ -56,6 +56,67 @@ test.describe('Home map — geolocation granted', () => {
 	})
 })
 
+test.describe('Home map — position arrives after the map loads', () => {
+	test.use({ geolocation: SONOMA_PLAZA, permissions: ['geolocation'] })
+
+	test('re-centers via the deferred flyTo once the position resolves', async ({
+		page,
+	}) => {
+		test.slow()
+		// Hold the position until the test releases it, so the map is guaranteed to
+		// build with the Napa fallback first — this exercises the deferred
+		// re-center path, not the initial camera.
+		await page.addInitScript(() => {
+			const geolocation = navigator.geolocation
+			const original = geolocation.getCurrentPosition.bind(geolocation)
+			geolocation.getCurrentPosition = (onSuccess, onError, options) => {
+				;(window as { __releaseGeolocation?: () => void }).__releaseGeolocation =
+					() => original(onSuccess, onError, options)
+			}
+		})
+
+		const owner = await createTestUser()
+		await createTestListing(owner.id, { name: 'Napa lemons' })
+
+		try {
+			await page.goto('/')
+			await expect(page.locator('.listings-map')).toBeVisible({ timeout: 15_000 })
+
+			// The map frames the held-back fallback (central Napa) first.
+			await expect
+				.poll(
+					async () => {
+						const center = await readMapCenter(page)
+						return center !== null && center.lng > -122.35
+					},
+					{ timeout: 15_000 }
+				)
+				.toBe(true)
+
+			// Release the position; the deferred effect must fly to it.
+			await page.evaluate(() =>
+				(window as { __releaseGeolocation?: () => void }).__releaseGeolocation?.()
+			)
+
+			await expect
+				.poll(
+					async () => {
+						const center = await readMapCenter(page)
+						return (
+							center !== null &&
+							Math.abs(center.lng - SONOMA_PLAZA.longitude) < 0.02 &&
+							Math.abs(center.lat - SONOMA_PLAZA.latitude) < 0.02
+						)
+					},
+					{ timeout: 15_000 }
+				)
+				.toBe(true)
+		} finally {
+			await cleanupTestUser(owner)
+		}
+	})
+})
+
 test.describe('Home map — geolocation denied', () => {
 	// Playwright denies geolocation unless the permission is granted, so the
 	// fallback path runs immediately — no prompt is shown.

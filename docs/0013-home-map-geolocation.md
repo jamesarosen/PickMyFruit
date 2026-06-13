@@ -28,6 +28,19 @@ finishes loading. Both orders are handled: the initial camera reads whatever
 position is known at setup time, and a reactive effect re-centers the map
 (`flyTo`) if the position resolves later.
 
+### Prompting on the home page
+
+Unlike doc 0012, which scoped the prompt to the intentful New Listing form,
+this prompts on the home page — the most-trafficked, often-anonymous page —
+on mount. That is the explicit request ("on the home page … ask to use the
+browser's geolocation API"). The cost to weigh: a visitor who picks "Block"
+sets a sticky per-origin decision that also denies the New Listing form's
+later, more clearly-motivated request. We accept this for now because the map
+degrades gracefully on denial (Napa framing) and the form already tolerates
+denial (Napa-biased suggestions). If unprompted home-page prompting proves
+costly, the follow-up is to gate it behind a "Use my location" control on the
+map.
+
 ### Why centering, not re-querying
 
 The loader runs on the server and cannot know the client's position, so it
