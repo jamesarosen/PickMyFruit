@@ -41,11 +41,15 @@ client's position is a possible later step but is out of scope here.
 ### Trade-off: granted position overrides fit-to-bounds
 
 When the position is granted, the map centers on the user rather than fitting
-all returned listing groups, so a listing well outside the initial viewport
-may sit off-screen until the user pans. This is the literal intent of
-"center the map there," and the listings grid below the map always shows the
-full set. The non-granted path is unchanged, so the common case keeps the
-fit-to-bounds framing.
+all returned listing groups. Because the loader fetches the listings nearest
+Napa City Hall (not the user — see below), a user far from Napa centers on
+their own neighborhood with **every** marker off-screen until they pan; the
+listings grid below the map still shows the full set. This is the literal
+intent of "center the map there," and is acceptable for the Napa beta where
+granted users are local. The non-granted path is unchanged, so the common
+case keeps the fit-to-bounds framing. Making the map follow the data for
+distant users means re-querying by the client's position — deferred (see
+_Known simplifications_).
 
 ### Where the logic lives
 
@@ -58,8 +62,8 @@ userCenter)` that returns either a `center`/`zoom` camera or a
   carried its own slightly different copy).
 - `src/components/ListingsMap.tsx` — consumes the plan for the initial camera,
   re-centers via a deferred effect when a position arrives after setup, and
-  reflects the live center in a `data-map-center` attribute (only under
-  WebDriver) so end-to-end tests can assert it.
+  reflects the live center in a `data-map-center` attribute so end-to-end
+  tests can assert it.
 - `src/routes/index.tsx` — requests the position on mount and passes it to
   `ListingsMap` as `center`; the loader's Napa query point now uses the shared
   `NAPA_CITY_HALL` constant.

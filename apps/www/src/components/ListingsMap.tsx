@@ -120,11 +120,11 @@ export default function ListingsMap(props: Props) {
 	}
 
 	/**
-	 * Mirrors the live map center onto `data-map-center` so end-to-end tests can
-	 * assert it. Gated on WebDriver so it never appears in normal browsing.
+	 * Mirrors the live map center onto `data-map-center` (`lng,lat`) — non-secret
+	 * observability the end-to-end tests assert against.
 	 */
 	function reportCenter(container: HTMLDivElement) {
-		if (!map || !navigator.webdriver) return
+		if (!map) return
 		const center = map.getCenter()
 		container.dataset.mapCenter = `${center.lng.toFixed(5)},${center.lat.toFixed(5)}`
 	}

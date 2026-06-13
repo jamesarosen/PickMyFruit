@@ -10,8 +10,8 @@ import {
 const SONOMA_PLAZA = { latitude: 38.291859, longitude: -122.458036 }
 
 /**
- * Reads the live map center the component mirrors onto `data-map-center`
- * (only set under WebDriver). Returns null until the map has reported once.
+ * Reads the live map center the component mirrors onto `data-map-center`.
+ * Returns null until the map has reported its center at least once.
  */
 async function readMapCenter(
 	page: Page
