@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/solid-router'
-import { For, Show } from 'solid-js'
+import { createSignal, For, onMount, Show } from 'solid-js'
 import { z } from 'zod'
 import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
@@ -7,10 +7,12 @@ import ListingsMap from '@/components/ListingsMap'
 import ListingCard from '@/components/ListingCard'
 import { getNearbyListings } from '@/api/listings'
 import { normalizeArea, listingMatchesArea } from '@/lib/h3-area'
+import {
+	NAPA_CITY_HALL,
+	requestCurrentLocation,
+	type LocationBias,
+} from '@/lib/geolocation'
 import '@/routes/index.css'
-
-// Napa City Hall — will be replaced with geolocation later
-const DEFAULT_CENTER = { lat: 38.2966234, lng: -122.2893688 }
 
 const homeSearchSchema = z.object({
 	area: z.string().optional(),
@@ -18,9 +20,11 @@ const homeSearchSchema = z.object({
 
 export const Route = createFileRoute('/')({
 	validateSearch: homeSearchSchema,
+	// The loader runs on the server and cannot know the client's position, so it
+	// queries by the launch-city anchor; the client recenters the map (below).
 	loader: () =>
 		getNearbyListings({
-			data: { lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng },
+			data: { lat: NAPA_CITY_HALL.lat, lng: NAPA_CITY_HALL.lng },
 		}),
 	component: HomePage,
 })
@@ -29,6 +33,15 @@ function HomePage() {
 	const listings = Route.useLoaderData()
 	const navigate = useNavigate()
 	const search = Route.useSearch()
+
+	// Ask for the user's position on mount; when granted, the map centers there
+	// instead of framing Napa. Denial is silent (see requestCurrentLocation).
+	const [userLocation, setUserLocation] = createSignal<LocationBias | null>(null)
+	onMount(() => {
+		void requestCurrentLocation().then((position) => {
+			if (position) setUserLocation(position)
+		})
+	})
 
 	const selectedH3 = () => normalizeArea(search().area ?? null)
 
@@ -106,6 +119,7 @@ function HomePage() {
 							>
 								<ListingsMap
 									listings={listings()}
+									center={userLocation()}
 									onGroupSelect={setSelectedH3}
 									selectedH3={selectedH3()}
 								/>
