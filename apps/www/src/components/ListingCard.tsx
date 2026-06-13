@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/solid-router'
 import { Apple } from 'lucide-solid'
 import { Show } from 'solid-js'
-import { getStatusVariant } from '@/lib/listing-status'
+import { getStatusLabel, getStatusVariant } from '@/lib/listing-status'
 import { formatListingLocation } from '@/lib/format-location'
 import { PRODUCE_STAND_SLUG } from '@/lib/produce-types'
 import DropOffIndicator from '@/components/DropOffIndicator'
@@ -68,7 +68,7 @@ export default function ListingCard(props: { listing: ListingCardData }) {
 						<span
 							class={`listing-card-status listing-card-status--${getStatusVariant(status())}`}
 						>
-							{status()}
+							{getStatusLabel(status())}
 						</span>
 					)}
 				</Show>

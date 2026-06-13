@@ -82,8 +82,8 @@ function HomePage() {
 								</div>
 								<div class="step">
 									<div class="step-number">2</div>
-									<h3>We match you with neighbors</h3>
-									<p>You get notified</p>
+									<h3>Neighbors find your listing</h3>
+									<p>You get an email when someone wants to pick</p>
 								</div>
 								<div class="step">
 									<div class="step-number">3</div>

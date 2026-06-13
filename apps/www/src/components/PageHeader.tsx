@@ -7,8 +7,16 @@ import {
 	useRouter,
 } from '@tanstack/solid-router'
 import { clsx } from 'clsx'
+import Bell from 'lucide-solid/icons/bell'
+import HeartPlus from 'lucide-solid/icons/heart-plus'
+import LogIn from 'lucide-solid/icons/log-in'
+import LogOut from 'lucide-solid/icons/log-out'
+import Sprout from 'lucide-solid/icons/sprout'
+import UserPen from 'lucide-solid/icons/user-pen'
+import { type LucideProps } from 'lucide-solid'
 import {
 	For,
+	JSX,
 	Show,
 	createEffect,
 	createSignal,
@@ -74,7 +82,15 @@ function getInitials(name: string): string {
  * on the `<a>`, and the controlled DropdownMenu in PageHeader closes via a
  * reactive effect once the route changes.
  */
-function DropdownMenuLink(props: ParentProps<{ to: string; class?: string }>) {
+function DropdownMenuLink(
+	props: ParentProps<{
+		to: string
+		class?: string
+		icon?: (props: LucideProps) => JSX.Element
+	}>
+) {
+	const Icon = props.icon ?? (() => <></>)
+
 	return (
 		<DropdownMenu.Item
 			as={Link}
@@ -82,6 +98,7 @@ function DropdownMenuLink(props: ParentProps<{ to: string; class?: string }>) {
 			closeOnSelect={false}
 			class={clsx('page-header__menu-item', props.class)}
 		>
+			<Icon size={16} aria-hidden="true" />
 			{props.children}
 		</DropdownMenu.Item>
 	)
@@ -126,14 +143,6 @@ export default function PageHeader(props: PageHeaderProps) {
 						<span class="page-header__logo-text">Pick My Fruit</span>
 					</Link>
 
-					<Link
-						to="/support"
-						search={{ from: 'header' }}
-						class="page-header__support-link hidden md:inline"
-					>
-						Support
-					</Link>
-
 					<DropdownMenu open={menuOpen()} onOpenChange={setMenuOpen}>
 						{/* aria-label is stable; Kobalte manages aria-expanded and aria-haspopup */}
 						<DropdownMenu.Trigger
@@ -162,15 +171,22 @@ export default function PageHeader(props: PageHeaderProps) {
 						<DropdownMenu.Portal>
 							<DropdownMenu.Content class="page-header__menu-content">
 								<Show when={user()}>
-									<DropdownMenuLink to="/listings/mine">My Garden</DropdownMenuLink>
-									<DropdownMenuLink to="/profile">Profile</DropdownMenuLink>
-									<DropdownMenuLink to="/notifications">Notifications</DropdownMenuLink>
+									<DropdownMenuLink to="/listings/mine" icon={Sprout}>
+										My Garden
+									</DropdownMenuLink>
+									<DropdownMenuLink to="/profile" icon={UserPen}>
+										Profile
+									</DropdownMenuLink>
+									<DropdownMenuLink to="/notifications" icon={Bell}>
+										Notifications
+									</DropdownMenuLink>
 									<DropdownMenu.Item
 										as="a"
 										href="/support?from=header"
 										closeOnSelect={false}
 										class="page-header__menu-item md:hidden"
 									>
+										<HeartPlus size={16} aria-hidden="true" />
 										Support Pick My Fruit
 									</DropdownMenu.Item>
 									<DropdownMenu.Separator class="page-header__menu-separator" />
@@ -178,17 +194,21 @@ export default function PageHeader(props: PageHeaderProps) {
 										class="page-header__menu-item page-header__menu-item--danger"
 										onSelect={handleSignOut}
 									>
+										<LogOut size={16} aria-hidden="true" />
 										Sign Out
 									</DropdownMenu.Item>
 								</Show>
 								<Show when={!user()}>
-									<DropdownMenuLink to="/login">Sign In</DropdownMenuLink>
+									<DropdownMenuLink to="/login" icon={LogIn}>
+										Sign In
+									</DropdownMenuLink>
 									<DropdownMenu.Item
 										as="a"
 										href="/support?from=header"
 										closeOnSelect={false}
 										class="page-header__menu-item md:hidden"
 									>
+										<HeartPlus size={16} aria-hidden="true" />
 										Support Pick My Fruit
 									</DropdownMenu.Item>
 								</Show>
