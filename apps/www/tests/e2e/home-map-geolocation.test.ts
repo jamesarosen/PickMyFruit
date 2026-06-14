@@ -24,119 +24,14 @@ async function readMapCenter(
 	return { lng, lat }
 }
 
-test.describe('Home map — geolocation granted', () => {
+function centerButton(page: Page) {
+	return page.getByRole('button', { name: 'Center map on my location' })
+}
+
+test.describe('Home map — defaults to Napa, centering is opt-in', () => {
 	test.use({ geolocation: SONOMA_PLAZA, permissions: ['geolocation'] })
 
-	test('centers the map on the user’s position', async ({ page }) => {
-		test.slow()
-		const owner = await createTestUser()
-		// A listing makes the "Available Now" map render at all.
-		await createTestListing(owner.id, { name: 'Napa lemons' })
-
-		try {
-			await page.goto('/')
-			await expect(page.locator('.listings-map')).toBeVisible({ timeout: 15_000 })
-
-			await expect
-				.poll(
-					async () => {
-						const center = await readMapCenter(page)
-						return (
-							center !== null &&
-							Math.abs(center.lng - SONOMA_PLAZA.longitude) < 0.02 &&
-							Math.abs(center.lat - SONOMA_PLAZA.latitude) < 0.02
-						)
-					},
-					{ timeout: 15_000 }
-				)
-				.toBe(true)
-		} finally {
-			await cleanupTestUser(owner)
-		}
-	})
-})
-
-test.describe('Home map — position arrives after the map loads', () => {
-	test.use({ geolocation: SONOMA_PLAZA, permissions: ['geolocation'] })
-
-	test('re-centers via the deferred flyTo once the position resolves', async ({
-		page,
-	}) => {
-		test.slow()
-		// Hold the position until the test releases it, so the map is guaranteed to
-		// build with the Napa fallback first — this exercises the deferred
-		// re-center path, not the initial camera.
-		await page.addInitScript(() => {
-			const geolocation = navigator.geolocation
-			const original = geolocation.getCurrentPosition.bind(geolocation)
-			geolocation.getCurrentPosition = (onSuccess, onError, options) => {
-				;(window as { __releaseGeolocation?: () => void }).__releaseGeolocation =
-					() => original(onSuccess, onError, options)
-			}
-		})
-
-		const owner = await createTestUser()
-		await createTestListing(owner.id, { name: 'Napa lemons' })
-
-		try {
-			await page.goto('/')
-			await expect(page.locator('.listings-map')).toBeVisible({ timeout: 15_000 })
-
-			// With the position held back, the map first frames the listing
-			// itself (fit-to-bounds), which sits in central Napa.
-			await expect
-				.poll(
-					async () => {
-						const center = await readMapCenter(page)
-						return center !== null && center.lng > -122.35
-					},
-					{ timeout: 15_000 }
-				)
-				.toBe(true)
-
-			// Capture the fit-to-bounds zoom so we can prove the recenter pans
-			// without forcing a zoom (a forced zoom would clear an area selection
-			// via the zoomend re-bucket).
-			const fitZoom = Number(
-				await page.locator('.listings-map').getAttribute('data-map-zoom')
-			)
-
-			// Release the position; the deferred effect must pan to it.
-			await page.evaluate(() =>
-				(window as { __releaseGeolocation?: () => void }).__releaseGeolocation?.()
-			)
-
-			await expect
-				.poll(
-					async () => {
-						const center = await readMapCenter(page)
-						return (
-							center !== null &&
-							Math.abs(center.lng - SONOMA_PLAZA.longitude) < 0.02 &&
-							Math.abs(center.lat - SONOMA_PLAZA.latitude) < 0.02
-						)
-					},
-					{ timeout: 15_000 }
-				)
-				.toBe(true)
-
-			// The pan preserved the zoom — it was not forced to a fixed value.
-			const afterZoom = Number(
-				await page.locator('.listings-map').getAttribute('data-map-zoom')
-			)
-			expect(afterZoom).toBeCloseTo(fitZoom, 1)
-		} finally {
-			await cleanupTestUser(owner)
-		}
-	})
-})
-
-test.describe('Home map — geolocation denied', () => {
-	// Playwright denies geolocation unless the permission is granted, so the
-	// fallback path runs immediately — no prompt is shown.
-	test.use({ permissions: [] })
-
-	test('falls back to Napa, never the user’s position', async ({ page }) => {
+	test('does not ask for or use the position on load', async ({ page }) => {
 		test.slow()
 		const owner = await createTestUser()
 		// Default test listing sits in central Napa (38.3, -122.3).
@@ -146,18 +41,110 @@ test.describe('Home map — geolocation denied', () => {
 			await page.goto('/')
 			await expect(page.locator('.listings-map')).toBeVisible({ timeout: 15_000 })
 
+			// Even with permission granted, the map frames the Napa listing — the
+			// page never requested the position, so it cannot have centered on it.
 			await expect
 				.poll(
 					async () => {
 						const center = await readMapCenter(page)
-						// Central Napa is east of -122.35; Sonoma Plaza is at -122.458.
 						return center !== null && center.lng > -122.35
 					},
 					{ timeout: 15_000 }
 				)
 				.toBe(true)
 
+			// Give any stray async work a beat, then confirm it is still on Napa.
+			await page.waitForTimeout(1_000)
 			const center = await readMapCenter(page)
+			expect(Math.abs(center!.lng - SONOMA_PLAZA.longitude)).toBeGreaterThan(0.1)
+		} finally {
+			await cleanupTestUser(owner)
+		}
+	})
+
+	test('the Center button pans to the user’s position, keeping the zoom', async ({
+		page,
+	}) => {
+		test.slow()
+		const owner = await createTestUser()
+		await createTestListing(owner.id, { name: 'Napa lemons' })
+
+		try {
+			await page.goto('/')
+			await expect(page.locator('.listings-map')).toBeVisible({ timeout: 15_000 })
+
+			// Wait for the default Napa framing and capture its zoom.
+			await expect
+				.poll(
+					async () => {
+						const center = await readMapCenter(page)
+						return center !== null && center.lng > -122.35
+					},
+					{ timeout: 15_000 }
+				)
+				.toBe(true)
+			const napaZoom = Number(
+				await page.locator('.listings-map').getAttribute('data-map-zoom')
+			)
+
+			await centerButton(page).click()
+
+			// The map pans onto the granted position…
+			await expect
+				.poll(
+					async () => {
+						const center = await readMapCenter(page)
+						return (
+							center !== null &&
+							Math.abs(center.lng - SONOMA_PLAZA.longitude) < 0.02 &&
+							Math.abs(center.lat - SONOMA_PLAZA.latitude) < 0.02
+						)
+					},
+					{ timeout: 15_000 }
+				)
+				.toBe(true)
+
+			// …without zooming out: the liked default zoom is preserved.
+			const afterZoom = Number(
+				await page.locator('.listings-map').getAttribute('data-map-zoom')
+			)
+			expect(afterZoom).toBeCloseTo(napaZoom, 1)
+		} finally {
+			await cleanupTestUser(owner)
+		}
+	})
+})
+
+test.describe('Home map — Center button when geolocation is denied', () => {
+	test.use({ permissions: [] })
+
+	test('leaves the map on Napa when the position is denied', async ({
+		page,
+	}) => {
+		test.slow()
+		const owner = await createTestUser()
+		await createTestListing(owner.id, { name: 'Napa lemons' })
+
+		try {
+			await page.goto('/')
+			await expect(page.locator('.listings-map')).toBeVisible({ timeout: 15_000 })
+
+			await expect
+				.poll(
+					async () => {
+						const center = await readMapCenter(page)
+						return center !== null && center.lng > -122.35
+					},
+					{ timeout: 15_000 }
+				)
+				.toBe(true)
+
+			await centerButton(page).click()
+
+			// Denial is silent and leaves the map where it was — never near Sonoma.
+			await page.waitForTimeout(1_000)
+			const center = await readMapCenter(page)
+			expect(center!.lng).toBeGreaterThan(-122.35)
 			expect(Math.abs(center!.lng - SONOMA_PLAZA.longitude)).toBeGreaterThan(0.1)
 		} finally {
 			await cleanupTestUser(owner)

@@ -13,60 +13,50 @@ deliberately left the home map out of scope. This doc closes that gap.
 
 ## Approach
 
-On mount, the home page asks the browser for the user's position via the same
-`requestCurrentLocation()` wrapper introduced in 0012 (the browser shows its
-permission prompt).
+The map keeps its existing default framing: fit the bounds of the returned
+listing groups (the launch city, Napa), or fall back to a hard-coded Napa
+City Hall point when there are none. Nothing changes on load, and the page
+does **not** ask for the user's position on mount.
 
-- **Granted** → the map centers on the user's coordinates at a
-  neighborhood-scale zoom, so it frames the area around them.
-- **Denied / unavailable / timed out / unsupported** → the map keeps its
-  current behavior: fit the bounds of the returned listing groups, or fall
-  back to Napa City Hall when there are none.
+Centering on the user is **opt-in**. A "Center" button (Lucide `locate`
+icon) sits at the right edge of the "Available Now" header. Clicking it asks
+the browser for the user's position via the `requestCurrentLocation()`
+wrapper from 0012 (the browser shows its permission prompt only then):
 
-The position resolves asynchronously and may arrive before or after the map
-finishes loading. Both orders are handled: the initial camera reads whatever
-position is known at setup time, and a reactive effect pans the map (`flyTo`)
-if the position resolves later. The late pan keeps the current zoom rather
-than forcing one — a zoom change would trip the `zoomend` handler, which
-re-buckets the H3 grouping resolution and clears any area the user has
-selected, so a background geolocation event would otherwise silently discard
-that selection and its `?area` URL state.
+- **Granted** → the map pans onto the user's coordinates, **keeping its
+  current zoom**.
+- **Denied / unavailable / timed out / unsupported** → nothing happens; the
+  map stays where it is. Denial is silent.
 
-### Prompting on the home page
+The pan keeps the current zoom rather than forcing one for two reasons. It
+preserves the default fit-to-bounds zoom (a forced lower zoom looked too far
+out), and a zoom change would trip the `zoomend` handler, which re-buckets
+the H3 grouping resolution and clears any area the user has selected — so the
+recenter would otherwise discard that selection and its `?area` URL state.
 
-Unlike doc 0012, which scoped the prompt to the intentful New Listing form,
-this prompts on the home page — the most-trafficked, often-anonymous page —
-on mount. That is the explicit request ("on the home page … ask to use the
-browser's geolocation API"). The cost to weigh: a visitor who picks "Block"
-sets a sticky per-origin decision that also denies the New Listing form's
-later, more clearly-motivated request. We accept this for now because the map
-degrades gracefully on denial (Napa framing) and the form already tolerates
-denial (Napa-biased suggestions). If unprompted home-page prompting proves
-costly, the follow-up is to gate it behind a "Use my location" control on the
-map.
+The position flows to the map through the same `center` prop the initial
+camera reads; because the click happens after load, a deferred reactive
+effect (`flyTo`) performs the pan.
+
+### Why prompting on click, not on mount
+
+An earlier iteration prompted on mount. That hit the most-trafficked, often-
+anonymous page with a permission dialog before any interaction, and a "Block"
+choice is sticky per-origin — it would also deny the New Listing form's
+later, more clearly-motivated request. Gating behind an explicit "Center"
+click keeps the prompt intentful, matching the posture doc 0012 took for the
+New Listing form.
 
 ### Why centering, not re-querying
 
 The loader runs on the server and cannot know the client's position, so it
 continues to fetch the listings nearest Napa City Hall (the launch anchor).
-This is a presentation change — _where the map looks_ — not a change to
-_which listings are fetched_. For the Napa beta that is the desired behavior:
-a granted user is in Napa, near the same listings, and the map simply frames
-their neighborhood instead of the whole returned set. Re-querying by the
-client's position is a possible later step but is out of scope here.
-
-### Trade-off: granted position overrides fit-to-bounds
-
-When the position is granted, the map centers on the user rather than fitting
-all returned listing groups. Because the loader fetches the listings nearest
-Napa City Hall (not the user — see below), a user far from Napa centers on
-their own neighborhood with **every** marker off-screen until they pan; the
-listings grid below the map still shows the full set. This is the literal
-intent of "center the map there," and is acceptable for the Napa beta where
-granted users are local. The non-granted path is unchanged, so the common
-case keeps the fit-to-bounds framing. Making the map follow the data for
-distant users means re-querying by the client's position — deferred (see
-_Known simplifications_).
+Centering is a presentation change — _where the map looks_ — not a change to
+_which listings are fetched_. A user far from Napa who clicks "Center" pans
+to their own neighborhood with the Napa markers off-screen; the listings grid
+below the map still shows the full set. That is the literal intent of the
+button, and it only happens on an explicit click. Re-querying by the client's
+position is a possible later step but is out of scope here.
 
 ### Where the logic lives
 
@@ -76,14 +66,17 @@ userCenter)` that returns either a `center`/`zoom` camera or a
   unit-testable without a map. It also exports `NAPA_CITY_HALL_LNGLAT`,
   derived from the shared `NAPA_CITY_HALL` constant in `src/lib/geolocation.ts`
   so the map and the autosuggest agree on one Napa anchor (the map previously
-  carried its own slightly different copy).
+  carried its own slightly different copy). The home map only ever supplies
+  `userCenter` after a click (via the deferred pan), so on load it always
+  takes the `fit-groups` / Napa-fallback path; the `center` branch keeps the
+  decision total and reusable.
 - `src/components/ListingsMap.tsx` — consumes the plan for the initial camera,
-  re-centers via a deferred effect when a position arrives after setup, and
-  reflects the live center in a `data-map-center` attribute so end-to-end
-  tests can assert it.
-- `src/routes/index.tsx` — requests the position on mount and passes it to
-  `ListingsMap` as `center`; the loader's Napa query point now uses the shared
-  `NAPA_CITY_HALL` constant.
+  pans via a deferred effect when a `center` arrives after setup, and reflects
+  the live camera in `data-map-center` / `data-map-zoom` attributes so
+  end-to-end tests can assert it.
+- `src/routes/index.tsx` — renders the "Center" button, asks for the position
+  on click, and passes it to `ListingsMap` as `center`; the loader's Napa
+  query point uses the shared `NAPA_CITY_HALL` constant.
 
 ## Testing
 
@@ -91,10 +84,11 @@ Double-loop TDD:
 
 - **Outer loop** (`tests/e2e/home-map-geolocation.test.ts`): Playwright's
   `geolocation`/`permissions` context options simulate grant and denial.
-  - granted (Sonoma Plaza, clearly west of Napa) → the map's
-    `data-map-center` settles on the granted coordinates.
-  - denied → the map centers on Napa (the returned listing's bounds), never
-    on the granted Sonoma point.
+  - granted, no click → the map stays on Napa (proves it never asked on load).
+  - granted, click "Center" → `data-map-center` settles on the granted
+    coordinates and `data-map-zoom` is unchanged (the default zoom is kept).
+  - denied, click "Center" → the map stays on Napa, never near the granted
+    Sonoma point.
 - **Inner loop** (`tests/listings-map-camera.test.ts`): unit tests for
   `planListingsMapCamera` — user position wins over groups, falls back to
   fitting groups, then to Napa City Hall, and the fallback uses the shared
@@ -104,5 +98,5 @@ Double-loop TDD:
 
 - The loader still queries by Napa City Hall; only the map's framing follows
   the user. Client-side re-query by position is future work.
-- A granted position is whatever was measured at mount; the map does not
+- A clicked position is whatever was measured at click time; the map does not
   follow the user if they move.
