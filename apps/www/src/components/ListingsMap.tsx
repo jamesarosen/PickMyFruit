@@ -3,6 +3,8 @@ import type { PublicListing } from '@/data/queries.server'
 import { cellToLatLng, cellToBoundary, cellToParent } from 'h3-js'
 import { H3_RESOLUTIONS, zoomToH3Resolution } from '@/lib/h3-resolutions'
 import { PRODUCE_STAND_SLUG } from '@/lib/produce-types'
+import type { LocationBias } from '@/lib/geolocation'
+import { planListingsMapCamera } from '@/lib/listings-map-camera'
 import { Sentry } from '@/lib/sentry'
 import MapLibreGL, {
 	MapLibreGLReadyArgs,
@@ -65,6 +67,11 @@ function h3ToPolygonCoordinates(h3Index: string): number[][] {
 
 interface Props {
 	listings: PublicListing[]
+	/**
+	 * The user's geolocated position, when known. The map centers here instead
+	 * of fitting the listing bounds; undefined/null keeps the default framing.
+	 */
+	center?: LocationBias | null
 	/** Called when a group marker is clicked. Null clears the filter. */
 	onGroupSelect?: (h3Index: string | null) => void
 	/** Currently selected H3 index, for highlighting. */
@@ -109,23 +116,43 @@ export default function ListingsMap(props: Props) {
 		}
 	}
 
+	/**
+	 * Mirrors the live camera onto `data-map-center` (`lng,lat`) and
+	 * `data-map-zoom` — non-secret observability the end-to-end tests assert
+	 * against.
+	 */
+	function reportCenter(container: HTMLDivElement) {
+		if (!map) return
+		const center = map.getCenter()
+		container.dataset.mapCenter = `${center.lng.toFixed(5)},${center.lat.toFixed(5)}`
+		container.dataset.mapZoom = map.getZoom().toFixed(2)
+	}
+
 	function setupMap({ container, maplibregl, onMapLoad }: MapLibreGLReadyArgs) {
 		maplibreglRef = maplibregl
 		const groups = groupByH3(props.listings)
-		const bounds = new maplibregl.LngLatBounds()
-		for (const group of groups) {
-			bounds.extend(group.center)
+		const camera = planListingsMapCamera(groups.length > 0, props.center)
+
+		let bounds: import('maplibre-gl').LngLatBounds | undefined
+		if (camera.kind === 'fit-groups') {
+			bounds = new maplibregl.LngLatBounds()
+			for (const group of groups) {
+				bounds.extend(group.center)
+			}
 		}
 
 		map = new maplibregl.Map({
 			container,
 			style: 'https://tiles.openfreemap.org/styles/liberty',
-			bounds: groups.length > 0 ? bounds : undefined,
-			center: groups.length === 0 ? [-122.2893688, 38.2966234] : undefined,
-			zoom: groups.length === 0 ? 13 : undefined,
+			bounds,
+			center: camera.kind === 'center' ? camera.center : undefined,
+			zoom: camera.kind === 'center' ? camera.zoom : undefined,
 			fitBoundsOptions: { padding: 60, maxZoom: 14 },
 			attributionControl: false,
 		})
+
+		reportCenter(container)
+		map.on('moveend', () => reportCenter(container))
 
 		map.addControl(
 			new maplibregl.AttributionControl({ compact: true }),
@@ -364,6 +391,23 @@ export default function ListingsMap(props: Props) {
 				updateHighlight()
 				updateRegion(props.selectedH3)
 			}
+		)
+	)
+
+	// Geolocation resolves asynchronously and may arrive after the map is built;
+	// pan to the user's position when it does. Deferred so it never fights the
+	// initial camera, which already reads `props.center` at setup. We keep the
+	// current zoom rather than forcing one: changing zoom here would trip the
+	// `zoomend` handler, which re-buckets the H3 resolution and clears any area
+	// the user has selected — a background event must not discard that state.
+	createEffect(
+		on(
+			() => props.center,
+			(center) => {
+				if (!center || !map) return
+				map.flyTo({ center: [center.lng, center.lat] })
+			},
+			{ defer: true }
 		)
 	)
 

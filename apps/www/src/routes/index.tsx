@@ -1,16 +1,19 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/solid-router'
-import { For, Show } from 'solid-js'
+import { createSignal, For, Show } from 'solid-js'
 import { z } from 'zod'
 import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
 import ListingsMap from '@/components/ListingsMap'
 import ListingCard from '@/components/ListingCard'
+import Locate from 'lucide-solid/icons/locate'
 import { getNearbyListings } from '@/api/listings'
 import { normalizeArea, listingMatchesArea } from '@/lib/h3-area'
+import {
+	NAPA_CITY_HALL,
+	requestCurrentLocation,
+	type LocationBias,
+} from '@/lib/geolocation'
 import '@/routes/index.css'
-
-// Napa City Hall — will be replaced with geolocation later
-const DEFAULT_CENTER = { lat: 38.2966234, lng: -122.2893688 }
 
 const homeSearchSchema = z.object({
 	area: z.string().optional(),
@@ -18,9 +21,12 @@ const homeSearchSchema = z.object({
 
 export const Route = createFileRoute('/')({
 	validateSearch: homeSearchSchema,
+	// The loader runs on the server and queries by the launch-city anchor; the
+	// map defaults to that framing and recenters only when the user clicks
+	// "Center" (below).
 	loader: () =>
 		getNearbyListings({
-			data: { lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng },
+			data: { lat: NAPA_CITY_HALL.lat, lng: NAPA_CITY_HALL.lng },
 		}),
 	component: HomePage,
 })
@@ -29,6 +35,25 @@ function HomePage() {
 	const listings = Route.useLoaderData()
 	const navigate = useNavigate()
 	const search = Route.useSearch()
+
+	// The map defaults to Napa. Centering on the user is opt-in via the "Center"
+	// button, which asks for their position on click; the map then pans there,
+	// keeping its zoom. Denial is silent (see requestCurrentLocation).
+	const [userLocation, setUserLocation] = createSignal<LocationBias | null>(null)
+	const [locating, setLocating] = createSignal(false)
+
+	async function centerOnMyLocation() {
+		if (locating()) return
+		setLocating(true)
+		try {
+			const position = await requestCurrentLocation()
+			// A fresh object each click re-triggers the map's recenter effect even
+			// when the coordinates are unchanged.
+			if (position) setUserLocation({ ...position })
+		} finally {
+			setLocating(false)
+		}
+	}
 
 	const selectedH3 = () => normalizeArea(search().area ?? null)
 
@@ -99,13 +124,28 @@ function HomePage() {
 
 					<section class="available-listings">
 						<div class="container">
-							<h2>Available Now</h2>
+							<div class="available-listings__header">
+								<h2>Available Now</h2>
+								<Show when={listings().length > 0}>
+									<button
+										type="button"
+										class="available-listings__center"
+										onClick={centerOnMyLocation}
+										disabled={locating()}
+										title="Center map on my location"
+										aria-label="Center map on my location"
+									>
+										<Locate aria-hidden="true" />
+									</button>
+								</Show>
+							</div>
 							<Show
 								when={listings().length > 0}
 								fallback={<p>No listings available right now.</p>}
 							>
 								<ListingsMap
 									listings={listings()}
+									center={userLocation()}
 									onGroupSelect={setSelectedH3}
 									selectedH3={selectedH3()}
 								/>

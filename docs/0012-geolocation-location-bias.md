@@ -132,6 +132,6 @@ Double-loop TDD:
   fix up to five minutes old is accepted — city-scale bias does not need GPS
   precision, and a coarse cached answer is faster and cheaper on battery.
 - The home-page map keeps its own hard-coded Napa center; migrating it to
-  geolocation is out of scope here.
+  geolocation is out of scope here. (Done in doc 0013.)
 - If the user grants the permission but later moves, the bias is whatever
   was measured at mount. Fine for a form that lives for one listing.
