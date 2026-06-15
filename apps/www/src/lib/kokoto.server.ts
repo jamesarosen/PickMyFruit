@@ -5,6 +5,7 @@ import {
 	type DurableRuntime,
 } from '@pickmyfruit/kokoto/runtime.server'
 import { libsqlClient } from '@/data/db.server'
+import { serverEnv } from '@/lib/env.server'
 import { logger } from '@/lib/logger.server'
 import { Sentry } from '@/lib/sentry'
 import { submitInquiryWorkflow } from '@/workflows/submit-inquiry.workflow.server'
@@ -65,6 +66,7 @@ export function getRuntime(): DurableRuntime {
 			telemetry: buildTelemetry(),
 			pollMs: 1000,
 			globalConcurrency: 16,
+			dispatch: serverEnv.KOKOTO_DISPATCH,
 		})
 	}
 	return runtimeInstance

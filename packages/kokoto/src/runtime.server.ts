@@ -105,16 +105,21 @@ export class DurableRuntime {
 	private readonly globalConcurrency: number
 	private readonly executorId: string
 	private readonly inFlight = new Set<string>()
+	private readonly inFlightWorkers = new Set<Promise<void>>()
 	private readonly perQueueInFlight = new Map<string, number>()
 	private readonly wake = new EventEmitter()
+	private readonly autoDispatch: boolean
 	private dispatcherActive = false
 	private stopping = false
 	private startedAt: number | null = null
 	private currentDispatch: Promise<void> = Promise.resolve()
+	private draining: Promise<void> | undefined
+	private drainRequested = false
 
 	constructor(config: RuntimeConfig) {
 		this.client = config.client
 		this.telemetry = new Telemetry(config.telemetry)
+		this.autoDispatch = (config.dispatch ?? 'auto') === 'auto'
 		this.pollMs = Math.max(10, config.pollMs ?? DEFAULT_POLL_MS)
 		// leaseMs of 0 is legal (and used by the lease-expiry test): the row's
 		// expiry is set to `now`, which is already in the past by the time
@@ -125,6 +130,11 @@ export class DurableRuntime {
 			config.globalConcurrency ?? DEFAULT_GLOBAL_CONCURRENCY
 		)
 		this.executorId = config.executorId ?? uuidv7()
+		// `wake` listeners scale with concurrency: one per in-flight
+		// `handle.result()` waiter plus the dispatch loop. That legitimately
+		// exceeds Node's default cap of 10 under load, so disable the
+		// leak-detection warning rather than emit noise to stderr.
+		this.wake.setMaxListeners(0)
 	}
 
 	/** Unique id for this boot — recorded on every claimed row's `executor_id`. */
@@ -180,9 +190,16 @@ export class DurableRuntime {
 
 		this.startedAt = now
 		this.dispatcherActive = true
-		this.scheduleDispatchSoon()
+		// In manual mode the background timer never runs, so the runtime performs
+		// no writes while idle; work is driven on demand via drain() (which
+		// startWorkflow triggers automatically).
+		if (this.autoDispatch) this.scheduleDispatchSoon()
 		this.telemetry.info(
-			{ executorId: this.executorId, pollMs: this.pollMs },
+			{
+				executorId: this.executorId,
+				pollMs: this.pollMs,
+				dispatch: this.autoDispatch ? 'auto' : 'manual',
+			},
 			'kokoto.runtime.started'
 		)
 	}
@@ -197,7 +214,51 @@ export class DurableRuntime {
 		this.dispatcherActive = false
 		this.wake.emit('wake')
 		await this.currentDispatch
+		// A manual-mode drain may be mid-flight; let its in-flight workers settle.
+		if (this.draining) await this.draining.catch(() => {})
 		this.telemetry.info({ executorId: this.executorId }, 'kokoto.runtime.stopped')
+	}
+
+	/**
+	 * Run the dispatcher on demand until no ready work remains. This is the only
+	 * thing that advances workflows in `manual` dispatch mode; `startWorkflow`
+	 * calls it automatically, and tests can call it directly to await side
+	 * effects deterministically.
+	 *
+	 * Single-flight: concurrent callers share one in-progress drain, and a
+	 * workflow enqueued mid-drain is picked up before the drain resolves.
+	 * Resolves once a tick claims nothing and no worker is in flight; workflows
+	 * rescheduled for a future time (retry backoff) are not awaited — in manual
+	 * mode such a retry only fires when a later enqueue (or an explicit drain())
+	 * triggers another drain, so callers that need a backoff retry to run must
+	 * drive it themselves.
+	 */
+	async drain(): Promise<void> {
+		this.drainRequested = true
+		this.draining ??= this.runDrain().finally(() => {
+			this.draining = undefined
+			// If a drain() landed in the microtask gap between runDrain reading
+			// drainRequested === false and this finally clearing `draining`, the
+			// request would otherwise be lost (a fresh drain was suppressed by the
+			// still-set `draining`). Restart so the late enqueue is not stranded.
+			if (this.drainRequested) {
+				void this.drain().catch((err) => this.telemetry.captureException(err))
+			}
+		})
+		return this.draining
+	}
+
+	private async runDrain(): Promise<void> {
+		while (this.drainRequested) {
+			this.drainRequested = false
+			for (;;) {
+				await this.dispatchTick()
+				if (this.inFlightWorkers.size === 0) break
+				// Workers may free queue capacity or enqueue follow-on work, so
+				// loop and re-dispatch once the current batch settles.
+				await Promise.allSettled([...this.inFlightWorkers])
+			}
+		}
 	}
 
 	/**
@@ -254,7 +315,15 @@ export class DurableRuntime {
 			queue: queue ?? 'none',
 		})
 
-		if (this.dispatcherActive) this.wake.emit('wake')
+		if (this.dispatcherActive) {
+			if (this.autoDispatch) {
+				this.wake.emit('wake')
+			} else {
+				// Manual mode has no background loop, so drive the dispatcher now.
+				// Awaited results resolve via the worker's `wake` emit on finish.
+				void this.drain().catch((err) => this.telemetry.captureException(err))
+			}
+		}
 
 		return this.createHandle<Output>(effectiveId, def.name)
 	}
@@ -477,7 +546,7 @@ export class DurableRuntime {
 			queue: queueName ?? 'none',
 		})
 
-		void (async () => {
+		const workerPromise = (async () => {
 			try {
 				await runWorkflow(this.client, this.registry, this.telemetry, row)
 			} catch (err) {
@@ -493,6 +562,12 @@ export class DurableRuntime {
 				this.wake.emit('wake')
 			}
 		})()
+		// Tracked so drain() can await the current batch settling. The IIFE
+		// swallows its own errors, so this promise always resolves.
+		this.inFlightWorkers.add(workerPromise)
+		void workerPromise.finally(() => {
+			this.inFlightWorkers.delete(workerPromise)
+		})
 	}
 }
 

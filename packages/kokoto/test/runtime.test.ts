@@ -446,3 +446,147 @@ describe('DurableRuntime — ctx.txStep (same-DB atomicity)', () => {
 		expect(appRows.rows).toEqual([{ note: 'second-try' }])
 	})
 })
+
+describe('DurableRuntime — manual dispatch', () => {
+	it('runs an awaited workflow on demand with no background poll', async () => {
+		const client = await newClient()
+		// A huge pollMs proves the background timer is NOT what advances work:
+		// manual mode never starts the timer, so completion comes from the
+		// drain that startWorkflow triggers — mirroring the inquiry request that
+		// awaits handle.result().
+		const runtime = await newRuntime({
+			client,
+			dispatch: 'manual',
+			pollMs: 60_000,
+		})
+		const echo = defineWorkflow('echo', async (_ctx, input: string) =>
+			input.toUpperCase()
+		)
+		await runtime.start({ workflows: [echo] })
+
+		const handle = await runtime.startWorkflow(echo, 'hello')
+		const result = await handle.result({ timeoutMs: 5_000, pollMs: 25 })
+
+		expect(result).toBe('HELLO')
+		expect(await handle.status()).toBe('success')
+		await runtime.stop()
+		client.close()
+	})
+
+	it('drain() advances an enqueued workflow and its side effect to completion', async () => {
+		const client = await newClient()
+		const runtime = await newRuntime({
+			client,
+			dispatch: 'manual',
+			pollMs: 60_000,
+		})
+		await client.execute(
+			`CREATE TABLE app_writes (id INTEGER PRIMARY KEY AUTOINCREMENT, note TEXT NOT NULL)`
+		)
+		const writer = defineWorkflow('writer', async (ctx) => {
+			return ctx.txStep('append', async (tx) => {
+				await tx.execute({
+					sql: `INSERT INTO app_writes (note) VALUES (?)`,
+					args: ['x'],
+				})
+				return null
+			})
+		})
+		await runtime.start({ workflows: [writer] })
+
+		const handle = await runtime.startWorkflow(writer, undefined)
+		// Awaiting drain() deterministically waits for the side effect, even
+		// though we never called handle.result().
+		await runtime.drain()
+
+		expect(await handle.status()).toBe('success')
+		const rows = await client.execute('SELECT note FROM app_writes')
+		expect(rows.rows).toEqual([{ note: 'x' }])
+		await runtime.stop()
+		client.close()
+	})
+
+	it('performs no writes while idle', async () => {
+		const client = await newClient()
+		const runtime = await newRuntime({ client, dispatch: 'manual', pollMs: 25 })
+		const noop = defineWorkflow('noop', async () => undefined)
+		await runtime.start({ workflows: [noop] })
+
+		// The executor heartbeat only advances inside a dispatch tick. With no
+		// enqueue and no background loop, it must stay frozen across many
+		// would-be poll intervals — this is the property that removes the
+		// write-lock contention with the E2E fixture connection.
+		const before = await client.execute('SELECT heartbeat_at FROM _dc_executor')
+		await sleep(150)
+		const after = await client.execute('SELECT heartbeat_at FROM _dc_executor')
+
+		expect(after.rows[0]?.heartbeat_at).toBe(before.rows[0]?.heartbeat_at)
+		await runtime.stop()
+		client.close()
+	})
+
+	it('drain() resolves with no work and coalesces concurrent callers', async () => {
+		const client = await newClient()
+		const runtime = await newRuntime({
+			client,
+			dispatch: 'manual',
+			pollMs: 60_000,
+		})
+		const noop = defineWorkflow('noop', async () => 'done')
+		await runtime.start({ workflows: [noop] })
+
+		// Nothing enqueued: drain is a clean no-op even when called concurrently.
+		await Promise.all([runtime.drain(), runtime.drain()])
+
+		// Still fully functional afterward.
+		const handle = await runtime.startWorkflow(noop, undefined)
+		expect(await handle.result({ timeoutMs: 5_000, pollMs: 25 })).toBe('done')
+		await runtime.stop()
+		client.close()
+	})
+
+	it('dispatches every workflow when many are enqueued back-to-back', async () => {
+		const client = await newClient()
+		const runtime = await newRuntime({
+			client,
+			dispatch: 'manual',
+			pollMs: 60_000,
+		})
+		const noop = defineWorkflow('noop', async (_ctx, n: number) => n)
+		await runtime.start({ workflows: [noop] })
+
+		// Each enqueue fires its own coalesced drain; none may be stranded by the
+		// single-flight guard (regression for the drain() lost-wakeup window).
+		const handles = await Promise.all(
+			Array.from({ length: 25 }, (_, i) => runtime.startWorkflow(noop, i))
+		)
+		const results = await Promise.all(
+			handles.map((h) => h.result({ timeoutMs: 10_000, pollMs: 25 }))
+		)
+
+		expect(results.sort((a, b) => a - b)).toEqual(
+			Array.from({ length: 25 }, (_, i) => i)
+		)
+		await runtime.stop()
+		client.close()
+	})
+})
+
+describe('DurableRuntime — auto dispatch (contrast)', () => {
+	it('advances the heartbeat in the background without any enqueue', async () => {
+		const client = await newClient()
+		const runtime = await newRuntime({ client, dispatch: 'auto', pollMs: 25 })
+		const noop = defineWorkflow('noop', async () => undefined)
+		await runtime.start({ workflows: [noop] })
+
+		const before = await client.execute('SELECT heartbeat_at FROM _dc_executor')
+		await sleep(150)
+		const after = await client.execute('SELECT heartbeat_at FROM _dc_executor')
+
+		expect(Number(after.rows[0]?.heartbeat_at)).toBeGreaterThan(
+			Number(before.rows[0]?.heartbeat_at)
+		)
+		await runtime.stop()
+		client.close()
+	})
+})
