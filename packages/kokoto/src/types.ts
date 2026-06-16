@@ -218,6 +218,18 @@ export interface RuntimeConfig {
 	globalConcurrency?: number
 	/** Identifier for the host process; defaults to a UUIDv7. */
 	executorId?: string
+	/**
+	 * Dispatch strategy. Default `'auto'`.
+	 *
+	 * - `'auto'`: a background timer polls for work every `pollMs`, the normal
+	 *   production behavior.
+	 * - `'manual'`: no background timer runs, so the runtime performs no writes
+	 *   while idle. Enqueuing a workflow (or calling {@link DurableRuntime.drain})
+	 *   drives work to quiescence on demand. Intended for tests that share the
+	 *   SQLite file with another connection and cannot tolerate a continuous
+	 *   background write loop.
+	 */
+	dispatch?: 'auto' | 'manual'
 }
 
 /** Configuration for {@link DurableRuntime.start}. */

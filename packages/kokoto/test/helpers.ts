@@ -92,6 +92,7 @@ export async function newRuntime(opts: {
 	pollMs?: number
 	leaseMs?: number
 	globalConcurrency?: number
+	dispatch?: 'auto' | 'manual'
 }): Promise<DurableRuntime> {
 	const runtime = createRuntime({
 		client: opts.client as never,
@@ -99,6 +100,7 @@ export async function newRuntime(opts: {
 		pollMs: opts.pollMs ?? 25,
 		leaseMs: opts.leaseMs ?? 5_000,
 		globalConcurrency: opts.globalConcurrency,
+		dispatch: opts.dispatch,
 	})
 	await runtime.createSchema()
 	return runtime

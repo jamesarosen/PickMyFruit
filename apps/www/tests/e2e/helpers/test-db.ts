@@ -37,11 +37,13 @@ const client = createClient({ url: TEST_DB_URL })
 // requires an exclusive lock, and without busy_timeout the PRAGMA fails
 // immediately with SQLITE_BUSY when the dev server is mid-write.
 //
-// 30s (vs. the 5s app default) gives the test fixture plenty of headroom
-// to outwait kokoto's dispatcher poll: every poll briefly acquires a write
-// lock via `BEGIN IMMEDIATE`, and on slow CI hardware those polls can
-// overlap with fixture writes often enough to exhaust a 5s budget.
-await client.execute('PRAGMA busy_timeout = 30000')
+// The E2E server runs kokoto in manual dispatch mode (KOKOTO_DISPATCH=manual
+// in playwright.config.ts), so the runtime performs no background writes while
+// idle — it only writes briefly while actually processing a workflow (e.g. an
+// inquiry submission). The 5s app-default budget is therefore ample for the
+// rare overlap; we no longer need the old 30s headroom that outwaited the 1s
+// dispatcher poll.
+await client.execute('PRAGMA busy_timeout = 5000')
 await client.execute('PRAGMA foreign_keys = ON')
 await client.execute('PRAGMA journal_mode = WAL')
 const db = drizzle(client)

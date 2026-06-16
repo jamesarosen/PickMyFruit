@@ -44,6 +44,10 @@ export default defineConfig({
 			EMAIL_FROM: 'Test <test@example.com>',
 			EMAIL_PROVIDER: 'silent',
 			HMAC_SECRET: 'test-secret-for-e2e-minimum-32-characters',
+			// Drive kokoto on demand instead of via a 1s background poll so its
+			// writes do not contend with the test fixture's connection for the
+			// shared SQLite write lock. See tests/e2e/helpers/test-db.ts.
+			KOKOTO_DISPATCH: 'manual',
 			NODE_ENV: 'test',
 			PORT: '5174',
 			STORAGE_PROVIDER: 'local',

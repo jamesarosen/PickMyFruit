@@ -83,6 +83,13 @@ const outputSchema = z
 			.string()
 			.regex(/^.+\s<[^@]+@[^>]+>$/, 'Must be in "Display Name <email>" format'),
 		HMAC_SECRET: z.string().min(32),
+		/**
+		 * Kokoto dispatch strategy. `'auto'` (default) runs the background poll
+		 * loop; `'manual'` performs no writes while idle and drives work on
+		 * demand — set in E2E so the dispatcher does not contend with the test
+		 * fixture's connection for the shared SQLite write lock.
+		 */
+		KOKOTO_DISPATCH: z.enum(['auto', 'manual']).prefault('auto'),
 		/** When true, apply journal migrations once when the server process starts. */
 		RUN_MIGRATIONS_ON_BOOT: z.stringbool().prefault('false'),
 		NODE_ENV: z.string().prefault('development'),
