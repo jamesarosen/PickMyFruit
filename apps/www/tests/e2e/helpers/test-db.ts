@@ -12,7 +12,7 @@ import {
 } from '../../../src/data/schema.server'
 import { eq, desc, like } from 'drizzle-orm'
 import { faker } from '@faker-js/faker'
-import { latLngToCell } from 'h3-js'
+import { latLngToCell, cellToParent } from 'h3-js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const wwwRoot = resolve(__dirname, '../../..')
@@ -150,6 +150,16 @@ export async function createTestListing(
 		createdAt: new Date(),
 		updatedAt: new Date(),
 		...overrides,
+	}
+	// When a test overrides lat/lng but not the cells, recompute them so the
+	// row is internally consistent (and ends up in the right map viewport).
+	if (overrides.h3Index === undefined) {
+		data.h3Index = latLngToCell(data.lat, data.lng, 13)
+	}
+	// Keep the public (res-8) cell in lockstep with whatever res-13 cell ended up
+	// on the row, mirroring `createListing` in production.
+	if (data.publicH3Index == null) {
+		data.publicH3Index = cellToParent(data.h3Index, 8)
 	}
 	const result = await db.insert(listings).values(data).returning()
 	return result[0]

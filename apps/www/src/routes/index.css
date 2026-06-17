@@ -151,28 +151,61 @@
 			cursor: default;
 		}
 
-		& .clear-filter {
-			display: block;
-			margin: 16px auto 0;
-			padding: 6px 16px;
-			font-size: 14px;
-			font-weight: 500;
-			color: var(--color-primary);
-			background: none;
-			border: 1px solid var(--color-primary);
-			border-radius: 6px;
-			cursor: pointer;
-			transition: background-color 0.15s;
-		}
-
-		& .clear-filter:hover {
-			background: oklch(from var(--color-primary) l c h / 0.08);
-		}
-
-		& .no-filtered-listings {
+		/* Reserved slot for the "Updating…" hint so it never reflows the grid. */
+		& .available-listings__updating {
+			min-height: 20px;
+			margin: 12px 0 0;
 			text-align: center;
+			font-size: 14px;
 			color: var(--color-quiet);
-			margin: 24px 0 0;
+		}
+
+		/* Empty-viewport block: picker action first, grower nudge second. */
+		& .viewport-empty {
+			margin-top: 32px;
+			text-align: center;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 16px;
+		}
+
+		& .viewport-empty__lead {
+			font-size: 18px;
+			color: var(--color-foreground);
+			margin: 0;
+		}
+
+		& .viewport-empty__grower {
+			font-size: 14px;
+			color: var(--color-quiet);
+			text-decoration: none;
+		}
+
+		& .viewport-empty__grower:hover {
+			text-decoration: underline;
+		}
+
+		& .viewport-divider {
+			margin: 40px auto 0;
+			max-width: 200px;
+			border: none;
+			border-top: 1px solid oklch(from var(--color-quiet) l calc(c * 0.2) h);
+		}
+
+		/* Sticky so it stays visible while scrolling the nearest cards, keeping
+		   the "these are not in your current view" framing in sight. */
+		& .nearest-heading {
+			position: sticky;
+			top: 0;
+			z-index: 1;
+			padding: 16px 0;
+			margin: 0;
+			text-align: center;
+			font-size: 20px;
+			font-weight: 600;
+			color: var(--color-foreground);
+			background: var(--color-background);
 		}
 
 		& .listings-grid {

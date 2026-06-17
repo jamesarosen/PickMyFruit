@@ -31,6 +31,9 @@ export const Route = createRootRoute({
 		meta: [
 			{ charSet: 'utf-8' },
 			{ name: 'viewport', content: 'width=device-width, initial-scale=1' },
+			// Don't leak a full URL (which can carry a shared map center in its
+			// query) to cross-origin requests such as the map tile host.
+			{ name: 'referrer', content: 'strict-origin-when-cross-origin' },
 			{ title: 'Pick My Fruit' },
 			// Open Graph (LinkedIn, NextDoor, Facebook, etc.)
 			{ property: 'og:type', content: 'website' },

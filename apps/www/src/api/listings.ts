@@ -6,8 +6,17 @@ import { NotFoundError } from '@/lib/user-error'
 import { Sentry } from '@/lib/sentry'
 import { updateListingSchema } from '@/lib/validation'
 import { PRODUCE_STAND_SLUG } from '@/lib/produce-types'
+import {
+	viewportToCells,
+	MAX_MERCATOR_LAT,
+	type ViewportBounds,
+} from '@/lib/h3-viewport'
 import type { AddressFields, Listing } from '@/data/schema.server'
-import type { OwnerListingView, VerifiedPublicListing } from '@/data/listing'
+import type {
+	OwnerListingView,
+	PublicListing,
+	VerifiedPublicListing,
+} from '@/data/listing'
 
 /** Fetches the current user's listings, or empty array if not authenticated. */
 export const getMyListings = createServerFn({ method: 'GET' })
@@ -65,22 +74,89 @@ export const getAvailableListings = createServerFn({ method: 'GET' })
 		return query(limit)
 	})
 
-const nearbyListingsSchema = z.object({
-	lat: z.number(),
-	lng: z.number(),
+const nearestListingsSchema = z.object({
+	lat: z.number().finite(),
+	lng: z.number().finite(),
 	limit: z.number().int().positive().max(50).default(12),
 })
 
-/** Fetches available listings ordered by proximity to a point. */
-export const getNearbyListings = createServerFn({ method: 'GET' })
+/**
+ * Fetches available listings ordered by proximity to a point, privacy-safely
+ * (the center and each listing are quantized to res-8 cell centers, so order
+ * never leaks sub-res-8 position). Powers the home loader and the
+ * empty-viewport "nearest listings" fallback.
+ */
+export const getNearestListings = createServerFn({ method: 'GET' })
 	.middleware([errorMiddleware])
 	.inputValidator((input: { lat: number; lng: number; limit?: number }) =>
-		nearbyListingsSchema.parse(input)
+		nearestListingsSchema.parse(input)
 	)
 	.handler(async ({ data }) => {
-		const { getNearbyListings: query } = await import('@/data/queries.server')
+		const { getNearestListings: query } = await import('@/data/queries.server')
 		return query(data.lat, data.lng, data.limit)
 	})
+
+const viewportSchema = z
+	.object({
+		north: z.number().finite().gte(-MAX_MERCATOR_LAT).lte(MAX_MERCATOR_LAT),
+		south: z.number().finite().gte(-MAX_MERCATOR_LAT).lte(MAX_MERCATOR_LAT),
+		east: z.number().finite().gte(-180).lte(180),
+		west: z.number().finite().gte(-180).lte(180),
+	})
+	// Reject degenerate / antimeridian-crossing rectangles. `viewportToCells`
+	// re-checks, but failing fast here keeps a tampered request from reaching it.
+	.refine((b) => b.south < b.north && b.west < b.east, {
+		message: 'Viewport bounds must be ordered and non-degenerate.',
+	})
+
+/**
+ * Fetches the available listings whose public (res-8) cell falls within the map
+ * viewport. Returns `[]` when nothing is in view or the viewport is too broad to
+ * cover exactly — the caller then shows the "nearest listings" fallback.
+ *
+ * Filtering is purely on coarsened cells, never raw coordinates, so the result
+ * set can change only at res-8 boundaries. Rate-limited per client because it is
+ * unauthenticated and otherwise scriptable. POST (not GET) so the viewport
+ * bounds travel in the body and never land in a URL, access log, or referrer.
+ */
+export const getListingsInViewport = createServerFn({ method: 'POST' })
+	.middleware([errorMiddleware])
+	.inputValidator((input: ViewportBounds) => viewportSchema.parse(input))
+	.handler(async ({ data }): Promise<PublicListing[]> => {
+		const headers = getRequestHeaders() as unknown as Record<
+			string,
+			string | undefined
+		>
+		const { rateLimit } = await import('@/lib/rate-limit.server')
+		// A real user pans at a few requests/second at most (debounced); allow a
+		// generous burst, then ~3/s sustained.
+		const allowed = rateLimit(
+			`viewport:${clientIp(headers['x-forwarded-for'])}`,
+			{
+				capacity: 60,
+				refillPerSec: 3,
+			}
+		)
+		if (!allowed) {
+			throw new UserError(
+				'RATE_LIMITED',
+				'Too many map updates. Please slow down.',
+				429
+			)
+		}
+
+		const cover = viewportToCells(data)
+		if (cover.kind === 'too-broad') return []
+
+		const { getListingsInPublicCells } = await import('@/data/queries.server')
+		return getListingsInPublicCells(cover.cells)
+	})
+
+/** Best-effort client IP from the `x-forwarded-for` header; `unknown` collapses unattributable callers. */
+function clientIp(forwarded: string | undefined): string {
+	if (forwarded) return forwarded.split(',')[0]?.trim() || 'unknown'
+	return 'unknown'
+}
 
 /**
  * Strict positive integer listing id from route params or RPC input; `.parse`

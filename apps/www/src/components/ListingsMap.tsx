@@ -4,6 +4,7 @@ import { cellToLatLng, cellToBoundary, cellToParent } from 'h3-js'
 import { H3_RESOLUTIONS, zoomToH3Resolution } from '@/lib/h3-resolutions'
 import { PRODUCE_STAND_SLUG } from '@/lib/produce-types'
 import type { LocationBias } from '@/lib/geolocation'
+import type { ViewportBounds } from '@/lib/h3-viewport'
 import {
 	DEFAULT_MAP_ZOOM,
 	planListingsMapCamera,
@@ -22,12 +23,12 @@ export interface ListingGroup {
 	listings: PublicListing[]
 }
 
+/** Debounce before reporting a settled viewport, so a drag emits once. */
+export const VIEWPORT_DEBOUNCE_MS = 400
+
 // MapLibre paint properties require literal color strings, not CSS variables.
-const COLOR_SELECTED = '#ff6b5a' // --color-sunset-coral
 const COLOR_DEFAULT = '#10b981' // --color-fresh-green
 const COLOR_LABEL = '#ffffff'
-const COLOR_REGION_FILL = '#10b981' // --color-fresh-green
-const COLOR_REGION_STROKE = '#10b981'
 
 // Lucide `Store` icon, inlined so it can be dropped into a MapLibre HTML marker
 // without rendering a Solid component into a detached node. Placeholder pick —
@@ -75,10 +76,11 @@ interface Props {
 	 * of fitting the listing bounds; undefined/null keeps the default framing.
 	 */
 	center?: LocationBias | null
-	/** Called when a group marker is clicked. Null clears the filter. */
-	onGroupSelect?: (h3Index: string | null) => void
-	/** Currently selected H3 index, for highlighting. */
-	selectedH3?: string | null
+	/**
+	 * Called (debounced) when the user settles the map on a new viewport, so the
+	 * page can fetch the listings now in view.
+	 */
+	onViewportChange?: (bounds: ViewportBounds) => void
 }
 
 /** Map showing nearby listings grouped by H3 cell. */
@@ -88,6 +90,7 @@ export default function ListingsMap(props: Props) {
 	let layersReady = false
 	let currentRes: number = H3_RESOLUTIONS.HOME_GROUPING
 	let standMarkers: import('maplibre-gl').Marker[] = []
+	let viewportTimer: ReturnType<typeof setTimeout> | undefined
 
 	/**
 	 * Renders a distinct Store marker for each produce stand so stands are
@@ -131,6 +134,27 @@ export default function ListingsMap(props: Props) {
 		container.dataset.mapZoom = map.getZoom().toFixed(2)
 	}
 
+	/**
+	 * Debounced emit of the settled viewport. `getBounds()` is reliable as soon
+	 * as the camera is set (it doesn't need tiles to load), so we emit for the
+	 * initial framing too — that first query is what swaps the loader's nearest
+	 * listings over to the actual in-view set.
+	 */
+	function scheduleViewportEmit() {
+		if (!props.onViewportChange) return
+		if (viewportTimer) clearTimeout(viewportTimer)
+		viewportTimer = setTimeout(() => {
+			if (!map) return
+			const b = map.getBounds()
+			props.onViewportChange?.({
+				north: b.getNorth(),
+				south: b.getSouth(),
+				east: b.getEast(),
+				west: b.getWest(),
+			})
+		}, VIEWPORT_DEBOUNCE_MS)
+	}
+
 	function setupMap({ container, maplibregl, onMapLoad }: MapLibreGLReadyArgs) {
 		maplibreglRef = maplibregl
 		const groups = groupByH3(props.listings)
@@ -155,7 +179,13 @@ export default function ListingsMap(props: Props) {
 		})
 
 		reportCenter(container)
-		map.on('moveend', () => reportCenter(container))
+		map.on('moveend', () => {
+			reportCenter(container)
+			scheduleViewportEmit()
+		})
+		// Emit once for the initial framing so the grid reflects the actual
+		// viewport even if no `moveend` fires (e.g. the camera was set directly).
+		scheduleViewportEmit()
 
 		map.addControl(
 			new maplibregl.AttributionControl({ compact: true }),
@@ -170,7 +200,6 @@ export default function ListingsMap(props: Props) {
 
 		reportMapLoadedOnce(map, onMapLoad, () => {
 			addGroupLayers(groups)
-			addRegionLayers()
 			layersReady = true
 
 			// Adjust resolution to match the map's initial zoom
@@ -180,11 +209,6 @@ export default function ListingsMap(props: Props) {
 				currentRes = initialRes
 				updateGroupSource(groupByH3(props.listings, currentRes))
 			}
-
-			if (props.selectedH3) {
-				updateRegion(props.selectedH3)
-				updateHighlight()
-			}
 		})
 
 		map.on('zoomend', () => {
@@ -193,11 +217,10 @@ export default function ListingsMap(props: Props) {
 			if (newRes === currentRes) return
 			currentRes = newRes
 			updateGroupSource(groupByH3(props.listings, currentRes))
-			// Clear selection — the old cell may not exist at the new resolution
-			props.onGroupSelect?.(null)
 		})
 
 		return () => {
+			if (viewportTimer) clearTimeout(viewportTimer)
 			for (const marker of standMarkers) marker.remove()
 			standMarkers = []
 			maplibreglRef = undefined
@@ -254,12 +277,7 @@ export default function ListingsMap(props: Props) {
 					10,
 					28,
 				],
-				'circle-color': [
-					'case',
-					['==', ['get', 'h3Index'], ''],
-					COLOR_SELECTED,
-					COLOR_DEFAULT,
-				],
+				'circle-color': COLOR_DEFAULT,
 				'circle-stroke-width': 2,
 				'circle-stroke-color': COLOR_LABEL,
 			},
@@ -280,14 +298,20 @@ export default function ListingsMap(props: Props) {
 			},
 		})
 
+		// Clicking a cluster zooms into its cell so the listings it represents
+		// come into view; the resulting `moveend` re-queries the viewport.
 		map.on('click', 'listing-groups-circle', (e) => {
 			const feature = e.features?.[0]
-			if (!feature) return
+			if (!feature || !map || !maplibreglRef) return
 			const clickedH3 = feature.properties?.h3Index
-			if (props.selectedH3 === clickedH3) {
-				props.onGroupSelect?.(null)
-			} else {
-				props.onGroupSelect?.(clickedH3)
+			if (typeof clickedH3 !== 'string') return
+			try {
+				const ring = h3ToPolygonCoordinates(clickedH3)
+				const cellBounds = new maplibreglRef.LngLatBounds()
+				for (const [lng, lat] of ring) cellBounds.extend([lng, lat])
+				map.fitBounds(cellBounds, { padding: 80, maxZoom: 15 })
+			} catch (err) {
+				Sentry.captureException(err)
 			}
 		})
 
@@ -300,86 +324,10 @@ export default function ListingsMap(props: Props) {
 		})
 	}
 
-	/** Adds the region outline source and layers (initially empty). */
-	function addRegionLayers() {
-		if (!map) return
-
-		const emptyPolygon: GeoJSON.FeatureCollection = {
-			type: 'FeatureCollection',
-			features: [],
-		}
-
-		map.addSource('selected-region', { type: 'geojson', data: emptyPolygon })
-
-		// Region fill — rendered below the pip layers
-		map.addLayer(
-			{
-				id: 'selected-region-fill',
-				type: 'fill',
-				source: 'selected-region',
-				paint: {
-					'fill-color': COLOR_REGION_FILL,
-					'fill-opacity': 0.15,
-				},
-			},
-			'listing-groups-circle' // insert before circle layer
-		)
-
-		map.addLayer(
-			{
-				id: 'selected-region-outline',
-				type: 'line',
-				source: 'selected-region',
-				paint: {
-					'line-color': COLOR_REGION_STROKE,
-					'line-width': 2,
-				},
-			},
-			'listing-groups-circle'
-		)
-	}
-
-	/** Updates the region outline to show the boundary of the given H3 cell. */
-	function updateRegion(h3Index: string | null | undefined) {
-		if (!map || !layersReady) return
-
-		const source = map.getSource('selected-region') as
-			| import('maplibre-gl').GeoJSONSource
-			| undefined
-		if (!source) return
-
-		if (!h3Index) {
-			source.setData({ type: 'FeatureCollection', features: [] })
-			return
-		}
-
-		try {
-			const ring = h3ToPolygonCoordinates(h3Index)
-			source.setData({
-				type: 'Feature',
-				geometry: { type: 'Polygon', coordinates: [ring] },
-				properties: {},
-			})
-		} catch (err) {
-			Sentry.captureException(err)
-			source.setData({ type: 'FeatureCollection', features: [] })
-		}
-	}
-
-	function updateHighlight() {
-		if (!map?.getLayer('listing-groups-circle')) return
-
-		map.setPaintProperty('listing-groups-circle', 'circle-color', [
-			'case',
-			['==', ['get', 'h3Index'], props.selectedH3 ?? ''],
-			COLOR_SELECTED,
-			COLOR_DEFAULT,
-		])
-	}
-
-	// react to listing array changes; keep the visible groups and stand markers
-	// up to date. Markers refresh as soon as the map exists; the grouped
-	// circles need the layers (and thus the loaded style) first.
+	// React to listing array changes; keep the visible groups and stand markers
+	// up to date. Markers refresh as soon as the map exists; the grouped circles
+	// need the layers (and thus the loaded style) first. Updating the source does
+	// not move the camera, so this never triggers a viewport re-query.
 	createEffect(() => {
 		if (!map) return
 		refreshStandMarkers()
@@ -387,21 +335,10 @@ export default function ListingsMap(props: Props) {
 		updateGroupSource(groupByH3(props.listings, currentRes))
 	})
 
-	createEffect(
-		on(
-			() => props.selectedH3,
-			() => {
-				updateHighlight()
-				updateRegion(props.selectedH3)
-			}
-		)
-	)
-
-	// A `center` arrives when the user clicks "Center"; fly there at a fixed
-	// neighborhood zoom. Deferred so it never fights the initial camera, which
-	// already reads `props.center` at setup. Centering is an explicit action, so
-	// the resulting zoom change re-framing the map (which the `zoomend` handler
-	// treats as a reset, clearing any `?area` selection) is acceptable.
+	// A `center` arrives when the user clicks "Center" or "Jump to nearest"; fly
+	// there at a fixed neighborhood zoom. Deferred so it never fights the initial
+	// camera, which already reads `props.center` at setup. The resulting
+	// `moveend` re-queries the viewport, which is the intended behavior.
 	createEffect(
 		on(
 			() => props.center,

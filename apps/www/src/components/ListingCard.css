@@ -14,6 +14,22 @@
 		}
 	}
 
+	/* Dimmed treatment for nearest-fallback cards that sit outside the current
+	   map view, so they are not mistaken for on-screen pins. */
+	.listing-card--muted {
+		opacity: 0.85;
+		border-style: dashed;
+	}
+
+	/* Distance/location chip above a fallback card. */
+	.listing-card-badge {
+		display: block;
+		padding: 6px 16px 0;
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--color-quiet);
+	}
+
 	/* Narrow chip overlaid on the card corner — collapses the indicator to its
 	   icon (the label stays available as a tooltip / accessible name). */
 	.drop-off-indicator.listing-card-dropoff {

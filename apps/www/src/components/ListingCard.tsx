@@ -24,10 +24,22 @@ export type ListingCardData = {
 }
 
 /** A card linking to a listing detail page, with cover photo or Apple placeholder. */
-export default function ListingCard(props: { listing: ListingCardData }) {
+export default function ListingCard(props: {
+	listing: ListingCardData
+	/** Optional chip shown above the card, e.g. a distance in the nearest fallback. */
+	badge?: string
+	/** Dims the card to signal it sits outside the current map view. */
+	muted?: boolean
+}) {
 	const l = () => props.listing
 	return (
-		<article class="listing-card surface-subtle">
+		<article
+			class="listing-card surface-subtle"
+			classList={{ 'listing-card--muted': props.muted }}
+		>
+			<Show when={props.badge}>
+				{(badge) => <span class="listing-card-badge">{badge()}</span>}
+			</Show>
 			<Show when={l().type === PRODUCE_STAND_SLUG}>
 				<DropOffIndicator
 					class="listing-card-dropoff"

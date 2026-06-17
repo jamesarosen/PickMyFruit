@@ -24,6 +24,7 @@ function makeListing(overrides: Partial<Listing> = {}): Listing {
 		lat: NAPA.lat,
 		lng: NAPA.lng,
 		h3Index,
+		publicH3Index: null,
 		userId: faker.string.uuid(),
 		notes: null,
 		accessInstructions: 'Ring doorbell',
