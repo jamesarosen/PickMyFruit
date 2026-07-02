@@ -138,6 +138,12 @@
 			background: var(--color-background);
 		}
 
+		/* The section receives programmatic focus after the picker CTAs'
+		   smooth scroll; a focus ring around the whole section is noise. */
+		& .available-listings:focus {
+			outline: none;
+		}
+
 		& .available-listings h2 {
 			font-size: 36px;
 			font-weight: 700;

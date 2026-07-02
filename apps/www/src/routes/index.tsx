@@ -75,6 +75,20 @@ function HomePage() {
 		)
 	}
 
+	// The picker CTAs glide to the listings instead of the anchor's instant
+	// jump. The href stays as a real fragment so the link still works without
+	// JS (e.g. opened in a new tab).
+	function scrollToListings(event: MouseEvent) {
+		event.preventDefault()
+		event.stopPropagation()
+		const section = document.getElementById('available-listings')
+		if (!section) return
+		section.scrollIntoView({ behavior: 'smooth' })
+		// preventDefault suppresses the browser's native focus move to the
+		// anchor target; restore it for keyboard and screen-reader users.
+		section.focus({ preventScroll: true })
+	}
+
 	return (
 		<Layout title="Pick My Fruit - Turn your backyard abundance into community food">
 			<div class="home-page">
@@ -102,7 +116,10 @@ function HomePage() {
 								<a
 									href="#available-listings"
 									class="button button--ghost button--lg"
-									onClick={() => trackOnboardingCtaClick('picker', 'hero')}
+									onClick={(event) => {
+										trackOnboardingCtaClick('picker', 'hero')
+										scrollToListings(event)
+									}}
 								>
 									Find Fruit to Pick
 								</a>
@@ -157,7 +174,10 @@ function HomePage() {
 									<a
 										href="#available-listings"
 										class="button button--primary"
-										onClick={() => trackOnboardingCtaClick('picker', 'how-it-works')}
+										onClick={(event) => {
+											trackOnboardingCtaClick('picker', 'how-it-works')
+											scrollToListings(event)
+										}}
 									>
 										Browse What's Ripe
 									</a>
@@ -170,7 +190,7 @@ function HomePage() {
 						</div>
 					</section>
 
-					<section class="available-listings" id="available-listings">
+					<section class="available-listings" id="available-listings" tabindex="-1">
 						<div class="container">
 							<div class="available-listings__header">
 								<h2>Available Now</h2>
