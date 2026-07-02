@@ -13,6 +13,11 @@ import {
 } from '@/lib/address-suggestions'
 import { authClient } from '@/lib/auth-client'
 import { countryOptions } from '@/lib/countries'
+import {
+	trackListingSubmitted,
+	trackMagicLinkRequested,
+	trackMagicLinkVerified,
+} from '@/lib/onboarding-telemetry'
 import { Sentry } from '@/lib/sentry'
 import { geocodeAddress, GeocodingNotFoundError } from '@/lib/geocoding'
 import { listingFormSchema } from '@/lib/validation'
@@ -96,6 +101,10 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 	const [clientMounted, setClientMounted] = createSignal(false)
 	onMount(() => setClientMounted(true))
 
+	// Tracks whether this flow created the session (magic link) or reused an
+	// existing one — recorded on the onboarding.listing.submitted event.
+	let verifiedViaMagicLink = false
+
 	async function submitListing(data: Record<string, unknown>) {
 		setFormState('submitting')
 		try {
@@ -118,6 +127,9 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 				)
 			}
 			sessionStorage.removeItem(PENDING_LISTING_KEY)
+			trackListingSubmitted(
+				verifiedViaMagicLink ? 'new-session' : 'existing-session'
+			)
 			navigate({
 				to: '/listings/$id',
 				params: { id: String(responseData.id) },
@@ -257,6 +269,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 				setSubmitError(error)
 				setFormState('error')
 			} else {
+				trackMagicLinkRequested('listing-form')
 				setFormState('awaiting-magic-link')
 			}
 		}
@@ -268,6 +281,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 	}
 
 	async function handleMagicLinkVerified() {
+		verifiedViaMagicLink = true
 		// Guard against the double-submit race where createEffect also fires
 		// (e.g. the user opened the email link in the same tab before entering
 		// the token, leaving listing_complete=true in the URL).
@@ -317,6 +331,9 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 				}
 
 				hasAutoSubmitted = true
+				// Arriving here means the emailed link signed the visitor in.
+				verifiedViaMagicLink = true
+				trackMagicLinkVerified('listing-form', 'email-link')
 				// Remove the param so re-mounting doesn't trigger a second submit.
 				const url = new URL(window.location.href)
 				url.searchParams.delete('listing_complete')
@@ -335,6 +352,7 @@ export default function ListingForm(props: { defaultAddress?: AddressFields }) {
 				<MagicLinkWaiting
 					email={email()}
 					callbackURL={CALLBACK_URL}
+					source="listing-form"
 					onCancel={handleMagicLinkCancel}
 					onVerified={handleMagicLinkVerified}
 				/>

@@ -20,6 +20,19 @@ vi.mock('@tanstack/solid-router', () => ({
 const mockSubmitInquiry = vi.fn()
 vi.mock('@/api/inquiries', () => ({ submitInquiry: mockSubmitInquiry }))
 
+const { mockTrackRequested, mockTrackVerified, mockTrackInquirySubmitted } =
+	vi.hoisted(() => ({
+		mockTrackRequested: vi.fn(),
+		mockTrackVerified: vi.fn(),
+		mockTrackInquirySubmitted: vi.fn(),
+	}))
+vi.mock('@/lib/onboarding-telemetry', () => ({
+	trackMagicLinkRequested: mockTrackRequested,
+	trackMagicLinkVerified: mockTrackVerified,
+	trackMagicLinkVerifyFailed: vi.fn(),
+	trackInquirySubmitted: mockTrackInquirySubmitted,
+}))
+
 // Loaded after mocks are set up.
 const { default: InquiryForm } = await import('../src/components/InquiryForm')
 
@@ -261,5 +274,80 @@ describe('InquiryForm name interstitial', () => {
 			queryByRole('heading', { name: 'Before we send your inquiry…' })
 		).not.toBeInTheDocument()
 		expect(mockUpdateUser).not.toHaveBeenCalled()
+	})
+})
+
+describe('InquiryForm onboarding telemetry', () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+		sessionStorage.clear()
+		mockSubmitInquiry.mockResolvedValue({ inquiryId: 1 })
+	})
+
+	afterEach(cleanup)
+
+	it('reports a submitted inquiry from an already signed-in visitor', async () => {
+		mockSession.mockReturnValue({
+			session: {
+				user: { id: 'user-1', name: 'Test User', email: 'test@example.com' },
+			},
+		})
+
+		const { getByRole } = render(() => <InquiryForm {...defaultProps} />)
+
+		fireEvent.click(getByRole('button', { name: 'Put me in touch' }))
+
+		await waitFor(() => {
+			expect(mockTrackInquirySubmitted).toHaveBeenCalledWith('existing-session')
+		})
+	})
+
+	it('reports the magic-link request when an email-first visitor asks to pick', async () => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		mockSession.mockReturnValue({ session: null } as any)
+		mockSendMagicLink.mockResolvedValue({ data: {}, error: null })
+
+		const { getByRole, getByLabelText } = render(() => (
+			<InquiryForm {...defaultProps} />
+		))
+
+		fireEvent.input(getByLabelText(/Your email/), {
+			target: { value: 'picker@example.com' },
+		})
+		fireEvent.click(getByRole('button', { name: 'Put me in touch' }))
+
+		await waitFor(() => {
+			expect(mockTrackRequested).toHaveBeenCalledWith('inquiry-form')
+		})
+		expect(mockTrackInquirySubmitted).not.toHaveBeenCalled()
+	})
+
+	it('reports an email-link verification and a new-session inquiry on return from the email', async () => {
+		mockSession.mockReturnValue({
+			session: {
+				user: { id: 'user-1', name: 'Jane Gleaner', email: 'jane@example.com' },
+			},
+		})
+		sessionStorage.setItem(
+			'pendingInquiry',
+			JSON.stringify({ listingId: 42, note: '' })
+		)
+		vi.spyOn(window.history, 'replaceState').mockImplementation(() => {})
+		Object.defineProperty(window, 'location', {
+			value: {
+				...window.location,
+				search: '?inquiry_complete=true',
+				href: 'http://localhost/listings/42?inquiry_complete=true',
+			},
+			writable: true,
+			configurable: true,
+		})
+
+		render(() => <InquiryForm {...defaultProps} />)
+
+		await waitFor(() => {
+			expect(mockTrackVerified).toHaveBeenCalledWith('inquiry-form', 'email-link')
+			expect(mockTrackInquirySubmitted).toHaveBeenCalledWith('new-session')
+		})
 	})
 })

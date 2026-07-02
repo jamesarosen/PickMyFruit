@@ -24,6 +24,14 @@
 			line-height: 1.5;
 		}
 
+		& .hero-actions {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			gap: 16px;
+			flex-wrap: wrap;
+		}
+
 		/* How It Works Section */
 		& .how-it-works {
 			padding: 80px 0;
@@ -37,63 +45,91 @@
 			margin: 0 0 60px 0;
 		}
 
-		& .steps {
+		/* One path card per audience: growers on the left, pickers on the right,
+		   stacking to a single column on narrow screens via auto-fit. */
+		& .paths {
 			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+			grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 			gap: 40px;
-			margin-bottom: 60px;
+			margin-bottom: 40px;
 		}
 
-		& .step {
+		& .path {
+			display: flex;
+			flex-direction: column;
+			gap: 24px;
+			padding: 32px;
+			border: 1px solid oklch(from var(--color-foreground) l c h / 0.12);
+			border-radius: 12px;
+			background: var(--color-background);
+			text-align: left;
+		}
+
+		& .path h3 {
+			font-size: 24px;
+			font-weight: 700;
+			color: var(--color-foreground);
+			margin: 0;
 			text-align: center;
 		}
 
-		& .step-number {
-			width: 60px;
-			height: 60px;
+		/* The CTA hugs the bottom edge so both cards' buttons align. */
+		& .path .button {
+			align-self: center;
+			margin-top: auto;
+		}
+
+		& .steps {
+			list-style: none;
+			counter-reset: step;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 20px;
+		}
+
+		& .step {
+			counter-increment: step;
+			position: relative;
+			padding-left: 56px;
+		}
+
+		& .step::before {
+			content: counter(step);
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 40px;
+			height: 40px;
 			border-radius: 50%;
 			background: var(--color-secondary);
 			color: var(--color-background);
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			font-size: 24px;
+			font-size: 18px;
 			font-weight: 700;
-			margin: 0 auto 20px auto;
 		}
 
-		& .step h3 {
-			font-size: 20px;
+		& .step h4 {
+			font-size: 18px;
 			font-weight: 600;
 			color: var(--color-foreground);
-			margin: 0 0 8px 0;
+			margin: 0 0 4px 0;
 		}
 
 		& .step p {
-			font-size: 16px;
+			font-size: 15px;
 			color: var(--color-quiet);
 			margin: 0;
 		}
 
-		/* Contact Info */
-		& .contact-info {
-			padding: 40px 0;
+		& .paths-both-note {
 			text-align: center;
-		}
-
-		& .contact-info p {
 			font-size: 16px;
 			color: var(--color-quiet);
 			margin: 0;
-		}
-
-		& .contact-info a {
-			color: var(--color-primary);
-			text-decoration: none;
-		}
-
-		& .contact-info a:hover {
-			text-decoration: underline;
 		}
 
 		/* Available Listings Section */
@@ -196,15 +232,28 @@
 				font-size: 28px;
 			}
 
+			/* Reserve room for the absolutely-positioned Center button so it
+			   cannot overlap the heading on narrow screens. */
+			& .available-listings__header {
+				padding: 0 52px;
+			}
+
+			& .available-listings__header h2 {
+				font-size: 28px;
+			}
+
 			& footer .container {
 				flex-direction: column;
 				gap: 20px;
 				text-align: center;
 			}
 
-			& .steps {
-				grid-template-columns: 1fr;
-				gap: 30px;
+			& .paths {
+				gap: 24px;
+			}
+
+			& .path {
+				padding: 24px;
 			}
 		}
 

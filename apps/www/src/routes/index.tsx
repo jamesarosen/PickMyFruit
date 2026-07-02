@@ -13,6 +13,7 @@ import {
 	requestCurrentLocation,
 	type LocationBias,
 } from '@/lib/geolocation'
+import { trackOnboardingCtaClick } from '@/lib/onboarding-telemetry'
 import '@/routes/index.css'
 
 const homeSearchSchema = z.object({
@@ -82,47 +83,94 @@ function HomePage() {
 				<main id="main-content">
 					<section class="hero surface-subtle">
 						<div class="container">
-							<h1>Stop Watching Your Fruit Rot</h1>
+							<h1>Share the Harvest, Neighbor to Neighbor</h1>
 							<p class="hero-subtitle">
-								Turn your backyard abundance into community food.
+								Backyard growers share their surplus. Neighbors pick it fresh.
 								<br />
-								We connect you with neighbors who will use your produce.
+								Come with a harvest, an appetite, or both.
 								<br />
 								Rooted in Napa. Growing everywhere.
 							</p>
-							<Link to="/listings/new" class="button button--primary button--lg">
-								Share What I'm Growing
-							</Link>
+							<div class="hero-actions">
+								<Link
+									to="/listings/new"
+									class="button button--primary button--lg"
+									onClick={() => trackOnboardingCtaClick('grower', 'hero')}
+								>
+									Share What I'm Growing
+								</Link>
+								<a
+									href="#available-listings"
+									class="button button--ghost button--lg"
+									onClick={() => trackOnboardingCtaClick('picker', 'hero')}
+								>
+									Find Fruit to Pick
+								</a>
+							</div>
 						</div>
 					</section>
 
 					<section class="how-it-works">
 						<div class="container">
 							<h2>How It Works</h2>
-							<div class="steps">
-								<div class="step">
-									<div class="step-number">1</div>
-									<h3>Tell us about your produce</h3>
-									<p>Takes 30 seconds</p>
-								</div>
-								<div class="step">
-									<div class="step-number">2</div>
-									<h3>Neighbors find your listing</h3>
-									<p>You get an email when someone wants to pick</p>
-								</div>
-								<div class="step">
-									<div class="step-number">3</div>
-									<h3>They pick (or pick up), you relax</h3>
-									<p>Surplus feeds families</p>
-								</div>
+							<div class="paths">
+								<article class="path" aria-labelledby="path-grower">
+									<h3 id="path-grower">Got more fruit than you can use?</h3>
+									<ol class="steps">
+										<li class="step">
+											<h4>Tell us about your produce</h4>
+											<p>Takes 30 seconds</p>
+										</li>
+										<li class="step">
+											<h4>Neighbors find your listing</h4>
+											<p>You get an email when someone wants to pick</p>
+										</li>
+										<li class="step">
+											<h4>They pick (or pick up), you relax</h4>
+											<p>Surplus feeds families</p>
+										</li>
+									</ol>
+									<Link
+										to="/listings/new"
+										class="button button--primary"
+										onClick={() => trackOnboardingCtaClick('grower', 'how-it-works')}
+									>
+										Add a Listing
+									</Link>
+								</article>
+								<article class="path" aria-labelledby="path-picker">
+									<h3 id="path-picker">No garden? No problem.</h3>
+									<ol class="steps">
+										<li class="step">
+											<h4>Browse what's growing nearby</h4>
+											<p>The map below shows what neighbors are sharing</p>
+										</li>
+										<li class="step">
+											<h4>Ask to pick</h4>
+											<p>All you need is an email address</p>
+										</li>
+										<li class="step">
+											<h4>Meet your neighbor, fill your basket</h4>
+											<p>Good fruit, good company</p>
+										</li>
+									</ol>
+									<a
+										href="#available-listings"
+										class="button button--primary"
+										onClick={() => trackOnboardingCtaClick('picker', 'how-it-works')}
+									>
+										Browse What's Ripe
+									</a>
+								</article>
 							</div>
-							<Link to="/listings/new" class="button button--primary button--lg">
-								Add a Listing
-							</Link>
+							<p class="paths-both-note">
+								Plenty of neighbors do both — share the plums in July, pick the apples
+								in October.
+							</p>
 						</div>
 					</section>
 
-					<section class="available-listings">
+					<section class="available-listings" id="available-listings">
 						<div class="container">
 							<div class="available-listings__header">
 								<h2>Available Now</h2>
