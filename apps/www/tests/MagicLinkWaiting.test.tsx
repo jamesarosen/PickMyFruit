@@ -2,6 +2,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, cleanup, fireEvent, waitFor } from '@solidjs/testing-library'
 import { mockVerify, mockSendMagicLink } from './mocks/auth-client.stub'
 
+const { mockTrackVerified, mockTrackVerifyFailed, mockTrackRequested } =
+	vi.hoisted(() => ({
+		mockTrackVerified: vi.fn(),
+		mockTrackVerifyFailed: vi.fn(),
+		mockTrackRequested: vi.fn(),
+	}))
+vi.mock('@/lib/onboarding-telemetry', () => ({
+	trackMagicLinkVerified: mockTrackVerified,
+	trackMagicLinkVerifyFailed: mockTrackVerifyFailed,
+	trackMagicLinkRequested: mockTrackRequested,
+}))
+
 import MagicLinkWaiting from '../src/components/MagicLinkWaiting'
 
 describe('MagicLinkWaiting', () => {
@@ -19,6 +31,7 @@ describe('MagicLinkWaiting', () => {
 				<MagicLinkWaiting
 					email="gardener@example.com"
 					callbackURL="/listings/mine"
+					source="login-page"
 					onCancel={() => {}}
 					onVerified={() => {}}
 				/>
@@ -32,6 +45,7 @@ describe('MagicLinkWaiting', () => {
 				<MagicLinkWaiting
 					email="test@example.com"
 					callbackURL="/listings/mine"
+					source="login-page"
 					onCancel={() => {}}
 					onVerified={() => {}}
 				/>
@@ -46,6 +60,7 @@ describe('MagicLinkWaiting', () => {
 				<MagicLinkWaiting
 					email="test@example.com"
 					callbackURL="/listings/mine"
+					source="login-page"
 					onCancel={() => {}}
 					onVerified={() => {}}
 				/>
@@ -62,6 +77,7 @@ describe('MagicLinkWaiting', () => {
 				<MagicLinkWaiting
 					email="test@example.com"
 					callbackURL="/listings/mine"
+					source="login-page"
 					onCancel={onCancel}
 					onVerified={() => {}}
 				/>
@@ -80,6 +96,7 @@ describe('MagicLinkWaiting', () => {
 				<MagicLinkWaiting
 					email="gardener@example.com"
 					callbackURL="/listings/mine"
+					source="login-page"
 					onCancel={() => {}}
 					onVerified={() => {}}
 				/>
@@ -105,6 +122,7 @@ describe('MagicLinkWaiting', () => {
 				<MagicLinkWaiting
 					email="test@example.com"
 					callbackURL="/dashboard"
+					source="login-page"
 					onCancel={() => {}}
 					onVerified={onVerified}
 				/>
@@ -133,6 +151,7 @@ describe('MagicLinkWaiting', () => {
 				<MagicLinkWaiting
 					email="test@example.com"
 					callbackURL="/dashboard"
+					source="login-page"
 					onCancel={() => {}}
 					onVerified={() => {}}
 				/>
@@ -153,6 +172,7 @@ describe('MagicLinkWaiting', () => {
 				<MagicLinkWaiting
 					email="test@example.com"
 					callbackURL="/dashboard"
+					source="login-page"
 					onCancel={() => {}}
 					onVerified={() => {}}
 				/>
@@ -161,6 +181,79 @@ describe('MagicLinkWaiting', () => {
 			fireEvent.click(getByRole('button', { name: /verify/i }))
 
 			expect(mockVerify).not.toHaveBeenCalled()
+		})
+
+		it('reports a successful manual-token verification to onboarding telemetry', async () => {
+			mockVerify.mockResolvedValue({ data: { user: {} } })
+
+			const { getByLabelText, getByRole } = render(() => (
+				<MagicLinkWaiting
+					email="test@example.com"
+					callbackURL="/dashboard"
+					source="inquiry-form"
+					onCancel={() => {}}
+					onVerified={() => {}}
+				/>
+			))
+
+			fireEvent.input(getByLabelText(/enter the token/i), {
+				target: { value: 'abc123' },
+			})
+			fireEvent.click(getByRole('button', { name: /verify/i }))
+
+			await waitFor(() => {
+				expect(mockTrackVerified).toHaveBeenCalledWith(
+					'inquiry-form',
+					'manual-token'
+				)
+			})
+			expect(mockTrackVerifyFailed).not.toHaveBeenCalled()
+		})
+
+		it('reports a failed verification to onboarding telemetry', async () => {
+			mockVerify.mockResolvedValue({
+				error: new Error('Invalid or expired token'),
+			})
+
+			const { getByLabelText, getByRole } = render(() => (
+				<MagicLinkWaiting
+					email="test@example.com"
+					callbackURL="/dashboard"
+					source="login-page"
+					onCancel={() => {}}
+					onVerified={() => {}}
+				/>
+			))
+
+			fireEvent.input(getByLabelText(/enter the token/i), {
+				target: { value: 'bad-token' },
+			})
+			fireEvent.click(getByRole('button', { name: /verify/i }))
+
+			await waitFor(() => {
+				expect(mockTrackVerifyFailed).toHaveBeenCalledWith('login-page')
+			})
+			expect(mockTrackVerified).not.toHaveBeenCalled()
+		})
+
+		it('reports a resend to onboarding telemetry', async () => {
+			mockSendMagicLink.mockResolvedValue({})
+
+			const { getByRole } = render(() => (
+				<MagicLinkWaiting
+					email="test@example.com"
+					callbackURL="/listings/mine"
+					source="login-page"
+					onCancel={() => {}}
+					onVerified={() => {}}
+				/>
+			))
+
+			fireEvent.click(getByRole('button', { name: /resend email/i }))
+
+			await waitFor(() => {
+				expect(mockTrackRequested).toHaveBeenCalledWith('login-page', 'resend')
+			})
 		})
 
 		it('shows verifying state during submission', async () => {
@@ -176,6 +269,7 @@ describe('MagicLinkWaiting', () => {
 				<MagicLinkWaiting
 					email="test@example.com"
 					callbackURL="/dashboard"
+					source="login-page"
 					onCancel={() => {}}
 					onVerified={() => {}}
 				/>

@@ -1,11 +1,19 @@
 import { createSignal } from 'solid-js'
 import { authClient } from '@/lib/auth-client'
+import {
+	trackMagicLinkRequested,
+	trackMagicLinkVerified,
+	trackMagicLinkVerifyFailed,
+	type MagicLinkSource,
+} from '@/lib/onboarding-telemetry'
 import '@/components/MagicLinkWaiting.css'
 import { createErrorSignal, ErrorMessage } from './ErrorMessage'
 
 interface MagicLinkWaitingProps {
 	email: string
 	callbackURL: string
+	/** Which surface sent the visitor here, for onboarding telemetry. */
+	source: MagicLinkSource
 	onCancel: () => void
 	onVerified: () => void | Promise<void>
 }
@@ -35,10 +43,12 @@ export default function MagicLinkWaiting(props: MagicLinkWaitingProps) {
 			})
 
 			if (result.error) {
+				trackMagicLinkVerifyFailed(props.source)
 				setError(result.error)
 				return
 			}
 
+			trackMagicLinkVerified(props.source, 'manual-token')
 			await props.onVerified()
 		} finally {
 			setIsVerifying(false)
@@ -94,6 +104,8 @@ export default function MagicLinkWaiting(props: MagicLinkWaitingProps) {
 						})
 						if (error) {
 							setResendError(error)
+						} else {
+							trackMagicLinkRequested(props.source, 'resend')
 						}
 						setIsSending(false)
 					}}

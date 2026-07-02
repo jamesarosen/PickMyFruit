@@ -4,6 +4,11 @@ import { submitInquiry as submitInquiryFn } from '@/api/inquiries'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import { authClient } from '@/lib/auth-client'
 import { displayName } from '@/lib/display-name'
+import {
+	trackInquirySubmitted,
+	trackMagicLinkRequested,
+	trackMagicLinkVerified,
+} from '@/lib/onboarding-telemetry'
 import { Sentry } from '@/lib/sentry'
 import {
 	produceTypeBySlug,
@@ -55,6 +60,10 @@ export default function InquiryForm(props: InquiryFormProps) {
 
 	const isAuthenticated = () => Boolean(context().session?.user)
 
+	// Tracks whether this flow created the session (magic link) or reused an
+	// existing one — recorded on the onboarding.inquiry.submitted event.
+	let verifiedViaMagicLink = false
+
 	async function submitInquiry() {
 		setFormState('submitting')
 		setError(null)
@@ -69,6 +78,9 @@ export default function InquiryForm(props: InquiryFormProps) {
 
 			setFormState('success')
 			sessionStorage.removeItem(PENDING_INQUIRY_KEY)
+			trackInquirySubmitted(
+				verifiedViaMagicLink ? 'new-session' : 'existing-session'
+			)
 		} catch (err) {
 			const message = err instanceof Error ? err.message : ''
 			if (message.includes('already contacted') || message.includes('24 hours')) {
@@ -128,6 +140,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 			if (error) {
 				setError(error)
 			} else {
+				trackMagicLinkRequested('inquiry-form')
 				setFormState('awaiting-magic-link')
 			}
 		}
@@ -139,6 +152,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 	}
 
 	async function handleMagicLinkVerified() {
+		verifiedViaMagicLink = true
 		// Invalidate the router so the session is populated before we check user.name.
 		// (The session cookie is set during verify but context() may not have updated yet.)
 		await router.invalidate()
@@ -205,6 +219,9 @@ export default function InquiryForm(props: InquiryFormProps) {
 				}
 
 				hasAutoSubmitted = true
+				// Arriving here means the emailed link signed the visitor in.
+				verifiedViaMagicLink = true
+				trackMagicLinkVerified('inquiry-form', 'email-link')
 				setNote(storedNote)
 				// Remove the param so re-mounting doesn't trigger a second submit.
 				// Use the History API directly — this param is not part of the typed
@@ -223,6 +240,7 @@ export default function InquiryForm(props: InquiryFormProps) {
 				<MagicLinkWaiting
 					email={email()}
 					callbackURL={`${props.callbackURL}?inquiry_complete=true`}
+					source="inquiry-form"
 					onCancel={handleMagicLinkCancel}
 					onVerified={handleMagicLinkVerified}
 				/>

@@ -13,6 +13,19 @@ vi.mock('@tanstack/solid-router', () => ({
 	Link: () => null,
 }))
 
+const { mockTrackRequested, mockTrackVerified, mockTrackListingSubmitted } =
+	vi.hoisted(() => ({
+		mockTrackRequested: vi.fn(),
+		mockTrackVerified: vi.fn(),
+		mockTrackListingSubmitted: vi.fn(),
+	}))
+vi.mock('@/lib/onboarding-telemetry', () => ({
+	trackMagicLinkRequested: mockTrackRequested,
+	trackMagicLinkVerified: mockTrackVerified,
+	trackMagicLinkVerifyFailed: vi.fn(),
+	trackListingSubmitted: mockTrackListingSubmitted,
+}))
+
 const { default: ListingForm } = await import('../src/components/ListingForm')
 
 describe('ListingForm', () => {
@@ -83,6 +96,27 @@ describe('ListingForm', () => {
 			)
 			// Clears the pending entry
 			expect(sessionStorage.getItem('pendingListing')).toBeNull()
+		})
+
+		it('reports the email-link verification and a new-session listing to onboarding telemetry', async () => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			mockContext.mockReturnValue({ session: { user: { id: 'u1' } } } as any)
+			sessionStorage.setItem('pendingListing', JSON.stringify(pendingListing()))
+			window.history.pushState({}, '', '/listings/new?listing_complete=true')
+
+			vi.spyOn(global, 'fetch').mockResolvedValue(
+				new Response(JSON.stringify({ id: 99 }), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' },
+				})
+			)
+
+			render(() => <ListingForm />)
+
+			await waitFor(() => {
+				expect(mockTrackVerified).toHaveBeenCalledWith('listing-form', 'email-link')
+				expect(mockTrackListingSubmitted).toHaveBeenCalledWith('new-session')
+			})
 		})
 
 		it('does not auto-submit when listing_complete param is absent', async () => {

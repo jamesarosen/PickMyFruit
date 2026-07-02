@@ -8,6 +8,7 @@ import { serverEnv } from './env.server'
 import { logger } from './logger.server'
 import { escapeHtml } from './html-escape.server'
 import { profileNameSchema } from './validation'
+import { trackUserCreated } from './onboarding-telemetry'
 import { Sentry } from './sentry'
 
 const sendMagicLinkEmail = async ({
@@ -115,6 +116,7 @@ export const auth = betterAuth({
 		user: {
 			create: {
 				after: async (user) => {
+					trackUserCreated()
 					enqueueResendSync(user)
 				},
 			},

@@ -12,6 +12,7 @@ import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
 import MagicLinkWaiting from '@/components/MagicLinkWaiting'
 import { authClient } from '@/lib/auth-client'
+import { trackMagicLinkRequested } from '@/lib/onboarding-telemetry'
 import './login.css'
 import { createErrorSignal, ErrorMessage } from '@/components/ErrorMessage'
 
@@ -73,6 +74,7 @@ function LoginPage() {
 		if (error) {
 			setError(error)
 		} else {
+			trackMagicLinkRequested('login-page')
 			setEmailSent(true)
 		}
 	}
@@ -88,6 +90,7 @@ function LoginPage() {
 							<MagicLinkWaiting
 								email={email()}
 								callbackURL={returnTo()}
+								source="login-page"
 								onCancel={() => {
 									setEmailSent(false)
 									setEmail('')
@@ -140,7 +143,8 @@ function LoginPage() {
 							</form>
 
 							<p class="login-footer">
-								Once signed in, you can list your fruit trees with the community.
+								Once you're signed in, you can ask to pick a neighbor's harvest, share
+								what you're growing, or both.
 							</p>
 						</div>
 					</Show>
