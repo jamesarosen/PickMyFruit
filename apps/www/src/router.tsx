@@ -1,6 +1,7 @@
 import { createRouter } from '@tanstack/solid-router'
 import { tanstackRouterBrowserTracingIntegration } from '@sentry/solid/tanstackrouter'
 import { Sentry } from '@/lib/sentry'
+import { installStaleAssetRecovery } from '@/lib/stale-asset-recovery'
 import { routeTree } from './routeTree.gen'
 
 export function getRouter() {
@@ -13,6 +14,7 @@ export function getRouter() {
 	// TanStack Router-aware version so navigation spans use route patterns.
 	if (!import.meta.env.SSR) {
 		Sentry.addIntegration(tanstackRouterBrowserTracingIntegration(router))
+		installStaleAssetRecovery()
 	}
 
 	return router
