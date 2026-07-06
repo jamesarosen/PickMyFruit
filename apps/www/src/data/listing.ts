@@ -5,6 +5,15 @@ import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
 /** Public photo shape returned to clients. */
 export type PublicPhoto = { id: string; pubUrl: string; order: number }
 
+/**
+ * Coarsens a stored res-13 H3 index to the public detail resolution (8). This
+ * is the only location precision exposed to non-owners and the value stored in
+ * `listings.public_h3_index` for privacy-safe viewport/area queries.
+ */
+export function toPublicH3Index(h3Index: string): string {
+	return cellToParent(h3Index, H3_RESOLUTIONS.PUBLIC_DETAIL)
+}
+
 /** Public listing fields safe to expose to any visitor. */
 export type PublicListing = Omit<
 	Listing,
@@ -15,6 +24,7 @@ export type PublicListing = Omit<
 	| 'lat'
 	| 'lng'
 	| 'h3Index'
+	| 'publicH3Index'
 	| 'zip'
 > & {
 	approximateH3Index: string
@@ -104,12 +114,16 @@ export function toPublicListing(
 		lat: _lat,
 		lng: _lng,
 		h3Index,
+		publicH3Index,
 		zip: _zip,
 		...safe
 	} = listing
 	let approximateH3Index: string
 	try {
-		approximateH3Index = cellToParent(h3Index, H3_RESOLUTIONS.PUBLIC_DETAIL)
+		// Prefer the stored res-8 cell (single source of truth, kept in lockstep
+		// by `createListing`); fall back to deriving it for legacy rows that
+		// predate the column.
+		approximateH3Index = publicH3Index ?? toPublicH3Index(h3Index)
 	} catch (error) {
 		onError?.(listing.id, error)
 		return null

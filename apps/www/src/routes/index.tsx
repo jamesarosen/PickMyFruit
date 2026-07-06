@@ -1,13 +1,25 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/solid-router'
-import { createSignal, For, Show } from 'solid-js'
+import { createFileRoute, Link } from '@tanstack/solid-router'
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	onCleanup,
+	Show,
+} from 'solid-js'
 import { z } from 'zod'
+import { cellToLatLng } from 'h3-js'
+import { milesTo, plural } from '@/lib/distance'
 import Layout from '@/components/Layout'
 import PageHeader from '@/components/PageHeader'
 import ListingsMap from '@/components/ListingsMap'
 import ListingCard from '@/components/ListingCard'
+import ListingGridCta from '@/components/ListingGridCta'
 import Locate from 'lucide-solid/icons/locate'
-import { getNearbyListings } from '@/api/listings'
-import { normalizeArea, listingMatchesArea } from '@/lib/h3-area'
+import { getNearestListings, getListingsInViewport } from '@/api/listings'
+import { Sentry } from '@/lib/sentry'
+import type { PublicListing } from '@/data/listing'
+import type { ViewportBounds } from '@/lib/h3-viewport'
 import {
 	NAPA_CITY_HALL,
 	requestCurrentLocation,
@@ -17,63 +29,176 @@ import { trackOnboardingCtaClick } from '@/lib/onboarding-telemetry'
 import '@/routes/index.css'
 
 const homeSearchSchema = z.object({
-	area: z.string().optional(),
+	// A shareable / deep-linkable map center. The loader frames the grid around
+	// it for a deterministic, crawlable first paint; live panning refines client
+	// side without rewriting the URL.
+	lat: z.number().optional(),
+	lng: z.number().optional(),
+	z: z.number().optional(),
 })
 
 export const Route = createFileRoute('/')({
 	validateSearch: homeSearchSchema,
-	// The loader runs on the server and queries by the launch-city anchor; the
-	// map defaults to that framing and recenters only when the user clicks
-	// "Center" (below).
-	loader: () =>
-		getNearbyListings({
-			data: { lat: NAPA_CITY_HALL.lat, lng: NAPA_CITY_HALL.lng },
+	loaderDeps: ({ search }) => ({ lat: search.lat, lng: search.lng }),
+	loader: ({ deps }) =>
+		getNearestListings({
+			data: {
+				lat: deps.lat ?? NAPA_CITY_HALL.lat,
+				lng: deps.lng ?? NAPA_CITY_HALL.lng,
+			},
 		}),
 	component: HomePage,
 })
 
+/** How the listings grid is currently sourced. */
+type GridMode = 'initial' | 'in-view' | 'empty'
+
 function HomePage() {
-	const listings = Route.useLoaderData()
-	const navigate = useNavigate()
+	const initialNearest = Route.useLoaderData()
 	const search = Route.useSearch()
 
-	// The map defaults to Napa. Centering on the user is opt-in via the "Center"
-	// button, which asks for their position on click; the map then pans there,
-	// keeping its zoom. Denial is silent (see requestCurrentLocation).
-	const [userLocation, setUserLocation] = createSignal<LocationBias | null>(null)
+	// The map centers on the URL point when present (a shared link / deep link),
+	// otherwise it frames the loader's nearest listings. A fresh object also
+	// re-triggers the map's recenter effect for "Center" and "Jump to nearest".
+	const initialCenter = (): LocationBias | null => {
+		const s = search()
+		return s.lat != null && s.lng != null ? { lat: s.lat, lng: s.lng } : null
+	}
+	const [mapCenter, setMapCenter] = createSignal<LocationBias | null>(
+		initialCenter()
+	)
 	const [locating, setLocating] = createSignal(false)
+
+	// `null` until the first user-driven viewport query — until then the grid
+	// shows the loader's nearest listings (the SSR first paint).
+	const [viewportListings, setViewportListings] = createSignal<
+		PublicListing[] | null
+	>(null)
+	// Nearest listings to wherever the user is looking, shown when the viewport
+	// itself is empty so the page never dead-ends.
+	const [fallbackNearest, setFallbackNearest] =
+		createSignal<PublicListing[]>(initialNearest())
+	const [fallbackCenter, setFallbackCenter] = createSignal<LocationBias>(
+		initialCenter() ?? NAPA_CITY_HALL
+	)
+	const [updating, setUpdating] = createSignal(false)
+
+	// A monotonically increasing id; only the latest in-flight request may write
+	// state, so fast panning settles on the final viewport, not a stale one.
+	let requestSeq = 0
+
+	async function handleViewportChange(bounds: ViewportBounds) {
+		const seq = ++requestSeq
+		setUpdating(true)
+		try {
+			const inView = await getListingsInViewport({ data: bounds })
+			if (seq !== requestSeq) return
+			setViewportListings(inView)
+			if (inView.length === 0) {
+				const center = {
+					lat: (bounds.north + bounds.south) / 2,
+					lng: (bounds.east + bounds.west) / 2,
+				}
+				const near = await getNearestListings({
+					data: { lat: center.lat, lng: center.lng },
+				})
+				if (seq !== requestSeq) return
+				setFallbackNearest(near)
+				setFallbackCenter(center)
+			}
+		} catch (error) {
+			// A failed refresh leaves the prior results in place rather than wedging
+			// the grid; the next settle retries.
+			Sentry.captureException(error)
+		} finally {
+			if (seq === requestSeq) setUpdating(false)
+		}
+	}
+
+	const mode = createMemo<GridMode>(() => {
+		const vp = viewportListings()
+		if (vp === null) return 'initial'
+		return vp.length > 0 ? 'in-view' : 'empty'
+	})
+
+	// Listings the map should render markers for. In the empty state these are
+	// the (off-screen) nearest listings, so their pins exist if the user pans.
+	const mapListings = createMemo<PublicListing[]>(() => {
+		switch (mode()) {
+			case 'in-view':
+				return viewportListings() ?? []
+			case 'empty':
+				return fallbackNearest()
+			default:
+				return initialNearest()
+		}
+	})
+
+	// Cards shown in the main grid (initial + in-view modes). The empty mode
+	// renders its own block plus a separate "Nearest listings" section.
+	const gridListings = createMemo<PublicListing[]>(() =>
+		mode() === 'in-view' ? (viewportListings() ?? []) : initialNearest()
+	)
+
+	const nearestTarget = createMemo(() => fallbackNearest()[0])
+
+	const jumpLabel = createMemo(() => {
+		const target = nearestTarget()
+		if (!target) return 'See nearest listings'
+		return `Jump to nearest — ${target.city}, ${milesTo(target, fallbackCenter())}`
+	})
+
+	function jumpToNearest() {
+		const target = nearestTarget()
+		if (!target) return
+		const [lat, lng] = cellToLatLng(target.approximateH3Index)
+		setMapCenter({ lat, lng })
+	}
 
 	async function centerOnMyLocation() {
 		if (locating()) return
 		setLocating(true)
 		try {
 			const position = await requestCurrentLocation()
-			// A fresh object each click re-triggers the map's recenter effect even
-			// when the coordinates are unchanged.
-			if (position) setUserLocation({ ...position })
+			if (position) setMapCenter({ ...position })
 		} finally {
 			setLocating(false)
 		}
 	}
 
-	const selectedH3 = () => normalizeArea(search().area ?? null)
+	// Politely announce result changes to assistive tech, encoding the mode so a
+	// non-sighted user can tell in-view results from the nearest fallback.
+	const liveSummary = createMemo(() => {
+		switch (mode()) {
+			case 'in-view': {
+				const n = viewportListings()?.length ?? 0
+				return `${n} ${plural(n, 'listing')} in this area.`
+			}
+			case 'empty': {
+				const target = nearestTarget()
+				const n = fallbackNearest().length
+				return target
+					? `No listings in this view; showing ${n} nearest, closest in ${target.city}.`
+					: 'No listings in this view.'
+			}
+			default: {
+				const n = initialNearest().length
+				return `${n} ${plural(n, 'listing')} near you.`
+			}
+		}
+	})
 
-	function setSelectedH3(h3: string | null) {
-		navigate({
-			to: '/',
-			search: h3 ? { area: h3 } : {},
-			replace: true,
-			resetScroll: false,
-		})
-	}
-
-	const visibleListings = () => {
-		const area = selectedH3()
-		if (!area) return listings()
-		return listings().filter((l) =>
-			listingMatchesArea(l.approximateH3Index, area)
-		)
-	}
+	// Delay the "Updating…" hint so quick (cached or fast) responses never flash
+	// it; only a genuinely slow fetch surfaces it.
+	const [showUpdating, setShowUpdating] = createSignal(false)
+	createEffect(() => {
+		if (!updating()) {
+			setShowUpdating(false)
+			return
+		}
+		const timer = setTimeout(() => setShowUpdating(true), 350)
+		onCleanup(() => clearTimeout(timer))
+	})
 
 	// The picker CTAs glide to the listings instead of the anchor's instant
 	// jump. The href stays as a real fragment so the link still works without
@@ -194,46 +319,72 @@ function HomePage() {
 						<div class="container">
 							<div class="available-listings__header">
 								<h2>Available Now</h2>
-								<Show when={listings().length > 0}>
-									<button
-										type="button"
-										class="available-listings__center"
-										onClick={centerOnMyLocation}
-										disabled={locating()}
-										title="Center map on my location"
-										aria-label="Center map on my location"
-									>
-										<Locate aria-hidden="true" />
-									</button>
-								</Show>
+								<button
+									type="button"
+									class="available-listings__center"
+									onClick={centerOnMyLocation}
+									disabled={locating()}
+									title="Center map on my location"
+									aria-label="Center map on my location"
+								>
+									<Locate aria-hidden="true" />
+								</button>
 							</div>
+
+							<ListingsMap
+								listings={mapListings()}
+								center={mapCenter()}
+								onViewportChange={handleViewportChange}
+							/>
+
+							<p class="sr-only" role="status" aria-live="polite">
+								{liveSummary()}
+							</p>
+							<p class="available-listings__updating" aria-hidden="true">
+								<Show when={showUpdating()}>Updating…</Show>
+							</p>
+
 							<Show
-								when={listings().length > 0}
-								fallback={<p>No listings available right now.</p>}
+								when={mode() === 'empty'}
+								fallback={
+									<div class="listings-grid">
+										<For each={gridListings()}>
+											{(listing) => <ListingCard listing={listing} />}
+										</For>
+										<ListingGridCta />
+									</div>
+								}
 							>
-								<ListingsMap
-									listings={listings()}
-									center={userLocation()}
-									onGroupSelect={setSelectedH3}
-									selectedH3={selectedH3()}
-								/>
-								<Show when={selectedH3()}>
+								<div class="viewport-empty">
+									<p class="viewport-empty__lead">No listings in this view yet.</p>
 									<button
 										type="button"
-										class="clear-filter"
-										onClick={() => setSelectedH3(null)}
+										class="button button--primary"
+										onClick={jumpToNearest}
+										disabled={!nearestTarget()}
 									>
-										Show all listings
+										{jumpLabel()}
 									</button>
-								</Show>
-								<Show when={selectedH3() && visibleListings().length === 0}>
-									<p class="no-filtered-listings">No listings in this area.</p>
-								</Show>
-								<div class="listings-grid">
-									<For each={visibleListings()}>
-										{(listing) => <ListingCard listing={listing} />}
-									</For>
+									<Link to="/listings/new" class="viewport-empty__grower">
+										Have a tree here? Be the first to share →
+									</Link>
 								</div>
+
+								<Show when={fallbackNearest().length > 0}>
+									<hr class="viewport-divider" />
+									<h3 class="nearest-heading">Nearest listings</h3>
+									<div class="listings-grid">
+										<For each={fallbackNearest()}>
+											{(listing) => (
+												<ListingCard
+													listing={listing}
+													muted
+													badge={`${listing.city} · ${milesTo(listing, fallbackCenter())}`}
+												/>
+											)}
+										</For>
+									</div>
+								</Show>
 							</Show>
 						</div>
 					</section>

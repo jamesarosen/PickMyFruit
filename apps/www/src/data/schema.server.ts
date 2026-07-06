@@ -137,6 +137,12 @@ export const listings = sqliteTable(
 		lat: real('lat').notNull(),
 		lng: real('lng').notNull(),
 		h3Index: text('h3_index').notNull(), // H3 index at H3_RES_STORAGE (resolution 13)
+		// H3 index at PUBLIC_DETAIL (resolution 8) — the coarsened cell that is
+		// safe to expose publicly. Indexed so privacy-preserving viewport/area
+		// queries can filter with `WHERE public_h3_index IN (...)` instead of ever
+		// touching raw lat/lng. Nullable only for legacy rows predating this
+		// column; every write path (see `createListing`) populates it.
+		publicH3Index: text('public_h3_index'),
 
 		// Owner — Better Auth user reference
 		userId: text('user_id')
@@ -168,7 +174,10 @@ export const listings = sqliteTable(
 			.notNull()
 			.default(sql`(unixepoch())`),
 	},
-	(table) => [index('listings_user_id_idx').on(table.userId)]
+	(table) => [
+		index('listings_user_id_idx').on(table.userId),
+		index('listings_public_h3_index_idx').on(table.publicH3Index),
+	]
 )
 
 export type Listing = typeof listings.$inferSelect

@@ -1,0 +1,51 @@
+@layer components {
+	.listing-grid-cta {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		min-height: 200px;
+		padding: 24px;
+		text-align: center;
+		text-decoration: none;
+		color: var(--color-foreground);
+		/* Dashed + no photo so it reads as an invitation, not a real listing. */
+		border: 2px dashed oklch(from var(--color-secondary) l calc(c * 0.6) h);
+		border-radius: 12px;
+		background: oklch(from var(--color-secondary) l c h / 0.04);
+		transition:
+			background-color 0.15s ease,
+			border-color 0.15s ease;
+	}
+
+	.listing-grid-cta:hover,
+	.listing-grid-cta:focus-visible {
+		background: oklch(from var(--color-secondary) l c h / 0.08);
+		border-color: var(--color-secondary);
+		outline: none;
+	}
+
+	.listing-grid-cta__icon {
+		display: inline-flex;
+		color: var(--color-secondary);
+	}
+
+	.listing-grid-cta__title {
+		font-size: 18px;
+		font-weight: 600;
+	}
+
+	.listing-grid-cta__body {
+		font-size: 14px;
+		color: var(--color-quiet);
+		max-width: 220px;
+	}
+
+	.listing-grid-cta__action {
+		margin-top: 8px;
+		font-size: 14px;
+		font-weight: 600;
+		color: var(--color-secondary);
+	}
+}

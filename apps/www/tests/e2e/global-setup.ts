@@ -105,6 +105,25 @@ export default async function globalSetup(config: FullConfig) {
 		await newPage.goto(`${baseURL}/listings/new`, { waitUntil: 'networkidle' })
 		console.log('[global-setup] browser warm-up of /listings/new complete')
 		await newPage.close()
+
+		// Warm up the home route + its lazy map chunk. `networkidle` is unusable
+		// here because the map streams external tiles that never settle; instead
+		// wait until the map has actually initialized (data-map-center is set once
+		// the maplibre chunk has compiled and the camera is framed). Waiting only
+		// for the container div would leave the first real test paying the cold
+		// compile cost and exhausting its timeout.
+		const homePage = await browser.newPage()
+		await homePage.goto(`${baseURL}/`, { waitUntil: 'domcontentloaded' })
+		await homePage
+			.waitForFunction(
+				() =>
+					document.querySelector('.listings-map')?.getAttribute('data-map-center') !=
+					null,
+				{ timeout: 90_000 }
+			)
+			.catch(() => undefined)
+		console.log('[global-setup] browser warm-up of / complete')
+		await homePage.close()
 	} finally {
 		await browser.close()
 	}

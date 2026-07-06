@@ -27,6 +27,7 @@
 		"db:migrate": "drizzle-kit migrate",
 		"db:push": "drizzle-kit push",
 		"db:seed": "vite-node src/data/seed.server.ts",
+		"db:backfill-public-h3": "vite-node src/data/backfill-public-h3.server.ts",
 		"deploy": "fly deploy",
 		"deploy:setup": "fly launch --no-deploy",
 		"logs": "fly logs",

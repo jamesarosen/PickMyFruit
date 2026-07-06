@@ -42,6 +42,7 @@ function makeListing(id: number): OwnerListingView {
 		lat: 0,
 		lng: 0,
 		h3Index: '8928308280fffff',
+		publicH3Index: null,
 		userId: 'user-123',
 		notes: null,
 		accessInstructions: null,

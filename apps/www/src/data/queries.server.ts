@@ -14,15 +14,18 @@ import {
 	type AddressReveal,
 } from './schema.server'
 import { eq, desc, and, ne, isNull, gt, inArray, sql } from 'drizzle-orm'
+import { cellToLatLng, latLngToCell } from 'h3-js'
 import {
 	ListingStatus,
 	type ListingStatusValue,
 	type AddressReleasePolicyValue,
 } from '@/lib/validation'
+import { H3_RESOLUTIONS } from '@/lib/h3-resolutions'
 import { Sentry } from '@/lib/sentry'
 import { storage } from '@/lib/storage.server'
 import {
 	toPublicListing,
+	toPublicH3Index,
 	type PublicListing,
 	type PublicPhoto,
 	type OwnerListingView,
@@ -123,6 +126,11 @@ export async function getAvailableListings(
 
 /**
  * Fetches available listings ordered by proximity to a point.
+ *
+ * ⚠️ Orders rows by **exact** coordinate distance, so the returned array order
+ * leaks sub-res-8 position. It must NOT back an unauthenticated endpoint — use
+ * {@link getNearestListings} (quantized, cell-center ordering) for anything a
+ * visitor can reach. Retained for internal use and ordering-invariant tests.
  * @invariant Each listing's `photos` are sorted by `order` ascending — the
  * element at index 0 is the cover photo. Callers may rely on this without
  * re-sorting.
@@ -159,11 +167,123 @@ export async function getNearbyListings(
 	)
 }
 
+/**
+ * Fetches available listings whose public (res-8) cell is one of `cells`,
+ * ordered deterministically by `id`.
+ *
+ * Membership is matched only against the coarsened `public_h3_index`, never raw
+ * coordinates, so panning/zooming the map can reveal nothing finer than the
+ * res-8 cell a listing already exposes. The `id` ordering keeps cap-driven
+ * dropout from leaking neighbours' recency. Returns `[]` for an empty cell set.
+ * @invariant Each listing's `photos` are sorted by `order` ascending.
+ */
+export async function getListingsInPublicCells(
+	cells: string[],
+	limit: number = 60
+): Promise<PublicListing[]> {
+	if (cells.length === 0) return []
+	return Sentry.startSpan(
+		{
+			name: 'getListingsInPublicCells',
+			op: 'db.query',
+			attributes: { cells: cells.length, limit },
+		},
+		async (span) => {
+			const rows = await db
+				.select()
+				.from(listings)
+				.where(
+					and(
+						eq(listings.status, ListingStatus.available),
+						isNull(listings.deletedAt),
+						inArray(listings.publicH3Index, cells)
+					)
+				)
+				.orderBy(listings.id)
+				.limit(limit)
+			const photoMap = await fetchPhotosByListingIds(rows.map((r) => r.id))
+			const results = rows.flatMap((row) => {
+				const pub = toPublicListing(row, photoMap.get(row.id) ?? [], reportH3Error)
+				return pub ? [pub] : []
+			})
+			span.setAttribute('listing_count', results.length)
+			return results
+		}
+	)
+}
+
+/**
+ * Fetches available listings ordered by proximity to `center`, privacy-safely.
+ *
+ * Unlike {@link getNearbyListings}, both the query center and each listing are
+ * quantized to their res-8 cell centers before distances are compared, so the
+ * returned order resolves only to res-8 granularity — sweeping the center can
+ * never triangulate a listing finer than the public detail it already exposes.
+ * Suitable for unauthenticated callers (home loader, empty-viewport fallback).
+ * @invariant Each listing's `photos` are sorted by `order` ascending.
+ */
+export async function getNearestListings(
+	lat: number,
+	lng: number,
+	limit: number = 12
+): Promise<PublicListing[]> {
+	return Sentry.startSpan(
+		{ name: 'getNearestListings', op: 'db.query', attributes: { limit } },
+		async (span) => {
+			// Quantize the center to its res-8 cell center; the comparison is then
+			// res-8-vs-res-8 and order can only change at cell boundaries.
+			const [centerLat, centerLng] = cellToLatLng(
+				latLngToCell(lat, lng, H3_RESOLUTIONS.PUBLIC_DETAIL)
+			)
+			const rows = await db
+				.select()
+				.from(listings)
+				.where(
+					and(
+						eq(listings.status, ListingStatus.available),
+						isNull(listings.deletedAt)
+					)
+				)
+			const photoMap = await fetchPhotosByListingIds(rows.map((r) => r.id))
+			const projected = rows.flatMap((row) => {
+				const pub = toPublicListing(row, photoMap.get(row.id) ?? [], reportH3Error)
+				return pub ? [pub] : []
+			})
+			projected.sort((a, b) => {
+				const da = squaredCellDistance(a.approximateH3Index, centerLat, centerLng)
+				const db2 = squaredCellDistance(b.approximateH3Index, centerLat, centerLng)
+				return da - db2 || a.id - b.id
+			})
+			span.setAttribute('listing_count', projected.length)
+			return projected.slice(0, limit)
+		}
+	)
+}
+
+/** Squared distance (deg²) from a public H3 cell's center to a fixed point. */
+function squaredCellDistance(
+	publicH3Index: string,
+	centerLat: number,
+	centerLng: number
+): number {
+	const [lat, lng] = cellToLatLng(publicH3Index)
+	const dLat = lat - centerLat
+	const dLng = lng - centerLng
+	return dLat * dLat + dLng * dLng
+}
+
 export async function createListing(data: NewListing): Promise<Listing> {
 	return Sentry.startSpan(
 		{ name: 'createListing', op: 'db.query' },
 		async () => {
-			const result = await db.insert(listings).values(data).returning()
+			// Derive the public (res-8) cell here so every write path keeps
+			// `public_h3_index` in lockstep with `h3Index` without each caller
+			// remembering to.
+			const values: NewListing = {
+				...data,
+				publicH3Index: data.publicH3Index ?? toPublicH3Index(data.h3Index),
+			}
+			const result = await db.insert(listings).values(values).returning()
 			return result[0]
 		}
 	)

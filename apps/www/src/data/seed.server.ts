@@ -124,6 +124,7 @@ function generateListing(userId: string): NewListing {
 		lat,
 		lng,
 		h3Index,
+		publicH3Index: latLngToCell(lat, lng, 8),
 		userId,
 		notes: faker.helpers.maybe(() => faker.lorem.sentence(), {
 			probability: 0.3,

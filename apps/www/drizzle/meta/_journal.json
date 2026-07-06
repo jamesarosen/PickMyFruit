@@ -85,6 +85,13 @@
 			"when": 1781270916765,
 			"tag": "0011_international_addresses",
 			"breakpoints": true
+		},
+		{
+			"idx": 12,
+			"version": "6",
+			"when": 1781704483098,
+			"tag": "0012_add_public_h3_index",
+			"breakpoints": true
 		}
 	]
 }
