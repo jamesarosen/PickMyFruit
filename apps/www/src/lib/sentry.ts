@@ -96,6 +96,16 @@ export function redactGeoSpan(span: SpanJSON): SpanJSON {
 	return span
 }
 
+// Meta's in-app browsers (Instagram, Facebook) inject their own instrumentation
+// script into every page loaded in their iOS WKWebView. That script talks to the
+// native app through `window.webkit.messageHandlers`, and it throws
+// `undefined is not an object (evaluating 'window.webkit.messageHandlers…')`
+// when the bridge isn't present. The error is caught by our global onerror
+// handler and attributed to the host document, but it is third-party code we
+// neither ship nor control (this app has no native WKWebView bridge), so it is
+// pure noise. See Sentry PICKMYFRUIT-23/24/25.
+export const IGNORED_ERROR_PATTERNS = [/window\.webkit\.messageHandlers/]
+
 const isServer = typeof window === 'undefined'
 const environment = isServer ? 'server' : 'client'
 
@@ -154,6 +164,7 @@ if (clientEnv.sentryDsn) {
 		release: clientEnv.sentryRelease,
 		sampleRate: clientEnv.sentrySampleRate,
 		tracesSampleRate: clientEnv.sentryTracesSampleRate,
+		ignoreErrors: IGNORED_ERROR_PATTERNS,
 		beforeBreadcrumb(breadcrumb) {
 			// Strip the internal shared secret from any breadcrumb that may have
 			// captured request headers (fetch, http, console). Defense-in-depth on
