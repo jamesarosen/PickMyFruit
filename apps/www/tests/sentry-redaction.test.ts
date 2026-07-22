@@ -12,8 +12,34 @@ vi.mock('../src/lib/env', () => ({
 	},
 }))
 
-const { redactGeoServiceUrl, redactGeoBreadcrumb, redactGeoSpan } =
-	await import('../src/lib/sentry')
+const {
+	redactGeoServiceUrl,
+	redactGeoBreadcrumb,
+	redactGeoSpan,
+	IGNORED_ERROR_PATTERNS,
+} = await import('../src/lib/sentry')
+
+/** Mirrors how Sentry's `ignoreErrors` matches an event: any pattern hits. */
+function isIgnored(message: string): boolean {
+	return IGNORED_ERROR_PATTERNS.some((pattern) => pattern.test(message))
+}
+
+describe('IGNORED_ERROR_PATTERNS', () => {
+	it.each([
+		"TypeError: undefined is not an object (evaluating 'window.webkit.messageHandlers')",
+		"TypeError: undefined is not an object (evaluating 'window.webkit.messageHandlers[e].postMessage')",
+	])('ignores Meta in-app browser bridge error: %s', (message) => {
+		expect(isIgnored(message)).toBe(true)
+	})
+
+	it.each([
+		'TypeError: Cannot read properties of undefined (reading id)',
+		"ReferenceError: Can't find variable: fetch",
+		'Error: Failed to load listing',
+	])('does not ignore genuine application error: %s', (message) => {
+		expect(isIgnored(message)).toBe(false)
+	})
+})
 
 describe('redactGeoServiceUrl', () => {
 	it.each([
